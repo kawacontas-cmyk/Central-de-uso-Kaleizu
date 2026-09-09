@@ -850,24 +850,24 @@
       async commit() {
         const inserir = [];
         const remover = [];
+        const agora = new Date().toISOString();
 
         for (const op of ops) {
           if (op.tipo === "delete") { remover.push(op.ref.id); continue; }
-          if (op.tipo === "insert") {
-            inserir.push({ id: op.ref.id, dados: _separa(op.dados) });
-            continue;
-          }
-          // upsert / update: mescla com o que já existe
-          const atual = alunosCache.find(a => a.id === op.ref.id) || {};
-          inserir.push({
-            id: op.ref.id,
-            dados: { ..._separa(atual), ..._separa(op.dados) },
-            atualizado_em: new Date().toISOString()
-          });
+
+          // Toda linha leva as mesmas chaves: o PostgREST recusa o lote
+          // quando os objetos têm conjuntos de chaves diferentes.
+          const base = op.tipo === "insert"
+            ? _separa(op.dados)
+            : { ..._separa(alunosCache.find(a => a.id === op.ref.id) || {}), ..._separa(op.dados) };
+
+          inserir.push({ id: op.ref.id, dados: base, atualizado_em: agora });
         }
 
-        if (inserir.length) {
-          const { error } = await sb.from(TABELA).upsert(inserir, { onConflict: "id" });
+        // Lotes de 200 para não estourar o limite da requisição
+        for (let i = 0; i < inserir.length; i += 200) {
+          const { error } = await sb.from(TABELA)
+            .upsert(inserir.slice(i, i + 200), { onConflict: "id" });
           if (error) throw error;
         }
         if (remover.length) {
@@ -2307,7 +2307,9 @@
     } catch (err) {
       console.error(err);
       document.getElementById("import-title").textContent = "Erro na importação";
-      statusEl.textContent = "Veja o console do navegador (F12) para detalhes.";
+      const msg = (err && (err.message || err.hint || err.details)) || "erro desconhecido";
+      statusEl.innerHTML = `<span style="color:var(--red)">${msg}</span>` +
+        (imported ? `<br><span style="font-size:12px;color:var(--gray-text)">${imported} registro(s) já haviam sido processados antes da falha.</span>` : "");
     }
     closeBtn.style.display = "inline-flex";
     e.target.value = "";
