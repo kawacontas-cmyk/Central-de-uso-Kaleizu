@@ -485,12 +485,7 @@
           <option value="Ativo">Ativo</option>
           <option value="Inativo">Inativo</option>
         </select>
-        <select id="f-status-matricula">
-          <option value="">Toda matrícula</option>
-          <option>Matrícula efetivada</option>
-          <option>Documentos não enviados</option>
-          <option>Aguardando efetivação</option>
-        </select>
+        <select id="f-status-matricula"><option value="">Toda matrícula</option></select>
         <select id="f-grupo">
           <option value="">Todo grupo</option>
           <option>No grupo</option>
@@ -683,14 +678,7 @@
         </div>
         <div class="field">
           <label>Status da matrícula</label>
-          <select id="fld-status-matricula">
-            <option value="">—</option>
-            <option>Matrícula efetivada</option>
-            <option>Documentos não enviados</option>
-            <option>Aguardando efetivação</option>
-            <option>Formado</option>
-            <option>Indeferida</option>
-          </select>
+          <select id="fld-status-matricula"></select>
         </div>
         <div class="field">
           <label>Grupo do WhatsApp</label>
@@ -1032,6 +1020,7 @@
     document.getElementById("fld-fim").value = aluno?.dataFim || "";
     document.getElementById("fld-canal").value = aluno?.canalVendas || "";
     document.getElementById("fld-status").value = aluno?.status || "Ativo";
+    montarSelect(document.getElementById("fld-status-matricula"), "statusMatricula", "Novo status");
     document.getElementById("fld-status-matricula").value = aluno?.statusMatricula || "";
     document.getElementById("fld-grupo-whats").value = aluno?.grupoWhats || "";
     document.getElementById("fld-pagamento").value = aluno?.formaPagamento || "";
@@ -1092,6 +1081,26 @@
   document.getElementById("btn-cancelar-modal").addEventListener("click", closeModal);
   modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
 
+  // Opções fixas de cada select. As que a equipe criar depois entram
+  // automaticamente, lidas dos alunos já cadastrados.
+  const OPCOES_BASE = {
+    statusMatricula: ["Matrícula efetivada", "Documentos não enviados",
+                      "Aguardando efetivação", "Formado", "Indeferida"],
+  };
+
+  // Monta o select: opções fixas + as que já aparecem no banco + "criar nova"
+  function montarSelect(el, campo, rotuloNovo, { vazio = true } = {}) {
+    const base = OPCOES_BASE[campo] || [];
+    const usadas = [...new Set(alunosCache.map(a => a[campo]).filter(Boolean))];
+    const extras = usadas.filter(v => !base.includes(v)).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    el.innerHTML =
+      (vazio ? '<option value="">—</option>' : "") +
+      base.map(v => `<option>${v}</option>`).join("") +
+      (extras.length ? `<optgroup label="Criadas pela equipe">${extras.map(v => `<option>${v}</option>`).join("")}</optgroup>` : "") +
+      `<option value="__nova__">+ ${rotuloNovo}</option>`;
+  }
+
   function handleNovoValor(selectEl, label) {
     selectEl.addEventListener("change", (e) => {
       if (e.target.value === "__nova__") {
@@ -1108,6 +1117,7 @@
   }
   handleNovoValor(document.getElementById("fld-turma"), "Nome da nova turma:");
   handleNovoValor(document.getElementById("fld-lancamento"), "Código do novo lançamento:");
+  handleNovoValor(document.getElementById("fld-status-matricula"), "Nome do novo status da matrícula:");
 
   document.getElementById("form-aluno").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1692,7 +1702,21 @@
     return `<span class="badge ${cls}">${statusMatricula}</span>`;
   }
 
+  // Mantém o filtro de status da matrícula em dia com os valores existentes
+  function montarFiltroMatricula() {
+    const el = document.getElementById("f-status-matricula");
+    if (!el) return;
+    const atual = el.value;
+    const base = OPCOES_BASE.statusMatricula;
+    const usadas = [...new Set(alunosCache.map(a => a.statusMatricula).filter(Boolean))];
+    const extras = usadas.filter(v => !base.includes(v)).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    el.innerHTML = '<option value="">Toda matrícula</option>' +
+      base.concat(extras).map(v => `<option>${v}</option>`).join("");
+    el.value = atual;
+  }
+
   function renderAlunos() {
+    montarFiltroMatricula();
     const busca = document.getElementById("f-busca").value.toLowerCase();
     const turma = document.getElementById("f-turma").value;
     const lancamento = document.getElementById("f-lancamento").value;
