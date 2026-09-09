@@ -848,30 +848,34 @@
       update(ref, patch){ ops.push({ tipo: "update", ref, dados: patch }); },
       delete(ref)       { ops.push({ tipo: "delete", ref }); },
       async commit() {
-        const inserir = [];
         const remover = [];
         const agora = new Date().toISOString();
+
+        // Um Map por id: se o mesmo aluno aparecer mais de uma vez no lote,
+        // as alterações são mescladas numa linha só. O Postgres recusa
+        // atualizar a mesma linha duas vezes na mesma instrução.
+        const porId = new Map();
 
         for (const op of ops) {
           if (op.tipo === "delete") { remover.push(op.ref.id); continue; }
 
-          // Toda linha leva as mesmas chaves: o PostgREST recusa o lote
-          // quando os objetos têm conjuntos de chaves diferentes.
-          const base = op.tipo === "insert"
-            ? _separa(op.dados)
-            : { ..._separa(alunosCache.find(a => a.id === op.ref.id) || {}), ..._separa(op.dados) };
+          const id = op.ref.id;
+          const anterior = porId.has(id)
+            ? porId.get(id).dados
+            : (op.tipo === "insert" ? {} : _separa(alunosCache.find(a => a.id === id) || {}));
 
-          inserir.push({ id: op.ref.id, dados: base, atualizado_em: agora });
+          porId.set(id, { id, dados: { ...anterior, ..._separa(op.dados) }, atualizado_em: agora });
         }
 
-        // Lotes de 200 para não estourar o limite da requisição
+        const inserir = [...porId.values()].filter(l => !remover.includes(l.id));
+
         for (let i = 0; i < inserir.length; i += 200) {
           const { error } = await sb.from(TABELA)
             .upsert(inserir.slice(i, i + 200), { onConflict: "id" });
           if (error) throw error;
         }
         if (remover.length) {
-          const { error } = await sb.from(TABELA).delete().in("id", remover);
+          const { error } = await sb.from(TABELA).delete().in("id", [...new Set(remover)]);
           if (error) throw error;
         }
         await carregarAlunos();
