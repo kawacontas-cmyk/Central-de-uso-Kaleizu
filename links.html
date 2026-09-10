@@ -1357,6 +1357,18 @@ async function abrirArquivo(id) {
   }
 }
 
+// Copia o endereço público da cópia arquivada
+async function copiarLinkPublico(id) {
+  const url = `${location.origin}/p/${id}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    mostrarProgresso("Link copiado — funciona sem login");
+    setTimeout(esconderProgresso, 2200);
+  } catch {
+    prompt("Copie o endereço:", url);
+  }
+}
+
 // Coloca o nome do link no título da aba e um selo discreto de "cópia arquivada"
 function injetarIdentificacao(html, l) {
   const titulo = (l.label || "Página arquivada").replace(/[<>]/g, "");
@@ -1974,6 +1986,10 @@ function render() {
             <button class="arq-b" onclick="abrirArquivo('${l.id}')" title="Ver a cópia salva">
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="1.8"/></svg>
               Ver
+            </button>
+            <button class="arq-b" onclick="copiarLinkPublico('${l.id}')" title="Copiar endereço para enviar a quem não tem login">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 00-1.5-1.5H3.5A1.5 1.5 0 002 3.5V9a1.5 1.5 0 001.5 1.5h2"/></svg>
+              Copiar
             </button>
             <button class="arq-b ${desativada ? "ativo" : ""}" onclick="alternarAtiva('${l.id}')"
               title="${desativada ? "Marcar como ativa no WordPress" : "Marcar como desativada no WordPress"}">
