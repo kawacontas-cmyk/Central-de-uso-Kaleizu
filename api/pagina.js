@@ -62,18 +62,26 @@ export default async function handler(req, res) {
       "As variáveis SUPABASE_URL e SUPABASE_SERVICE_KEY não estão definidas no Vercel."));
   }
 
-  const id = (req.query.id || "").toString().trim();
-  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+  const chave = (req.query.id || "").toString().trim();
+
+  // Aceita tanto o apelido (l21-matriculas) quanto o identificador antigo
+  const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chave);
+  const ehSlug = /^[a-z0-9][a-z0-9-]{0,79}$/.test(chave);
+
+  if (!ehUuid && !ehSlug) {
     res.status(400).setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(pagina("Endereço inválido", "O identificador da página não está correto."));
+    return res.send(pagina("Endereço inválido", "O endereço da página não está correto."));
   }
 
   const cab = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` };
+  const filtro = ehUuid
+    ? `id=eq.${chave}`
+    : `slug=eq.${encodeURIComponent(chave)}`;
 
   try {
     // 1. Busca o link e o caminho do arquivo
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/links?id=eq.${id}&deleted=eq.false` +
+      `${SUPABASE_URL}/rest/v1/links?${filtro}&deleted=eq.false` +
       `&select=label,url,arquivo_path,arquivado_em`, { headers: cab });
     const linhas = await r.json();
     const link = Array.isArray(linhas) ? linhas[0] : null;
