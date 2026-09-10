@@ -1232,23 +1232,37 @@ async function saveGroupOrder() {
 
 const BUCKET = "paginas";
 
-// Abre a cópia arquivada numa aba nova, com link temporário assinado
+// Abre a cópia arquivada.
+// O Supabase entrega HTML enviado por usuário como texto puro, por segurança.
+// Então baixamos o arquivo e criamos um endereço local, que o navegador renderiza.
 async function abrirArquivo(id) {
   const l = links.find(x => x.id === id);
   if (!l || !l.arquivo_path) return;
 
+  const ehPdf = l.arquivo_path.toLowerCase().endsWith(".pdf");
   const aba = window.open("", "_blank");   // abre antes para o navegador não bloquear
-  if (aba) aba.document.write("<p style='font-family:sans-serif;padding:2rem'>Abrindo a página arquivada...</p>");
+  if (aba) aba.document.write(
+    "<title>Abrindo…</title><body style='font-family:sans-serif;background:#060B1F;color:#8b93b8;" +
+    "display:flex;align-items:center;justify-content:center;height:100vh;margin:0'>" +
+    "<p>Carregando a página arquivada…</p></body>");
 
-  const { data, error } = await sb.storage.from(BUCKET)
-    .createSignedUrl(l.arquivo_path, 3600);   // vale 1 hora
+  mostrarProgresso("Baixando a cópia arquivada...");
+  try {
+    const { data, error } = await sb.storage.from(BUCKET).download(l.arquivo_path);
+    if (error) throw error;
 
-  if (error || !data) {
+    // Recria o blob com o tipo certo para o navegador renderizar em vez de baixar
+    const blob = new Blob([data], { type: ehPdf ? "application/pdf" : "text/html; charset=utf-8" });
+    const endereco = URL.createObjectURL(blob);
+
+    if (aba) aba.location.href = endereco; else window.open(endereco, "_blank");
+    setTimeout(() => URL.revokeObjectURL(endereco), 60000);
+    esconderProgresso();
+  } catch (e) {
     if (aba) aba.close();
-    alert("Não consegui abrir o arquivo: " + (error?.message || "erro desconhecido"));
-    return;
+    esconderProgresso();
+    alert("Não consegui abrir o arquivo: " + (e.message || "erro desconhecido"));
   }
-  if (aba) aba.location.href = data.signedUrl; else window.open(data.signedUrl, "_blank");
 }
 
 // Envia o .html salvo pelo SingleFile
