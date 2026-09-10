@@ -60,6 +60,128 @@
   .selector-footer { margin-top: 2.5rem; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-hint); }
   .selector-footer button { background: transparent; border: none; font-size: 13px; color: var(--text-hint); cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: underline; }
   .selector-footer button:hover { color: var(--text-muted); }
+  .admin-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #CDA04C;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .admin-btn:hover { background: rgba(205,160,76,0.08); border-color: #CDA04C; }
+  .admin-btn svg { width: 14px; height: 14px; }
+  .admin-btn.visible { display: flex; }
+
+  #admin-panel {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: flex-start;
+    justify-content: flex-end;
+  }
+  #admin-panel.open { display: flex; }
+
+  .admin-drawer {
+    background: var(--surface);
+    border-left: 1px solid rgba(255,255,255,.18);
+    width: 100%; max-width: 520px;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+  .admin-header {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .admin-header h2 { font-size: 16px; font-weight: 600; color: var(--text); }
+  .admin-close {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--muted);
+  }
+  .admin-close:hover { color: var(--text); }
+  .admin-close svg { width: 14px; height: 14px; }
+
+  .admin-section-title {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--hint);
+    margin-bottom: 10px;
+  }
+
+  .user-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+  }
+  .user-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(205,160,76,.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: var(--gold);
+    flex-shrink: 0;
+  }
+  .user-info { flex: 1; min-width: 0; }
+  .user-email { font-size: 13px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-meta { font-size: 12px; color: var(--hint); margin-top: 2px; }
+
+  .role-select {
+    padding: 4px 8px; border-radius: 6px; font-size: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Sans', sans-serif; cursor: pointer;
+  }
+  .role-select option { background: #0e1530; }
+
+  .user-del {
+    width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
+    background: transparent; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--hint);
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .user-del:hover { background: #2a0a0a; border-color: #7a1a1a; color: #f07a7a; }
+  .user-del svg { width: 13px; height: 13px; }
+
+  .admin-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .admin-form label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; margin-top: 10px; }
+  .admin-form label:first-child { margin-top: 0; }
+  .admin-form input, .admin-form select {
+    width: 100%; padding: 8px 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; font-size: 13px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; outline: none;
+  }
+  .admin-form input:focus, .admin-form select:focus { border-color: #CDA04C; }
+  .admin-form select option { background: #0e1530; }
+  .admin-msg { font-size: 13px; margin-top: 10px; padding: 8px 10px; border-radius: 7px; display: none; }
+  .admin-msg.ok  { display: block; background: rgba(95,205,138,.13); color: #5fcd8a; }
+  .admin-msg.err { display: block; background: #2a0a0a; color: #f07a7a; }
+
+
+  .btn-confirm { padding:7px 16px; border-radius:7px; font-size:13px; cursor:pointer;
+    background:var(--gold); border:1px solid var(--gold); color:#060B1F; font-weight:600;
+    font-family:'DM Sans',sans-serif; }
+  .btn-confirm:hover { background:#e0b45a; }
 </style>
 </head>
 <body>
@@ -158,9 +280,47 @@
   <div class="selector-footer">
     <span id="selector-email"></span>
     <span>·</span>
+    <button id="admin-btn" class="admin-link" onclick="openAdminPanel()">Gerenciar usuários</button>
+    <span id="admin-sep" style="display:none">·</span>
     <button onclick="doLogout()">Sair</button>
   </div>
 </div>
+
+<div id="admin-panel" onclick="closeAdminPanel(event)">
+  <div class="admin-drawer">
+    <div class="admin-header">
+      <h2>Painel Admin</h2>
+      <div class="admin-close" onclick="closeAdminPanel(null,true)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+      </div>
+    </div>
+
+    <div>
+      <p class="admin-section-title">Usuários cadastrados</p>
+      <div id="user-list"><p style="font-size:13px;color:var(--text-hint)">Carregando...</p></div>
+    </div>
+
+    <div>
+      <p class="admin-section-title">Adicionar novo usuário</p>
+      <div class="admin-form">
+        <label>Email</label>
+        <input type="email" id="new-email" placeholder="email@exemplo.com" />
+        <label>Senha</label>
+        <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres" />
+        <label>Papel</label>
+        <select id="new-role">
+          <option value="member">Membro (só visualiza)</option>
+          <option value="admin">Admin (acesso total)</option>
+        </select>
+        <div style="margin-top:12px;">
+          <button class="btn-confirm" style="width:100%" onclick="createUser()">Criar usuário</button>
+        </div>
+        <div class="admin-msg" id="admin-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -199,7 +359,139 @@ function showSelector(user) {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("selector-screen").classList.add("active");
   if (user?.email) document.getElementById("selector-email").textContent = user.email;
+
+  isAdmin = user?.user_metadata?.role === "admin";
+  document.getElementById("admin-btn").style.display  = isAdmin ? "inline" : "none";
+  document.getElementById("admin-sep").style.display  = isAdmin ? "inline" : "none";
 }
+
+
+// ══════════════════════════════════════════════════════════
+// GERENCIAMENTO DE USUÁRIOS
+// Fica aqui, no seletor, porque vale para o painel inteiro
+// e não para uma ferramenta específica.
+// ══════════════════════════════════════════════════════════
+let isAdmin = false;
+const EDGE_URL = "https://iabugpuqlcfftwabuxsj.supabase.co/functions/v1/manage-users";
+
+async function callEdge(body) {
+  const { data: { session }, error: sessionError } = await sb.auth.getSession();
+  if (sessionError || !session) {
+    await doLogout();
+    throw new Error("Sessão expirada. Faça login novamente.");
+  }
+  const { data: refreshed } = await sb.auth.refreshSession();
+  const token = refreshed?.session?.access_token || session.access_token;
+
+  const res = await fetch(EDGE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  if (!text) throw new Error("Resposta vazia da função (status " + res.status + ")");
+  try { return JSON.parse(text); }
+  catch { throw new Error("Resposta inválida: " + text.slice(0, 100)); }
+}
+
+// ── ADMIN PANEL ────────────────────────────────────────
+async function openAdminPanel() {
+  document.getElementById("admin-panel").classList.add("open");
+  // Refresh session antes de carregar
+  await sb.auth.refreshSession();
+  await loadUsers();
+}
+
+function closeAdminPanel(e, force) {
+  if (force || (e && e.target === document.getElementById("admin-panel"))) {
+    document.getElementById("admin-panel").classList.remove("open");
+  }
+}
+
+async function loadUsers() {
+  const list = document.getElementById("user-list");
+  list.innerHTML = '<p style="font-size:13px;color:var(--text-hint)">Carregando...</p>';
+  let result;
+  try {
+    result = await callEdge({ action: "list" });
+  } catch(e) {
+    list.innerHTML = `<p style="font-size:13px;color:#f07a7a">Erro: ${e.message}</p>`;
+    return;
+  }
+  if (result.error) { list.innerHTML = `<p style="font-size:13px;color:#f07a7a">${result.error}</p>`; return; }
+  if (!result.users || !Array.isArray(result.users)) {
+    list.innerHTML = `<p style="font-size:13px;color:#f07a7a">Resposta inesperada: ${JSON.stringify(result)}</p>`;
+    return;
+  }
+
+  const { data: { user: me } } = await sb.auth.getUser();
+  list.innerHTML = result.users.map(u => {
+    const initials = u.email.slice(0,2).toUpperCase();
+    const lastLogin = u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString("pt-BR") : "Nunca";
+    const isMe = u.id === me.id;
+    return `<div class="user-row">
+      <div class="user-avatar">${initials}</div>
+      <div class="user-info">
+        <div class="user-email">${u.email}${isMe ? ' <span style="font-size:11px;color:var(--text-hint)">(você)</span>' : ""}</div>
+        <div class="user-meta">Último acesso: ${lastLogin}</div>
+      </div>
+      <select class="role-select" onchange="updateRole('${u.id}', this.value)">
+        <option value="admin"${u.role==="admin"?" selected":""}>Admin</option>
+        <option value="member"${u.role!=="admin"?" selected":""}>Membro</option>
+      </select>
+      ${!isMe ? `<div class="user-del" onclick="deleteUser('${u.id}')" title="Remover">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,4 13,4"/><path d="M5 4V3h6v1M6 7v5M10 7v5"/><rect x="3" y="4" width="10" height="9" rx="1"/></svg>
+      </div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+async function createUser() {
+  const email = document.getElementById("new-email").value.trim();
+  const pass  = document.getElementById("new-pass").value;
+  const role  = document.getElementById("new-role").value;
+  const msg   = document.getElementById("admin-msg");
+  const btn   = document.querySelector("#admin-panel .btn-confirm");
+  msg.className = "admin-msg";
+
+  if (!email || !pass) { msg.textContent = "Preencha email e senha."; msg.className = "admin-msg err"; return; }
+  if (pass.length < 6)  { msg.textContent = "Senha deve ter ao menos 6 caracteres."; msg.className = "admin-msg err"; return; }
+
+  btn.textContent = "Criando..."; btn.disabled = true;
+
+  try {
+    const result = await callEdge({ action: "create", email, password: pass, role });
+    if (result.error) {
+      msg.textContent = "Erro: " + result.error;
+      msg.className = "admin-msg err";
+    } else {
+      msg.textContent = "Usuário criado com sucesso!";
+      msg.className = "admin-msg ok";
+      document.getElementById("new-email").value = "";
+      document.getElementById("new-pass").value = "";
+      await loadUsers();
+    }
+  } catch(e) {
+    msg.textContent = "Erro de conexão: " + e.message;
+    msg.className = "admin-msg err";
+  }
+
+  btn.textContent = "Criar usuário"; btn.disabled = false;
+}
+
+async function updateRole(userId, role) {
+  const { error } = await callEdge({ action: "update_role", userId, role });
+  if (error) alert("Erro ao atualizar papel: " + error);
+  else await loadUsers();
+}
+
+async function deleteUser(userId) {
+  if (!confirm("Remover este usuário? Esta ação não pode ser desfeita.")) return;
+  const { error } = await callEdge({ action: "delete", userId });
+  if (error) alert("Erro ao remover: " + error);
+  else await loadUsers();
+}
+
 
 sb.auth.getSession().then(({ data }) => {
   if (data.session) showSelector(data.session.user);

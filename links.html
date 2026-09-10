@@ -794,10 +794,6 @@
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M2.5 11v2h11v-2"/></svg>
       Arquivar em lote
     </button>
-    <button id="admin-btn" class="admin-btn" onclick="openAdminPanel()" title="Painel Admin">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="5" r="2.5"/><path d="M2 13c0-3 2.5-5 6-5s6 2 6 5"/></svg>
-      Usuários
-    </button>
     <button onclick="goToSelector()" style="background:transparent;border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:13px;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="10,3 5,8 10,13"/></svg>
       Voltar
@@ -805,41 +801,6 @@
     <button onclick="doLogout()" style="background:transparent;border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:13px;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;">Sair</button>
   </div>
 </header>
-
-<div id="admin-panel" onclick="closeAdminPanel(event)">
-  <div class="admin-drawer">
-    <div class="admin-header">
-      <h2>Painel Admin</h2>
-      <div class="admin-close" onclick="closeAdminPanel(null,true)">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
-      </div>
-    </div>
-
-    <div>
-      <p class="admin-section-title">Usuários cadastrados</p>
-      <div id="user-list"><p style="font-size:13px;color:var(--text-hint)">Carregando...</p></div>
-    </div>
-
-    <div>
-      <p class="admin-section-title">Adicionar novo usuário</p>
-      <div class="admin-form">
-        <label>Email</label>
-        <input type="email" id="new-email" placeholder="email@exemplo.com" />
-        <label>Senha</label>
-        <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres" />
-        <label>Papel</label>
-        <select id="new-role">
-          <option value="member">Membro (só visualiza)</option>
-          <option value="admin">Admin (acesso total)</option>
-        </select>
-        <div style="margin-top:12px;">
-          <button class="btn-confirm" style="width:100%" onclick="createUser()">Criar usuário</button>
-        </div>
-        <div class="admin-msg" id="admin-msg"></div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <div class="main">
   <aside class="sidebar">
@@ -969,104 +930,6 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 window._sb = sb;
 
-// ── ADMIN PANEL ────────────────────────────────────────
-async function openAdminPanel() {
-  document.getElementById("admin-panel").classList.add("open");
-  // Refresh session antes de carregar
-  await sb.auth.refreshSession();
-  await loadUsers();
-}
-
-function closeAdminPanel(e, force) {
-  if (force || (e && e.target === document.getElementById("admin-panel"))) {
-    document.getElementById("admin-panel").classList.remove("open");
-  }
-}
-
-async function loadUsers() {
-  const list = document.getElementById("user-list");
-  list.innerHTML = '<p style="font-size:13px;color:var(--text-hint)">Carregando...</p>';
-  let result;
-  try {
-    result = await callEdge({ action: "list" });
-  } catch(e) {
-    list.innerHTML = `<p style="font-size:13px;color:#f07a7a">Erro: ${e.message}</p>`;
-    return;
-  }
-  if (result.error) { list.innerHTML = `<p style="font-size:13px;color:#f07a7a">${result.error}</p>`; return; }
-  if (!result.users || !Array.isArray(result.users)) {
-    list.innerHTML = `<p style="font-size:13px;color:#f07a7a">Resposta inesperada: ${JSON.stringify(result)}</p>`;
-    return;
-  }
-
-  const { data: { user: me } } = await sb.auth.getUser();
-  list.innerHTML = result.users.map(u => {
-    const initials = u.email.slice(0,2).toUpperCase();
-    const lastLogin = u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString("pt-BR") : "Nunca";
-    const isMe = u.id === me.id;
-    return `<div class="user-row">
-      <div class="user-avatar">${initials}</div>
-      <div class="user-info">
-        <div class="user-email">${u.email}${isMe ? ' <span style="font-size:11px;color:var(--text-hint)">(você)</span>' : ""}</div>
-        <div class="user-meta">Último acesso: ${lastLogin}</div>
-      </div>
-      <select class="role-select" onchange="updateRole('${u.id}', this.value)">
-        <option value="admin"${u.role==="admin"?" selected":""}>Admin</option>
-        <option value="member"${u.role!=="admin"?" selected":""}>Membro</option>
-      </select>
-      ${!isMe ? `<div class="user-del" onclick="deleteUser('${u.id}')" title="Remover">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,4 13,4"/><path d="M5 4V3h6v1M6 7v5M10 7v5"/><rect x="3" y="4" width="10" height="9" rx="1"/></svg>
-      </div>` : ""}
-    </div>`;
-  }).join("");
-}
-
-async function createUser() {
-  const email = document.getElementById("new-email").value.trim();
-  const pass  = document.getElementById("new-pass").value;
-  const role  = document.getElementById("new-role").value;
-  const msg   = document.getElementById("admin-msg");
-  const btn   = document.querySelector("#admin-panel .btn-confirm");
-  msg.className = "admin-msg";
-
-  if (!email || !pass) { msg.textContent = "Preencha email e senha."; msg.className = "admin-msg err"; return; }
-  if (pass.length < 6)  { msg.textContent = "Senha deve ter ao menos 6 caracteres."; msg.className = "admin-msg err"; return; }
-
-  btn.textContent = "Criando..."; btn.disabled = true;
-
-  try {
-    const result = await callEdge({ action: "create", email, password: pass, role });
-    if (result.error) {
-      msg.textContent = "Erro: " + result.error;
-      msg.className = "admin-msg err";
-    } else {
-      msg.textContent = "Usuário criado com sucesso!";
-      msg.className = "admin-msg ok";
-      document.getElementById("new-email").value = "";
-      document.getElementById("new-pass").value = "";
-      await loadUsers();
-    }
-  } catch(e) {
-    msg.textContent = "Erro de conexão: " + e.message;
-    msg.className = "admin-msg err";
-  }
-
-  btn.textContent = "Criar usuário"; btn.disabled = false;
-}
-
-async function updateRole(userId, role) {
-  const { error } = await callEdge({ action: "update_role", userId, role });
-  if (error) alert("Erro ao atualizar papel: " + error);
-  else await loadUsers();
-}
-
-async function deleteUser(userId) {
-  if (!confirm("Remover este usuário? Esta ação não pode ser desfeita.")) return;
-  const { error } = await callEdge({ action: "delete", userId });
-  if (error) alert("Erro ao remover: " + error);
-  else await loadUsers();
-}
-
 // ── LOGIN ──────────────────────────────────────────────
 async function doLogin() {
   const email = document.getElementById("login-user").value.trim();
@@ -1095,71 +958,36 @@ async function doLogout() {
 }
 
 let isAdmin = false;
-const EDGE_URL = "https://iabugpuqlcfftwabuxsj.supabase.co/functions/v1/manage-users";
-
-async function callEdge(body) {
-  const { data: { session }, error: sessionError } = await sb.auth.getSession();
-  if (sessionError || !session) {
-    await doLogout();
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-  // Refresh token se estiver perto de expirar
-  const { data: refreshed } = await sb.auth.refreshSession();
-  const token = refreshed?.session?.access_token || session.access_token;
-
-  const res = await fetch(EDGE_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify(body)
-  });
-  const text = await res.text();
-  if (!text) throw new Error("Resposta vazia da função (status " + res.status + ")");
-  try {
-    return JSON.parse(text);
-  } catch(e) {
-    throw new Error("Resposta inválida: " + text.slice(0, 100));
-  }
-}
-
-function openApp(app) {
-  showApp();
-}
-
-function openGroupModal() {
-  document.getElementById("group-name-input").value = "";
-  document.getElementById("group-modal-overlay").classList.add("open");
-  setTimeout(() => document.getElementById("group-name-input").focus(), 50);
-}
-
-function closeGroupModal(e) {
-  if (!e || e.target === document.getElementById("group-modal-overlay"))
-    document.getElementById("group-modal-overlay").classList.remove("open");
-}
-
-async function confirmCreateGroup() {
-  const name = document.getElementById("group-name-input").value.trim();
-  if (!name) return;
-  if (groupOrder.includes(name)) {
-    alert("Já existe um grupo com esse nome.");
-    return;
-  }
-  groupOrder.push(name);
-  collapsedGroups.add(name);
-  await saveGroupOrder();
-  document.getElementById("group-modal-overlay").classList.remove("open");
-  render();
-}
-
+// ── Volta para o seletor de ferramentas ──
 function goToSelector() {
   window.location.href = "index.html";
 }
 
+// ── Criação de grupo ──────────────────────────────────
+function openGroupModal() {
+  document.getElementById("group-name-input").value = "";
+  document.getElementById("group-modal-overlay").classList.add("open");
+  document.getElementById("group-name-input").focus();
+}
+
+function closeGroupModal(e, forcar) {
+  if (forcar || !e || e.target === document.getElementById("group-modal-overlay"))
+    document.getElementById("group-modal-overlay").classList.remove("open");
+}
+
+async function confirmCreateGroup() {
+  const nome = document.getElementById("group-name-input").value.trim();
+  if (!nome) return;
+  if (groupOrder.includes(nome)) { alert("Já existe um grupo com esse nome."); return; }
+  groupOrder.push(nome);
+  collapsedGroups.add(nome);
+  await saveGroupOrder();
+  closeGroupModal(null, true);
+  render();
+}
+
 function showApp() {
   if (isAdmin) {
-    document.getElementById("admin-btn").classList.add("visible");
     const ngb = document.getElementById("new-group-btn");
     if (ngb) ngb.style.display = "flex";
   }
