@@ -224,7 +224,7 @@
   }
   .nav-item:hover { background: var(--surface); color: var(--text); }
   .nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
-  .nav-count {
+  .nav-count { flex-shrink: 0;
     font-size: 11px;
     background: var(--surface2);
     color: var(--text-hint);
@@ -743,6 +743,24 @@
   input[type="search"][readonly] { cursor: text; opacity: 1; }
 
   .grupo-vazio { font-size: 13px; color: var(--text-hint); padding: 10px 2px 4px; margin: 0; }
+
+  /* ── menu lateral: arrastar e remover ── */
+  .nav-item { position: relative; }
+  .nav-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .nav-drag { display: flex; align-items: center; flex-shrink: 0; cursor: grab;
+    color: var(--text-hint); opacity: 0; transition: opacity .15s; margin-left: -4px; }
+  .nav-drag svg { width: 11px; height: 11px; }
+  .nav-item:hover .nav-drag { opacity: 1; }
+  .nav-item.arrastando { opacity: .4; }
+  .nav-item.alvo { box-shadow: inset 0 2px 0 #CDA04C; }
+
+  .nav-del { flex-shrink: 0; width: 17px; height: 17px; padding: 0; border: none;
+    background: transparent; color: var(--text-hint); cursor: pointer; border-radius: 4px;
+    display: none; align-items: center; justify-content: center; transition: all .12s; }
+  .nav-del svg { width: 10px; height: 10px; }
+  .nav-item:hover .nav-del { display: flex; }
+  .nav-del:hover { background: rgba(224,90,90,.15); color: #e05a5a; }
 </style>
 </head>
 <body>
@@ -1665,13 +1683,116 @@ function renderNav(filtered) {
   filtered.forEach(l => { counts[l.grupo] = (counts[l.grupo]||0)+1; });
   const total = filtered.length;
   const nav = document.getElementById("nav");
-  nav.innerHTML = ["Todos",...groupOrder].map(g => {
+
+  nav.innerHTML = ["Todos", ...groupOrder].map(g => {
     const n = g==="Todos" ? total : (counts[g]||0);
     // Grupo sem links continua na lista — foi criado de propósito.
     // Só some enquanto há busca ativa, para não poluir o resultado.
     if (g!=="Todos" && n===0 && q) return "";
-    return `<li class="nav-item${activeGrupo===g?" active":""}" onclick="setGrupo('${g.replace(/'/g,"&#39;")}')">${g}<span class="nav-count">${n}</span></li>`;
+
+    const gEsc = g.replace(/'/g,"&#39;");
+    if (g === "Todos") {
+      return `<li class="nav-item${activeGrupo===g?" active":""}" onclick="setGrupo('${gEsc}')">
+        <span class="nav-nome">${g}</span><span class="nav-count">${n}</span></li>`;
+    }
+
+    const arrasta = isAdmin ? `draggable="true"
+      ondragstart="navDragStart(event,'${gEsc}')"
+      ondragover="navDragOver(event,'${gEsc}')"
+      ondrop="navDrop(event,'${gEsc}')"
+      ondragend="navDragEnd()"` : "";
+
+    const remover = isAdmin ? `
+      <button class="nav-del" title="Remover grupo"
+        onclick="event.stopPropagation();removerGrupo('${gEsc}')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3.5" y1="3.5" x2="10.5" y2="10.5"/><line x1="10.5" y1="3.5" x2="3.5" y2="10.5"/>
+        </svg>
+      </button>` : "";
+
+    return `<li class="nav-item${activeGrupo===g?" active":""}" data-grupo="${gEsc}" ${arrasta}
+      onclick="setGrupo('${gEsc}')">
+      ${isAdmin ? '<span class="nav-drag"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="6" cy="12" r="1"/><circle cx="10" cy="4" r="1"/><circle cx="10" cy="8" r="1"/><circle cx="10" cy="12" r="1"/></svg></span>' : ""}
+      <span class="nav-nome">${g}</span>
+      <span class="nav-count">${n}</span>
+      ${remover}
+    </li>`;
   }).join("");
+}
+
+// ── Remoção de grupo ──────────────────────────────────
+async function removerGrupo(grupo) {
+  const dentro = links.filter(l => l.grupo === grupo);
+
+  if (dentro.length) {
+    const destinos = groupOrder.filter(g => g !== grupo);
+    if (!destinos.length) {
+      alert(`"${grupo}" tem ${dentro.length} link(s) e não há outro grupo para movê-los.`);
+      return;
+    }
+    const escolha = prompt(
+      `"${grupo}" tem ${dentro.length} link(s).\n\n` +
+      `Para qual grupo mover?\n\n${destinos.map((g,i)=>`${i+1} — ${g}`).join("\n")}\n\n` +
+      `Digite o número (ou cancele para não remover):`);
+    if (!escolha) return;
+
+    const idx = parseInt(escolha, 10) - 1;
+    const destino = destinos[idx];
+    if (!destino) { alert("Número inválido."); return; }
+
+    mostrarProgresso(`Movendo ${dentro.length} link(s) para ${destino}...`);
+    const { error } = await sb.from("links").update({ grupo: destino }).eq("grupo", grupo);
+    esconderProgresso();
+    if (error) { alert("Erro ao mover os links: " + error.message); return; }
+    dentro.forEach(l => l.grupo = destino);
+  } else {
+    if (!confirm(`Remover o grupo "${grupo}"?`)) return;
+  }
+
+  await sb.from("grupo_order").delete().eq("grupo", grupo);
+  groupOrder = groupOrder.filter(g => g !== grupo);
+  collapsedGroups.delete(grupo);
+  if (activeGrupo === grupo) activeGrupo = "Todos";
+  await saveGroupOrder();
+  render();
+}
+
+// ── Reordenar pelo menu lateral ───────────────────────
+let navArrastando = null;
+
+function navDragStart(e, grupo) {
+  navArrastando = grupo;
+  e.dataTransfer.effectAllowed = "move";
+  e.currentTarget.classList.add("arrastando");
+}
+
+function navDragOver(e, grupo) {
+  e.preventDefault();
+  if (!navArrastando || navArrastando === grupo) return;
+  document.querySelectorAll(".nav-item.alvo").forEach(el => el.classList.remove("alvo"));
+  e.currentTarget.classList.add("alvo");
+}
+
+async function navDrop(e, grupo) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (!navArrastando || navArrastando === grupo) return;
+  const de = groupOrder.indexOf(navArrastando);
+  const para = groupOrder.indexOf(grupo);
+  if (de === -1 || para === -1) return;
+  groupOrder.splice(de, 1);
+  groupOrder.splice(para, 0, navArrastando);
+  navArrastando = null;
+  document.querySelectorAll(".nav-item.alvo, .nav-item.arrastando")
+    .forEach(el => el.classList.remove("alvo","arrastando"));
+  await saveGroupOrder();
+  render();
+}
+
+function navDragEnd() {
+  navArrastando = null;
+  document.querySelectorAll(".nav-item.alvo, .nav-item.arrastando")
+    .forEach(el => el.classList.remove("alvo","arrastando"));
 }
 
 function setGrupo(g) {
