@@ -911,7 +911,7 @@
     <select id="modal-grupo"></select>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="btn-confirm" onclick="confirmAdd()">Adicionar</button>
+      <button class="btn-confirm" id="modal-ok" onclick="confirmAdd()">Adicionar</button>
     </div>
   </div>
 </div>
@@ -1583,10 +1583,36 @@ async function confirmAdd() {
   if (!label || !url) { alert("Preencha nome e URL."); return; }
 
   // A URL é única na tabela. Excluir um link só o marca como apagado,
-  // então a linha continua lá e bloqueia um cadastro novo com a mesma URL.
+  // então a linha continua lá e pode bloquear um cadastro com a mesma URL.
   const { data: existente } = await sb.from("links")
     .select("id, label, grupo, deleted").eq("url", url).maybeSingle();
 
+  // ── Edição ──
+  if (editandoId) {
+    if (existente && existente.id !== editandoId && !existente.deleted) {
+      alert(`Esta URL já pertence a "${existente.label}", no grupo ${existente.grupo}.`);
+      return;
+    }
+    // Se a URL nova está presa a um link apagado, libera a linha antes
+    if (existente && existente.id !== editandoId && existente.deleted) {
+      await sb.from("links").delete().eq("id", existente.id);
+    }
+
+    const { error } = await sb.from("links")
+      .update({ label, url, grupo, tipo }).eq("id", editandoId);
+    if (error) { alert("Erro ao salvar: " + error.message); return; }
+
+    const l = links.find(x => x.id === editandoId);
+    if (l) Object.assign(l, { label, url, grupo, tipo });
+
+    if (!groupOrder.includes(grupo)) { groupOrder.push(grupo); await saveGroupOrder(); }
+    editandoId = null;
+    document.getElementById("modal-overlay").classList.remove("open");
+    render();
+    return;
+  }
+
+  // ── Cadastro novo ──
   if (existente && !existente.deleted) {
     alert(`Esta URL já está cadastrada como "${existente.label}", no grupo ${existente.grupo}.`);
     return;
@@ -1594,7 +1620,6 @@ async function confirmAdd() {
 
   let registro;
   if (existente) {
-    // Reaproveita a linha apagada em vez de criar outra
     const { data, error } = await sb.from("links")
       .update({ label, grupo, tipo, deleted: false })
       .eq("id", existente.id).select().single();
@@ -1611,10 +1636,7 @@ async function confirmAdd() {
                arquivo_path: registro.arquivo_path, arquivo_tam: registro.arquivo_tam,
                arquivado_em: registro.arquivado_em, pagina_ativa: registro.pagina_ativa !== false });
 
-  if (!groupOrder.includes(grupo)) {
-    groupOrder.push(grupo);
-    await saveGroupOrder();
-  }
+  if (!groupOrder.includes(grupo)) { groupOrder.push(grupo); await saveGroupOrder(); }
   document.getElementById("modal-overlay").classList.remove("open");
   render();
 }
@@ -1637,18 +1659,41 @@ function showLoading(on) {
   }
 }
 
+let editandoId = null;   // null = cadastro novo
+
 function openAddModal(grupo) {
+  editandoId = null;
   const sel = document.getElementById("modal-grupo");
   sel.innerHTML = groupOrder.map(g => `<option value="${g}"${g===grupo?" selected":""}>${g}</option>`).join("");
+  document.getElementById("modal-title").textContent = "Adicionar link";
+  document.getElementById("modal-ok").textContent = "Adicionar";
   document.getElementById("modal-label").value = "";
   document.getElementById("modal-url").value = "";
   document.getElementById("modal-tipo").value = "cap";
   document.getElementById("modal-overlay").classList.add("open");
+  document.getElementById("modal-label").focus();
+}
+
+function openEditModal(id) {
+  const l = links.find(x => x.id === id);
+  if (!l) return;
+  editandoId = id;
+  const sel = document.getElementById("modal-grupo");
+  sel.innerHTML = groupOrder.map(g => `<option value="${g}"${g===l.grupo?" selected":""}>${g}</option>`).join("");
+  document.getElementById("modal-title").textContent = "Editar link";
+  document.getElementById("modal-ok").textContent = "Salvar";
+  document.getElementById("modal-label").value = l.label;
+  document.getElementById("modal-url").value = l.url;
+  document.getElementById("modal-tipo").value = l.tipo || "outro";
+  document.getElementById("modal-overlay").classList.add("open");
+  document.getElementById("modal-label").focus();
 }
 
 function closeModal(e) {
-  if (!e || e.target === document.getElementById("modal-overlay"))
+  if (!e || e.target === document.getElementById("modal-overlay")) {
     document.getElementById("modal-overlay").classList.remove("open");
+    editandoId = null;
+  }
 }
 
 function toggleDropdown(e, id) {
@@ -1859,20 +1904,14 @@ function render() {
     const cards = items.map((l, i) => {
       const t = tipoInfo[l.tipo] || tipoInfo.outro;
       const slug = l.url.replace("https://kaleizurosa.com","") || "/";
-      const ddId = "dd-" + grupo.replace(/\s+/g,"_") + "-" + i;
-      const opts = Object.entries(tipoInfo).map(([k,v]) =>
-        `<div class="type-opt${l.tipo===k?" active":""}" onclick="setType('${l.id}','${l.url}','${k}')">
-          <span class="badge ${v.cls}" style="pointer-events:none">${v.label}</span>
-        </div>`).join("");
       const delBtn = isAdmin ? `
         <div class="del-btn" onclick="deleteLink('${l.id}','${l.url}')" title="Excluir">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,4 13,4"/><path d="M5 4V3h6v1M6 7v5M10 7v5"/><rect x="3" y="4" width="10" height="9" rx="1"/></svg>
         </div>` : "";
       const editBtn = isAdmin ? `
-        <div class="edit-btn" onclick="toggleDropdown(event,'${ddId}')" title="Alterar tipo">
+        <div class="edit-btn" onclick="event.preventDefault();event.stopPropagation();openEditModal('${l.id}')" title="Editar nome, URL, tipo e grupo">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 2l3 3-8 8H3v-3L11 2z"/></svg>
-        </div>
-        <div class="type-dropdown" id="${ddId}">${opts}</div>` : "";
+        </div>` : "";
 
       const temArquivo = !!l.arquivo_path;
       const desativada = l.pagina_ativa === false;
