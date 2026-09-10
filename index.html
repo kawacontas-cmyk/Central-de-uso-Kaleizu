@@ -182,6 +182,12 @@
     background:var(--gold); border:1px solid var(--gold); color:#060B1F; font-weight:600;
     font-family:'DM Sans',sans-serif; }
   .btn-confirm:hover { background:#e0b45a; }
+  .user-key { width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
+    background: transparent; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--hint); transition: background .12s, border-color .12s, color .12s; }
+  .user-key:hover { background: rgba(205,160,76,.12); border-color: var(--gold); color: var(--gold); }
+  .user-key svg { width: 13px; height: 13px; }
 </style>
 </head>
 <body>
@@ -280,7 +286,7 @@
   <div class="selector-footer">
     <span id="selector-email"></span>
     <span>·</span>
-    <button id="admin-btn" class="admin-link" onclick="openAdminPanel()">Gerenciar usuários</button>
+    <button id="admin-btn" class="admin-link" style="display:none" onclick="openAdminPanel()">Gerenciar usuários</button>
     <span id="admin-sep" style="display:none">·</span>
     <button onclick="doLogout()">Sair</button>
   </div>
@@ -396,6 +402,7 @@ async function callEdge(body) {
 
 // ── ADMIN PANEL ────────────────────────────────────────
 async function openAdminPanel() {
+  if (!isAdmin) return;   // membro não abre o painel nem pelo console
   document.getElementById("admin-panel").classList.add("open");
   // Refresh session antes de carregar
   await sb.auth.refreshSession();
@@ -439,6 +446,9 @@ async function loadUsers() {
         <option value="admin"${u.role==="admin"?" selected":""}>Admin</option>
         <option value="member"${u.role!=="admin"?" selected":""}>Membro</option>
       </select>
+      <div class="user-key" onclick="resetSenha('${u.id}','${u.email}')" title="Redefinir a senha">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="8" r="2.5"/><path d="M7.5 8H14M11.5 8v2.2M13.5 8v1.6"/></svg>
+      </div>
       ${!isMe ? `<div class="user-del" onclick="deleteUser('${u.id}')" title="Remover">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,4 13,4"/><path d="M5 4V3h6v1M6 7v5M10 7v5"/><rect x="3" y="4" width="10" height="9" rx="1"/></svg>
       </div>` : ""}
@@ -483,6 +493,16 @@ async function updateRole(userId, role) {
   const { error } = await callEdge({ action: "update_role", userId, role });
   if (error) alert("Erro ao atualizar papel: " + error);
   else await loadUsers();
+}
+
+async function resetSenha(userId, email) {
+  const nova = prompt(`Nova senha para ${email}:\n\nMínimo de 6 caracteres.`);
+  if (nova === null) return;
+  if (nova.trim().length < 6) { alert("A senha precisa ter ao menos 6 caracteres."); return; }
+
+  const { error } = await callEdge({ action: "reset_password", userId, password: nova.trim() });
+  if (error) { alert("Erro ao redefinir: " + error); return; }
+  alert(`Senha de ${email} redefinida.\n\nAvise a pessoa da senha nova — ela não recebe e-mail.`);
 }
 
 async function deleteUser(userId) {
