@@ -403,6 +403,9 @@
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 3l10 10M13 3L3 13' stroke='black' stroke-width='2'/%3E%3C/svg%3E") center/contain no-repeat;
   }
   input[type="search"]::-webkit-search-cancel-button:hover { opacity: .9; }
+
+  /* campo de busca nasce readonly para escapar do autofill — não deve parecer desabilitado */
+  input[type="search"][readonly] { cursor: text; opacity: 1; }
 </style>
 </head>
 <body>
@@ -483,7 +486,7 @@
       </div>
 
       <div class="filters-bar">
-        <input type="search" id="f-busca" name="busca-alunos" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" data-1p-ignore placeholder="Buscar por nome, e-mail, CPF, celular ou matrícula">
+        <input type="search" id="f-busca" name="busca-alunos" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" data-1p-ignore placeholder="Buscar por nome, e-mail, CPF, celular ou matrícula" readonly onfocus="this.removeAttribute('readonly')">
         <select id="f-curso"><option value="">Todos os cursos</option><option>Pós Cardio</option><option>Pós Clínica</option></select>
         <select id="f-turma"><option value="">Todas as turmas</option></select>
         <select id="f-lancamento"><option value="">Todos os lançamentos</option></select>
@@ -564,7 +567,7 @@
       </div>
 
       <div class="filters-bar">
-        <input type="search" id="f-busca-fin" name="busca-financeiro" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" data-1p-ignore placeholder="Buscar por nome">
+        <input type="search" id="f-busca-fin" name="busca-financeiro" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" data-1p-ignore placeholder="Buscar por nome" readonly onfocus="this.removeAttribute('readonly')">
         <select id="f-curso-fin"><option value="">Todos os cursos</option><option>Pós Cardio</option><option>Pós Clínica</option></select>
         <select id="f-turma-fin"><option value="">Todas as turmas</option></select>
         <select id="f-lancamento-fin"><option value="">Todos os lançamentos</option></select>
