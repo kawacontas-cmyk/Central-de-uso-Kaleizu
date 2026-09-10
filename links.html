@@ -741,6 +741,8 @@
 
   /* campo de busca nasce readonly para escapar do autofill — não deve parecer desabilitado */
   input[type="search"][readonly] { cursor: text; opacity: 1; }
+
+  .grupo-vazio { font-size: 13px; color: var(--text-hint); padding: 10px 2px 4px; margin: 0; }
 </style>
 </head>
 <body>
@@ -1252,7 +1254,9 @@ async function loadData() {
 
   const allG = [...new Set(links.map(l => l.grupo))];
   if (dbOrder && dbOrder.length > 0) {
-    const ordered = dbOrder.map(r => r.grupo).filter(g => allG.includes(g));
+    // Mantém a ordem salva por inteiro: um grupo criado sem links
+    // ainda não aparece em nenhum link, mas deve continuar existindo.
+    const ordered = dbOrder.map(r => r.grupo);
     const missing = allG.filter(g => !ordered.includes(g));
     groupOrder = [...ordered, ...missing];
   } else {
@@ -1656,13 +1660,16 @@ function onDragEnd() {
 
 // ── NAV ────────────────────────────────────────────────
 function renderNav(filtered) {
+  const q = (document.getElementById("search")?.value || "").trim();
   const counts = {};
   filtered.forEach(l => { counts[l.grupo] = (counts[l.grupo]||0)+1; });
   const total = filtered.length;
   const nav = document.getElementById("nav");
   nav.innerHTML = ["Todos",...groupOrder].map(g => {
     const n = g==="Todos" ? total : (counts[g]||0);
-    if (g!=="Todos" && n===0) return "";
+    // Grupo sem links continua na lista — foi criado de propósito.
+    // Só some enquanto há busca ativa, para não poluir o resultado.
+    if (g!=="Todos" && n===0 && q) return "";
     return `<li class="nav-item${activeGrupo===g?" active":""}" onclick="setGrupo('${g.replace(/'/g,"&#39;")}')">${g}<span class="nav-count">${n}</span></li>`;
   }).join("");
 }
@@ -1685,10 +1692,17 @@ function render() {
 
   const byGroupMap = {};
   filtered.forEach(l => { if (!byGroupMap[l.grupo]) byGroupMap[l.grupo]=[]; byGroupMap[l.grupo].push(l); });
-  const byGroup = groupOrder.filter(g => byGroupMap[g]).map(g => [g, byGroupMap[g]]);
+
+  // Grupos recém-criados ainda não têm links. Sem busca ativa eles
+  // aparecem vazios, para dar onde clicar em "Adicionar link".
+  const byGroup = groupOrder
+    .filter(g => byGroupMap[g] || (!q && (activeGrupo === "Todos" || activeGrupo === g)))
+    .map(g => [g, byGroupMap[g] || []]);
 
   const content = document.getElementById("content");
-  if (!filtered.length) { content.innerHTML = '<p class="empty">Nenhum link encontrado.</p>'; return; }
+  if (!filtered.length && !byGroup.length) {
+    content.innerHTML = '<p class="empty">Nenhum link encontrado.</p>'; return;
+  }
 
   content.innerHTML = byGroup.map(([grupo, items]) => {
     const id = "sec-" + grupo.replace(/\s+/g,"_");
@@ -1772,7 +1786,8 @@ function render() {
         <span class="section-total">${items.length}</span>
       </div>
       <div class="grid-wrap">
-        <div class="grid">${cards}</div>
+        ${items.length ? `<div class="grid">${cards}</div>`
+          : `<p class="grupo-vazio">Nenhum link neste grupo ainda.</p>`}
         ${isAdmin ? `<div class="add-btn" onclick="openAddModal('${gEsc}')">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
           Adicionar link
