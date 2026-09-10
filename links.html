@@ -1581,9 +1581,36 @@ async function confirmAdd() {
   const tipo  = document.getElementById("modal-tipo").value;
   const grupo = document.getElementById("modal-grupo").value;
   if (!label || !url) { alert("Preencha nome e URL."); return; }
-  const { data, error } = await sb.from("links").insert([{ label, url, grupo, tipo, deleted: false }]).select().single();
-  if (error) { alert("Erro ao salvar: " + error.message); return; }
-  links.push({ id: data.id, label, url, grupo, tipo });
+
+  // A URL é única na tabela. Excluir um link só o marca como apagado,
+  // então a linha continua lá e bloqueia um cadastro novo com a mesma URL.
+  const { data: existente } = await sb.from("links")
+    .select("id, label, grupo, deleted").eq("url", url).maybeSingle();
+
+  if (existente && !existente.deleted) {
+    alert(`Esta URL já está cadastrada como "${existente.label}", no grupo ${existente.grupo}.`);
+    return;
+  }
+
+  let registro;
+  if (existente) {
+    // Reaproveita a linha apagada em vez de criar outra
+    const { data, error } = await sb.from("links")
+      .update({ label, grupo, tipo, deleted: false })
+      .eq("id", existente.id).select().single();
+    if (error) { alert("Erro ao salvar: " + error.message); return; }
+    registro = data;
+  } else {
+    const { data, error } = await sb.from("links")
+      .insert([{ label, url, grupo, tipo, deleted: false }]).select().single();
+    if (error) { alert("Erro ao salvar: " + error.message); return; }
+    registro = data;
+  }
+
+  links.push({ id: registro.id, label, url, grupo, tipo,
+               arquivo_path: registro.arquivo_path, arquivo_tam: registro.arquivo_tam,
+               arquivado_em: registro.arquivado_em, pagina_ativa: registro.pagina_ativa !== false });
+
   if (!groupOrder.includes(grupo)) {
     groupOrder.push(grupo);
     await saveGroupOrder();
