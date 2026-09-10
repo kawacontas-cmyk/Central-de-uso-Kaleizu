@@ -389,6 +389,30 @@
     padding:11px 20px; font-size:13px; color:var(--text); z-index:300;
     opacity:0; pointer-events:none; transition:all .2s; }
   .prog-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ── arquivamento em lote ── */
+  .lote-ajuda { font-size:12px; color:var(--text-muted); line-height:1.6; margin-bottom:14px; }
+  .lote-ajuda code { font-family:'DM Mono',monospace; font-size:11px; color:#CDA04C; }
+  .lote-drop { display:flex; flex-direction:column; align-items:center; gap:8px;
+    padding:22px; border:2px dashed var(--border-hover); border-radius:10px;
+    cursor:pointer; color:var(--text-muted); font-size:13px; transition:all .15s; }
+  .lote-drop:hover { border-color:#CDA04C; color:#CDA04C; background:rgba(205,160,76,.05); }
+  .lote-drop svg { width:30px; height:30px; }
+  .lote-lista { margin-top:14px; max-height:280px; overflow-y:auto; }
+  .lote-vazio { font-size:12px; color:var(--text-hint); text-align:center; padding:16px 0; }
+  .lote-resumo { font-size:12px; color:var(--text); padding:9px 11px; background:var(--surface2);
+    border-radius:7px; margin-bottom:9px; }
+  .lote-resumo strong { color:#5fcd8a; }
+  .lote-alerta { color:#e8c97a; margin-left:6px; }
+  .lote-item { display:grid; grid-template-columns:1fr 1fr auto auto; gap:9px; align-items:center;
+    padding:6px 9px; border-bottom:1px solid var(--border); font-size:11px; }
+  .lote-item.erro { opacity:.5; }
+  .lote-nome { color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lote-alvo { color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lote-tam { color:var(--text-hint); font-family:'DM Mono',monospace; white-space:nowrap; }
+  .lote-st { font-family:'DM Mono',monospace; color:var(--text-hint); white-space:nowrap; min-width:62px; text-align:right; }
+  .lote-st.ok { color:#5fcd8a; }
+  .lote-st.erro { color:#e05a5a; }
   .card-wrap:hover .edit-btn { opacity: 1; }
   .card-wrap:hover .del-btn  { opacity: 1; }
 
@@ -726,6 +750,10 @@
       <input type="text" id="search" placeholder="Buscar link..." oninput="render()" />
     </div>
     <span class="count-badge" id="count"></span>
+    <button id="lote-btn" class="admin-btn" onclick="abrirLoteModal()" title="Arquivar várias páginas de uma vez">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M2.5 11v2h11v-2"/></svg>
+      Arquivar em lote
+    </button>
     <button id="admin-btn" class="admin-btn" onclick="openAdminPanel()" title="Painel Admin">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="5" r="2.5"/><path d="M2 13c0-3 2.5-5 6-5s6 2 6 5"/></svg>
       Usuários
@@ -804,6 +832,31 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeGroupModal()">Cancelar</button>
       <button class="btn-confirm" onclick="confirmCreateGroup()">Criar grupo</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="lote-overlay" onclick="fecharLoteModal(event)">
+  <div class="modal" style="max-width:620px">
+    <h3>Arquivar em lote</h3>
+    <p class="lote-ajuda">
+      Escolha vários arquivos <code>.html</code> salvos pelo SingleFile. O app lê a URL
+      gravada dentro de cada um e casa com o link correspondente automaticamente.
+    </p>
+    <div style="margin-bottom:12px">
+      <button class="btn-cancel" style="font-size:12px;padding:5px 11px" onclick="baixarListaUrls()">
+        Baixar lista de URLs
+      </button>
+    </div>
+    <label class="lote-drop">
+      <input type="file" accept=".html,.htm,.pdf" multiple onchange="selecionarLote(this)" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4 4 4M12 8v8"/></svg>
+      <span>Clique para escolher os arquivos</span>
+    </label>
+    <div class="lote-lista" id="lote-lista"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="fecharLoteModal(null,true)">Fechar</button>
+      <button class="btn-confirm" id="lote-enviar" style="display:none" onclick="enviarLote()">Enviar todos</button>
     </div>
   </div>
 </div>
@@ -1350,6 +1403,138 @@ function mostrarProgresso(txt) {
 function esconderProgresso() {
   const el = document.getElementById("prog-toast");
   if (el) el.classList.remove("show");
+}
+
+// ══════════════════════════════════════════════════════════
+// ARQUIVAMENTO EM LOTE
+// O SingleFile grava a URL original num comentário no topo do
+// arquivo. Lemos esse comentário para casar cada arquivo com
+// seu link, sem precisar escolher um por um.
+// ══════════════════════════════════════════════════════════
+
+function normalizaUrl(u) {
+  return (u || "").toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/[?#].*$/, "")
+    .replace(/\/+$/, "");
+}
+
+// Lê os primeiros KB do arquivo à procura da URL original
+async function urlDoArquivo(arq) {
+  const trecho = await arq.slice(0, 4096).text();
+  const m = trecho.match(/url:\s*(https?:\/\/[^\s\r\n]+)/i);
+  return m ? m[1] : null;
+}
+
+async function baixarListaUrls() {
+  const linhas = links.map(l => l.url).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([linhas], { type: "text/plain;charset=utf-8" }));
+  a.download = "urls_para_arquivar.txt";
+  a.click();
+}
+
+function abrirLoteModal() {
+  document.getElementById("lote-lista").innerHTML =
+    '<p class="lote-vazio">Nenhum arquivo escolhido ainda.</p>';
+  document.getElementById("lote-enviar").style.display = "none";
+  loteArquivos = [];
+  document.getElementById("lote-overlay").classList.add("open");
+}
+
+function fecharLoteModal(e, forcar) {
+  if (forcar || (e && e.target === document.getElementById("lote-overlay")))
+    document.getElementById("lote-overlay").classList.remove("open");
+}
+
+let loteArquivos = [];
+
+async function selecionarLote(input) {
+  const arquivos = [...(input.files || [])];
+  if (!arquivos.length) return;
+
+  const lista = document.getElementById("lote-lista");
+  lista.innerHTML = '<p class="lote-vazio">Lendo os arquivos...</p>';
+
+  const porUrl = new Map(links.map(l => [normalizaUrl(l.url), l]));
+  loteArquivos = [];
+
+  for (const arq of arquivos) {
+    const url = arq.name.toLowerCase().endsWith(".pdf") ? null : await urlDoArquivo(arq);
+    const link = url ? porUrl.get(normalizaUrl(url)) : null;
+    loteArquivos.push({ arq, url, link, tamMb: arq.size / 1048576 });
+  }
+
+  const achados = loteArquivos.filter(x => x.link).length;
+  lista.innerHTML = `
+    <div class="lote-resumo">
+      <strong>${achados}</strong> de ${loteArquivos.length} arquivo(s) casaram com um link.
+      ${achados < loteArquivos.length ? '<span class="lote-alerta">Os demais serão ignorados.</span>' : ""}
+    </div>
+    ${loteArquivos.map((x, i) => `
+      <div class="lote-item ${x.link ? "" : "erro"}">
+        <span class="lote-nome" title="${x.arq.name}">${x.arq.name}</span>
+        <span class="lote-alvo">${x.link ? x.link.label : (x.url ? "sem link correspondente" : "URL não encontrada no arquivo")}</span>
+        <span class="lote-tam">${x.tamMb.toFixed(1)} MB</span>
+        <span class="lote-st" id="lote-st-${i}">${x.link ? "pronto" : "—"}</span>
+      </div>`).join("")}`;
+
+  document.getElementById("lote-enviar").style.display = achados ? "inline-block" : "none";
+}
+
+async function enviarLote() {
+  const fila = loteArquivos.filter(x => x.link);
+  if (!fila.length) return;
+
+  const btn = document.getElementById("lote-enviar");
+  btn.disabled = true;
+  let ok = 0, falhas = 0;
+
+  for (let i = 0; i < loteArquivos.length; i++) {
+    const item = loteArquivos[i];
+    if (!item.link) continue;
+    const st = document.getElementById("lote-st-" + i);
+
+    if (item.arq.size > 50 * 1048576) {
+      if (st) { st.textContent = "grande demais"; st.className = "lote-st erro"; }
+      falhas++; continue;
+    }
+
+    if (st) { st.textContent = "enviando..."; st.className = "lote-st"; }
+    try {
+      const ehPdf = item.arq.name.toLowerCase().endsWith(".pdf");
+      const nome = (item.link.url.replace(/^https?:\/\//, "").replace(/[^\w]+/g, "_") || item.link.id)
+                 + (ehPdf ? ".pdf" : ".html");
+      const caminho = `${item.link.id}/${nome}`;
+
+      const { error: upErr } = await sb.storage.from(BUCKET).upload(caminho, item.arq, {
+        upsert: true, contentType: ehPdf ? "application/pdf" : "text/html"
+      });
+      if (upErr) throw upErr;
+
+      const { error: dbErr } = await sb.from("links").update({
+        arquivo_path: caminho, arquivo_tam: item.arq.size,
+        arquivado_em: new Date().toISOString()
+      }).eq("id", item.link.id);
+      if (dbErr) throw dbErr;
+
+      Object.assign(item.link, {
+        arquivo_path: caminho, arquivo_tam: item.arq.size,
+        arquivado_em: new Date().toISOString()
+      });
+      if (st) { st.textContent = "arquivado"; st.className = "lote-st ok"; }
+      ok++;
+    } catch (e) {
+      if (st) { st.textContent = "erro"; st.className = "lote-st erro"; st.title = e.message; }
+      falhas++;
+    }
+    btn.textContent = `Enviando... ${ok + falhas} de ${fila.length}`;
+  }
+
+  btn.textContent = `Concluído — ${ok} arquivado(s)` + (falhas ? `, ${falhas} com erro` : "");
+  btn.disabled = false;
+  render();
 }
 
 async function deleteLink(id, url) {
