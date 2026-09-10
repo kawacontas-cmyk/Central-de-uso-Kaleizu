@@ -381,31 +381,56 @@ let isAdmin = false;
 const EDGE_URL = "https://iabugpuqlcfftwabuxsj.supabase.co/functions/v1/manage-users";
 
 async function callEdge(body) {
-  const { data: { session }, error: sessionError } = await sb.auth.getSession();
-  if (sessionError || !session) {
+  // O supabase-js já renova o token sozinho quando precisa.
+  // Chamar refreshSession() a cada requisição rotacionava o token
+  // e derrubava a sessão nas chamadas seguintes.
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    alert("Sua sessão expirou. Faça login novamente.");
     await doLogout();
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error("Sessão expirada.");
   }
-  const { data: refreshed } = await sb.auth.refreshSession();
-  const token = refreshed?.session?.access_token || session.access_token;
 
   const res = await fetch(EDGE_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`
+    },
     body: JSON.stringify(body)
   });
+
   const text = await res.text();
   if (!text) throw new Error("Resposta vazia da função (status " + res.status + ")");
-  try { return JSON.parse(text); }
+
+  let dados;
+  try { dados = JSON.parse(text); }
   catch { throw new Error("Resposta inválida: " + text.slice(0, 100)); }
+
+  // Token recusado: tenta uma vez com a sessão renovada
+  if (res.status === 401) {
+    const { data: novaSessao } = await sb.auth.refreshSession();
+    const token = novaSessao?.session?.access_token;
+    if (!token) {
+      alert("Sua sessão expirou. Faça login novamente.");
+      await doLogout();
+      throw new Error("Sessão expirada.");
+    }
+    const res2 = await fetch(EDGE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify(body)
+    });
+    return JSON.parse(await res2.text());
+  }
+
+  return dados;
 }
 
 // ── ADMIN PANEL ────────────────────────────────────────
 async function openAdminPanel() {
   if (!isAdmin) return;   // membro não abre o painel nem pelo console
   document.getElementById("admin-panel").classList.add("open");
-  // Refresh session antes de carregar
-  await sb.auth.refreshSession();
   await loadUsers();
 }
 
