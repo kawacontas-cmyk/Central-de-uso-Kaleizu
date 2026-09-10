@@ -1317,6 +1317,65 @@ async function saveGroupOrder() {
 
 const BUCKET = "paginas";
 
+// Transforma "L21 – Matrículas" em "l21-matriculas"
+function gerarSlug(texto) {
+  return (texto || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")   // tira acentos
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "pagina";
+}
+
+// Garante que o link tenha um apelido único, criando na hora se faltar.
+// Se a coluna ainda não existir no banco, devolve null sem quebrar nada.
+async function garantirSlug(l) {
+  if (l.slug) return l.slug;
+  try {
+    const base = gerarSlug(l.label);
+    let tentativa = base;
+    for (let i = 2; i <= 10; i++) {
+      const { data, error } = await sb.from("links").select("id").eq("slug", tentativa).maybeSingle();
+      if (error) return null;                    // coluna ausente ou sem permissão
+      if (!data || data.id === l.id) break;
+      tentativa = `${base}-${i}`;
+    }
+    const { error } = await sb.from("links").update({ slug: tentativa }).eq("id", l.id);
+    if (error) return null;
+    l.slug = tentativa;
+    return tentativa;
+  } catch (e) {
+    console.warn("Apelido não gerado:", e);
+    return null;
+  }
+}
+
+// Copia o endereço público da cópia arquivada
+async function copiarLinkPublico(id) {
+  const l = links.find(x => x.id === id);
+  if (!l) return;
+
+  mostrarProgresso("Preparando o endereço...");
+  let destino = id;
+  try {
+    const slug = await Promise.race([
+      garantirSlug(l),
+      new Promise(r => setTimeout(() => r(null), 4000))
+    ]);
+    if (slug) destino = slug;
+  } catch {}
+
+  const url = `${location.origin}/p/${destino}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    mostrarProgresso("Link copiado — funciona sem login");
+    setTimeout(esconderProgresso, 2400);
+  } catch {
+    esconderProgresso();
+    prompt("Copie o endereço:", url);
+  }
+}
+
 // Abre a cópia arquivada no endereço público, com apelido legível.
 // Quem serve o arquivo é a função em /api/pagina.js, que também
 // ajusta o título da aba e coloca o selo de cópia arquivada.
@@ -1331,9 +1390,20 @@ async function abrirArquivo(id) {
     "display:flex;align-items:center;justify-content:center;height:100vh;margin:0'>" +
     "<p>Abrindo a página arquivada…</p></body>");
 
-  const slug = await garantirSlug(l);
-  const url = `${location.origin}/p/${slug || id}`;
+  // O apelido é um detalhe cosmético: se der qualquer problema,
+  // abrimos pelo identificador em vez de deixar a aba parada.
+  let destino = id;
+  try {
+    const slug = await Promise.race([
+      garantirSlug(l),
+      new Promise(r => setTimeout(() => r(null), 4000))
+    ]);
+    if (slug) destino = slug;
+  } catch (e) {
+    console.warn("Não consegui gerar o apelido:", e);
+  }
 
+  const url = `${location.origin}/p/${destino}`;
   if (aba) aba.location.href = url; else window.open(url, "_blank");
 }
 
