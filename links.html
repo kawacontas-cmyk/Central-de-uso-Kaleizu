@@ -368,6 +368,27 @@
   }
 
   .card-wrap { position: relative; }
+  .card-wrap.desativada .card { border-style: dashed; opacity: .82; }
+
+  .selo { display:inline-block; margin-top:6px; font-size:10px; padding:2px 7px;
+    border-radius:99px; font-weight:500; letter-spacing:.02em; }
+  .selo-arq { background: rgba(169,139,255,.15); color:#a98bff; }
+  .selo-ok  { background: rgba(95,205,138,.13); color:#5fcd8a; }
+
+  .arq-btns { display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; }
+  .arq-b { display:inline-flex; align-items:center; gap:4px; padding:4px 9px;
+    background:transparent; border:1px solid var(--border); border-radius:6px;
+    font-size:10px; color:var(--text-muted); cursor:pointer;
+    font-family:'DM Sans',sans-serif; transition:all .15s; }
+  .arq-b:hover { border-color:#CDA04C; color:#CDA04C; }
+  .arq-b.ativo { border-color:rgba(169,139,255,.4); color:#a98bff; }
+  .arq-b svg { width:11px; height:11px; }
+
+  .prog-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(12px);
+    background:var(--surface); border:1px solid #CDA04C; border-radius:8px;
+    padding:11px 20px; font-size:13px; color:var(--text); z-index:300;
+    opacity:0; pointer-events:none; transition:all .2s; }
+  .prog-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
   .card-wrap:hover .edit-btn { opacity: 1; }
   .card-wrap:hover .del-btn  { opacity: 1; }
 
@@ -670,6 +691,9 @@
   .admin-msg { font-size: 13px; margin-top: 10px; padding: 8px 10px; border-radius: 7px; display: none; }
   .admin-msg.ok  { display: block; background: var(--obg-bg); color: var(--obg-text); }
   .admin-msg.err { display: block; background: #2a0a0a; color: #f07a7a; }
+
+  .empty {
+    color: var(--text-muted);
     font-size: 14px;
     padding: 3rem 0;
     text-align: center;
@@ -1159,7 +1183,9 @@ async function loadData() {
     return;
   }
 
-  links = dbLinks.map(r => ({ id: r.id, label: r.label, url: r.url, grupo: r.grupo, tipo: r.tipo }));
+  links = dbLinks.map(r => ({ id: r.id, label: r.label, url: r.url, grupo: r.grupo, tipo: r.tipo,
+    arquivo_path: r.arquivo_path, arquivo_tam: r.arquivo_tam, arquivado_em: r.arquivado_em,
+    pagina_ativa: r.pagina_ativa !== false }));
 
   const allG = [...new Set(links.map(l => l.grupo))];
   if (dbOrder && dbOrder.length > 0) {
@@ -1202,6 +1228,114 @@ async function seedInitialData() {
 async function saveGroupOrder() {
   const rows = groupOrder.map((g, i) => ({ grupo: g, position: i }));
   await sb.from("grupo_order").upsert(rows, { onConflict: "grupo" });
+}
+
+const BUCKET = "paginas";
+
+// Abre a cópia arquivada numa aba nova, com link temporário assinado
+async function abrirArquivo(id) {
+  const l = links.find(x => x.id === id);
+  if (!l || !l.arquivo_path) return;
+
+  const aba = window.open("", "_blank");   // abre antes para o navegador não bloquear
+  if (aba) aba.document.write("<p style='font-family:sans-serif;padding:2rem'>Abrindo a página arquivada...</p>");
+
+  const { data, error } = await sb.storage.from(BUCKET)
+    .createSignedUrl(l.arquivo_path, 3600);   // vale 1 hora
+
+  if (error || !data) {
+    if (aba) aba.close();
+    alert("Não consegui abrir o arquivo: " + (error?.message || "erro desconhecido"));
+    return;
+  }
+  if (aba) aba.location.href = data.signedUrl; else window.open(data.signedUrl, "_blank");
+}
+
+// Envia o .html salvo pelo SingleFile
+function arquivarPagina(id) {
+  const l = links.find(x => x.id === id);
+  if (!l) return;
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".html,.htm,.pdf";
+  input.onchange = async () => {
+    const arq = input.files[0];
+    if (!arq) return;
+
+    const LIMITE = 50 * 1024 * 1024;
+    if (arq.size > LIMITE) {
+      alert(`O arquivo tem ${(arq.size/1048576).toFixed(1)} MB e o limite é 50 MB.\n\n` +
+            "No SingleFile, ative a opção de comprimir as imagens antes de salvar.");
+      return;
+    }
+
+    const ext = arq.name.toLowerCase().endsWith(".pdf") ? "pdf" : "html";
+    const nome = (l.url.replace(/^https?:\/\//, "").replace(/[^\w]+/g, "_") || l.id) + "." + ext;
+    const caminho = `${l.id}/${nome}`;
+
+    mostrarProgresso(`Enviando ${(arq.size/1048576).toFixed(1)} MB...`);
+    try {
+      const { error: upErr } = await sb.storage.from(BUCKET)
+        .upload(caminho, arq, { upsert: true, contentType: ext === "pdf" ? "application/pdf" : "text/html" });
+      if (upErr) throw upErr;
+
+      const { error: dbErr } = await sb.from("links").update({
+        arquivo_path: caminho,
+        arquivo_tam: arq.size,
+        arquivado_em: new Date().toISOString()
+      }).eq("id", l.id);
+      if (dbErr) throw dbErr;
+
+      Object.assign(l, { arquivo_path: caminho, arquivo_tam: arq.size, arquivado_em: new Date().toISOString() });
+      esconderProgresso();
+      render();
+    } catch (e) {
+      esconderProgresso();
+      alert("Erro ao arquivar: " + e.message);
+    }
+  };
+  input.click();
+}
+
+// Marca a página como desativada no WordPress (ou reativa)
+async function alternarAtiva(id) {
+  const l = links.find(x => x.id === id);
+  if (!l) return;
+  if (l.pagina_ativa !== false && !l.arquivo_path) {
+    alert("Arquive a página antes de marcá-la como desativada, senão o conteúdo fica inacessível.");
+    return;
+  }
+  const novo = l.pagina_ativa === false;
+  await sb.from("links").update({ pagina_ativa: novo }).eq("id", id);
+  l.pagina_ativa = novo;
+  render();
+}
+
+async function removerArquivo(id) {
+  const l = links.find(x => x.id === id);
+  if (!l || !l.arquivo_path) return;
+  if (!confirm("Remover a cópia arquivada desta página?")) return;
+  await sb.storage.from(BUCKET).remove([l.arquivo_path]);
+  await sb.from("links").update({ arquivo_path: null, arquivo_tam: null, arquivado_em: null, pagina_ativa: true }).eq("id", id);
+  Object.assign(l, { arquivo_path: null, arquivo_tam: null, arquivado_em: null, pagina_ativa: true });
+  render();
+}
+
+function mostrarProgresso(txt) {
+  let el = document.getElementById("prog-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "prog-toast";
+    el.className = "prog-toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = txt;
+  el.classList.add("show");
+}
+function esconderProgresso() {
+  const el = document.getElementById("prog-toast");
+  if (el) el.classList.remove("show");
 }
 
 async function deleteLink(id, url) {
@@ -1369,11 +1503,46 @@ function render() {
         </div>
         <div class="type-dropdown" id="${ddId}">${opts}</div>` : "";
 
-      return `<div class="card-wrap">
-        <a class="card" href="${l.url}" target="_blank" rel="noopener">
-          <div class="card-top"><span class="badge ${t.cls}">${t.label}</span><span class="card-label" title="${l.label}">${l.label}</span></div>
+      const temArquivo = !!l.arquivo_path;
+      const desativada = l.pagina_ativa === false;
+      const tam = l.arquivo_tam ? (l.arquivo_tam/1048576).toFixed(1) + " MB" : "";
+
+      // Página desativada abre a cópia; ativa abre o link normal
+      const destino = desativada && temArquivo
+        ? `href="javascript:void(0)" onclick="abrirArquivo('${l.id}')"`
+        : `href="${l.url}" target="_blank" rel="noopener"`;
+
+      const selo = desativada
+        ? `<span class="selo selo-arq" title="Página desativada no WordPress — abre a cópia arquivada">arquivada</span>`
+        : (temArquivo ? `<span class="selo selo-ok" title="Cópia salva, página ainda ativa">cópia ${tam}</span>` : "");
+
+      const arqBtns = isAdmin ? `
+        <div class="arq-btns">
+          <button class="arq-b" onclick="arquivarPagina('${l.id}')" title="${temArquivo ? "Substituir a cópia salva" : "Enviar cópia da página"}">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M2.5 11v2h11v-2"/></svg>
+            ${temArquivo ? "Trocar" : "Arquivar"}
+          </button>
+          ${temArquivo ? `
+            <button class="arq-b" onclick="abrirArquivo('${l.id}')" title="Ver a cópia salva">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="1.8"/></svg>
+              Ver
+            </button>
+            <button class="arq-b ${desativada ? "ativo" : ""}" onclick="alternarAtiva('${l.id}')"
+              title="${desativada ? "Marcar como ativa no WordPress" : "Marcar como desativada no WordPress"}">
+              ${desativada ? "Reativar" : "Desativar"}
+            </button>` : ""}
+        </div>` : "";
+
+      return `<div class="card-wrap${desativada ? " desativada" : ""}">
+        <a class="card" ${destino}>
+          <div class="card-top">
+            <span class="badge ${t.cls}">${t.label}</span>
+            <span class="card-label" title="${l.label}">${l.label}</span>
+          </div>
           <span class="card-url">${slug}</span>
+          ${selo}
         </a>
+        ${arqBtns}
         ${delBtn}${editBtn}
       </div>`;
     }).join("");
