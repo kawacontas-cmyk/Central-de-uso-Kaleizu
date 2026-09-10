@@ -1267,7 +1267,7 @@ async function loadData() {
   }
 
   links = dbLinks.map(r => ({ id: r.id, label: r.label, url: r.url, grupo: r.grupo, tipo: r.tipo,
-    arquivo_path: r.arquivo_path, arquivo_tam: r.arquivo_tam, arquivado_em: r.arquivado_em,
+    arquivo_path: r.arquivo_path, arquivo_tam: r.arquivo_tam, arquivado_em: r.arquivado_em, slug: r.slug,
     pagina_ativa: r.pagina_ativa !== false }));
 
   const allG = [...new Set(links.map(l => l.grupo))];
@@ -1357,14 +1357,49 @@ async function abrirArquivo(id) {
   }
 }
 
+// Transforma "L21 – Matrículas" em "l21-matriculas"
+function gerarSlug(texto) {
+  return (texto || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")  // tira acentos
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "pagina";
+}
+
+// Garante que o link tenha um apelido único, criando na hora se faltar
+async function garantirSlug(l) {
+  if (l.slug) return l.slug;
+
+  const base = gerarSlug(l.label);
+  let tentativa = base;
+  for (let i = 2; i <= 30; i++) {
+    const { data } = await sb.from("links").select("id").eq("slug", tentativa).maybeSingle();
+    if (!data || data.id === l.id) break;
+    tentativa = `${base}-${i}`;
+  }
+
+  const { error } = await sb.from("links").update({ slug: tentativa }).eq("id", l.id);
+  if (error) return null;
+  l.slug = tentativa;
+  return tentativa;
+}
+
 // Copia o endereço público da cópia arquivada
 async function copiarLinkPublico(id) {
-  const url = `${location.origin}/p/${id}`;
+  const l = links.find(x => x.id === id);
+  if (!l) return;
+
+  mostrarProgresso("Preparando o endereço...");
+  const slug = await garantirSlug(l);
+  const url = `${location.origin}/p/${slug || id}`;
+
   try {
     await navigator.clipboard.writeText(url);
     mostrarProgresso("Link copiado — funciona sem login");
-    setTimeout(esconderProgresso, 2200);
+    setTimeout(esconderProgresso, 2400);
   } catch {
+    esconderProgresso();
     prompt("Copie o endereço:", url);
   }
 }
@@ -1648,12 +1683,16 @@ async function confirmAdd() {
       await sb.from("links").delete().eq("id", existente.id);
     }
 
-    const { error } = await sb.from("links")
-      .update({ label, url, grupo, tipo }).eq("id", editandoId);
+    const l0 = links.find(x => x.id === editandoId);
+    // Se o nome mudou, o apelido é refeito para continuar coerente
+    const mexeuNoNome = l0 && l0.label !== label;
+    const patch = { label, url, grupo, tipo };
+    if (mexeuNoNome) patch.slug = null;
+
+    const { error } = await sb.from("links").update(patch).eq("id", editandoId);
     if (error) { alert("Erro ao salvar: " + error.message); return; }
 
-    const l = links.find(x => x.id === editandoId);
-    if (l) Object.assign(l, { label, url, grupo, tipo });
+    if (l0) Object.assign(l0, { label, url, grupo, tipo }, mexeuNoNome ? { slug: null } : {});
 
     if (!groupOrder.includes(grupo)) { groupOrder.push(grupo); await saveGroupOrder(); }
     editandoId = null;
