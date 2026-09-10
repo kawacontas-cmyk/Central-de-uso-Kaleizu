@@ -761,6 +761,16 @@
   .nav-del svg { width: 10px; height: 10px; }
   .nav-item:hover .nav-del { display: flex; }
   .nav-del:hover { background: rgba(224,90,90,.15); color: #e05a5a; }
+
+  .add-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .np-ajuda { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 14px; }
+  .np-drop { display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 22px; border: 2px dashed var(--border-hover); border-radius: 10px;
+    cursor: pointer; color: var(--text-muted); font-size: 13px; transition: all .15s;
+    text-align: center; }
+  .np-drop:hover { border-color: #CDA04C; color: #CDA04C; background: rgba(205,160,76,.05); }
+  .np-drop svg { width: 30px; height: 30px; }
+  #np-campos { margin-top: 14px; }
 </style>
 </head>
 <body>
@@ -862,6 +872,40 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeGroupModal()">Cancelar</button>
       <button class="btn-confirm" onclick="confirmCreateGroup()">Criar grupo</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="np-overlay" onclick="fecharNovaPagina(event)">
+  <div class="modal">
+    <h3>Adicionar página arquivada</h3>
+    <p class="np-ajuda">Envie o arquivo salvo pelo SingleFile. O nome e a URL original
+      são lidos de dentro dele, e o link de compartilhamento sai pronto.</p>
+
+    <label class="np-drop">
+      <input type="file" accept=".html,.htm,.pdf" onchange="escolherArquivoNovaPagina(this)" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4 4 4M12 8v8"/></svg>
+      <span id="np-arquivo">Clique para escolher o arquivo</span>
+    </label>
+
+    <div id="np-campos" style="display:none">
+      <label>Nome da página</label>
+      <input type="text" id="np-label" />
+      <label>URL original <span style="color:var(--text-hint);font-weight:400">(só para referência)</span></label>
+      <input type="text" id="np-url" placeholder="lida do arquivo" />
+      <label>Tipo</label>
+      <select id="np-tipo">
+        <option value="cap">Captura</option><option value="obg">Obrigado</option>
+        <option value="vnd">Vendas</option><option value="pesq">Pesquisa</option>
+        <option value="aula">Aula</option><option value="outro">Outros</option>
+      </select>
+      <label>Grupo</label>
+      <select id="np-grupo"></select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="fecharNovaPagina(null,true)">Cancelar</button>
+      <button class="btn-confirm" id="np-ok" style="display:none" onclick="confirmarNovaPagina()">Cadastrar e copiar link</button>
     </div>
   </div>
 </div>
@@ -1316,6 +1360,152 @@ async function saveGroupOrder() {
 }
 
 const BUCKET = "paginas";
+
+// Lê o cabeçalho do arquivo salvo pelo SingleFile: URL original e título
+async function lerCabecalho(arq) {
+  if (arq.name.toLowerCase().endsWith(".pdf")) return { url: null, titulo: null };
+  const trecho = await arq.slice(0, 16384).text();
+  const mUrl = trecho.match(/url:\s*(https?:\/\/[^\s\r\n]+)/i);
+  const mTit = trecho.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const titulo = mTit
+    ? mTit[1].replace(/\s+/g, " ").replace(/&[a-z]+;/gi, " ").trim()
+    : null;
+  return { url: mUrl ? mUrl[1] : null, titulo };
+}
+
+// Chuta o tipo pela URL, para poupar um clique
+function adivinharTipo(url) {
+  const u = (url || "").toLowerCase();
+  if (/obg|obrigad/.test(u))                 return "obg";
+  if (/pesquisa/.test(u))                    return "pesq";
+  if (/aula|cpl/.test(u))                    return "aula";
+  if (/matricul|vendas|inscric|oferta/.test(u)) return "vnd";
+  if (/cap|captur|lead/.test(u))             return "cap";
+  return "outro";
+}
+
+let arqNovaPagina = null;
+
+function abrirNovaPagina(grupo) {
+  arqNovaPagina = null;
+  const sel = document.getElementById("np-grupo");
+  sel.innerHTML = groupOrder.map(g => `<option value="${g}"${g===grupo?" selected":""}>${g}</option>`).join("");
+  document.getElementById("np-label").value = "";
+  document.getElementById("np-url").value = "";
+  document.getElementById("np-tipo").value = "outro";
+  document.getElementById("np-arquivo").textContent = "Clique para escolher o arquivo";
+  document.getElementById("np-campos").style.display = "none";
+  document.getElementById("np-ok").style.display = "none";
+  document.getElementById("np-overlay").classList.add("open");
+}
+
+function fecharNovaPagina(e, forcar) {
+  if (forcar || (e && e.target === document.getElementById("np-overlay")))
+    document.getElementById("np-overlay").classList.remove("open");
+}
+
+async function escolherArquivoNovaPagina(input) {
+  const arq = input.files[0];
+  if (!arq) return;
+  if (arq.size > 50 * 1048576) {
+    alert(`O arquivo tem ${(arq.size/1048576).toFixed(1)} MB e o limite é 50 MB.`);
+    return;
+  }
+  arqNovaPagina = arq;
+  document.getElementById("np-arquivo").textContent =
+    `${arq.name} — ${(arq.size/1048576).toFixed(1)} MB`;
+
+  const { url, titulo } = await lerCabecalho(arq);
+  document.getElementById("np-url").value = url || "";
+  document.getElementById("np-label").value = titulo || arq.name.replace(/\.(html?|pdf)$/i, "");
+  document.getElementById("np-tipo").value = adivinharTipo(url || arq.name);
+  document.getElementById("np-campos").style.display = "block";
+  document.getElementById("np-ok").style.display = "inline-block";
+  document.getElementById("np-label").focus();
+}
+
+async function confirmarNovaPagina() {
+  const label = document.getElementById("np-label").value.trim();
+  const url   = document.getElementById("np-url").value.trim();
+  const tipo  = document.getElementById("np-tipo").value;
+  const grupo = document.getElementById("np-grupo").value;
+  const btn   = document.getElementById("np-ok");
+
+  if (!arqNovaPagina) { alert("Escolha o arquivo da página."); return; }
+  if (!label) { alert("Dê um nome à página."); return; }
+
+  // A URL é obrigatória porque é a chave única da tabela.
+  // Sem ela no arquivo, montamos uma a partir do nome.
+  const urlFinal = url || `arquivada://${gerarSlug(label)}`;
+
+  const { data: existente } = await sb.from("links")
+    .select("id, label, grupo, deleted").eq("url", urlFinal).maybeSingle();
+
+  if (existente && !existente.deleted) {
+    alert(`Esta página já está cadastrada como "${existente.label}", no grupo ${existente.grupo}.`);
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = "Enviando...";
+  try {
+    // 1. Cria (ou revive) o registro
+    let registro;
+    if (existente) {
+      const { data, error } = await sb.from("links")
+        .update({ label, grupo, tipo, deleted: false, slug: null })
+        .eq("id", existente.id).select().single();
+      if (error) throw error;
+      registro = data;
+    } else {
+      const { data, error } = await sb.from("links")
+        .insert([{ label, url: urlFinal, grupo, tipo, deleted: false }]).select().single();
+      if (error) throw error;
+      registro = data;
+    }
+
+    // 2. Envia o arquivo
+    const ehPdf = arqNovaPagina.name.toLowerCase().endsWith(".pdf");
+    const nome = gerarSlug(label) + (ehPdf ? ".pdf" : ".html");
+    const caminho = `${registro.id}/${nome}`;
+
+    const { error: upErr } = await sb.storage.from(BUCKET).upload(caminho, arqNovaPagina, {
+      upsert: true, contentType: ehPdf ? "application/pdf" : "text/html"
+    });
+    if (upErr) throw upErr;
+
+    // 3. Marca como arquivada, já que não há página ativa no WordPress
+    const agora = new Date().toISOString();
+    await sb.from("links").update({
+      arquivo_path: caminho, arquivo_tam: arqNovaPagina.size,
+      arquivado_em: agora, pagina_ativa: false
+    }).eq("id", registro.id);
+
+    const novo = { id: registro.id, label, url: urlFinal, grupo, tipo,
+                   arquivo_path: caminho, arquivo_tam: arqNovaPagina.size,
+                   arquivado_em: agora, pagina_ativa: false, slug: null };
+    links.push(novo);
+
+    if (!groupOrder.includes(grupo)) { groupOrder.push(grupo); await saveGroupOrder(); }
+
+    // 4. Gera o apelido e entrega o endereço pronto
+    const slug = await garantirSlug(novo);
+    const endereco = `${location.origin}/p/${slug || registro.id}`;
+
+    fecharNovaPagina(null, true);
+    render();
+
+    try {
+      await navigator.clipboard.writeText(endereco);
+      mostrarProgresso("Página cadastrada e link copiado!");
+      setTimeout(esconderProgresso, 3000);
+    } catch {
+      prompt("Página cadastrada. Copie o endereço:", endereco);
+    }
+  } catch (e) {
+    alert("Erro ao cadastrar: " + e.message);
+  }
+  btn.disabled = false; btn.textContent = "Cadastrar e copiar link";
+}
 
 // Transforma "L21 – Matrículas" em "l21-matriculas"
 function gerarSlug(texto) {
@@ -2040,9 +2230,15 @@ function render() {
       <div class="grid-wrap">
         ${items.length ? `<div class="grid">${cards}</div>`
           : `<p class="grupo-vazio">Nenhum link neste grupo ainda.</p>`}
-        ${isAdmin ? `<div class="add-btn" onclick="openAddModal('${gEsc}')">
+        ${isAdmin ? `<div class="add-row">
+          <div class="add-btn" onclick="abrirNovaPagina('${gEsc}')" title="Enviar o arquivo e gerar o link">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M2.5 11v2h11v-2"/></svg>
+            Adicionar página arquivada
+          </div>
+          <div class="add-btn" onclick="openAddModal('${gEsc}')">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
-          Adicionar link
+            Adicionar link
+          </div>
         </div>` : ""}
       </div>
     </div>`;
