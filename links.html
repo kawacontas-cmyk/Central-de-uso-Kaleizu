@@ -1317,122 +1317,24 @@ async function saveGroupOrder() {
 
 const BUCKET = "paginas";
 
-// Abre a cópia arquivada.
-// O Supabase entrega HTML enviado por usuário como texto puro, por segurança.
-// Então baixamos o arquivo e criamos um endereço local, que o navegador renderiza.
+// Abre a cópia arquivada no endereço público, com apelido legível.
+// Quem serve o arquivo é a função em /api/pagina.js, que também
+// ajusta o título da aba e coloca o selo de cópia arquivada.
 async function abrirArquivo(id) {
   const l = links.find(x => x.id === id);
   if (!l || !l.arquivo_path) return;
 
-  const ehPdf = l.arquivo_path.toLowerCase().endsWith(".pdf");
   const aba = window.open("", "_blank");   // abre antes para o navegador não bloquear
   if (aba) aba.document.write(
-    `<title>${l.label}</title><body style='font-family:sans-serif;background:#060B1F;color:#8b93b8;` +
+    `<title>${(l.label || "").replace(/[<>]/g, "")}</title>` +
+    "<body style='font-family:sans-serif;background:#060B1F;color:#8b93b8;" +
     "display:flex;align-items:center;justify-content:center;height:100vh;margin:0'>" +
-    "<p>Carregando a página arquivada…</p></body>");
+    "<p>Abrindo a página arquivada…</p></body>");
 
-  mostrarProgresso("Baixando a cópia arquivada...");
-  try {
-    const { data, error } = await sb.storage.from(BUCKET).download(l.arquivo_path);
-    if (error) throw error;
-
-    let blob;
-    if (ehPdf) {
-      blob = new Blob([data], { type: "application/pdf" });
-    } else {
-      // Troca o título pelo nome do link e marca a página como arquivada
-      let html = await data.text();
-      html = injetarIdentificacao(html, l);
-      blob = new Blob([html], { type: "text/html; charset=utf-8" });
-    }
-
-    const endereco = URL.createObjectURL(blob);
-    if (aba) aba.location.href = endereco; else window.open(endereco, "_blank");
-    setTimeout(() => URL.revokeObjectURL(endereco), 120000);
-    esconderProgresso();
-  } catch (e) {
-    if (aba) aba.close();
-    esconderProgresso();
-    alert("Não consegui abrir o arquivo: " + (e.message || "erro desconhecido"));
-  }
-}
-
-// Transforma "L21 – Matrículas" em "l21-matriculas"
-function gerarSlug(texto) {
-  return (texto || "")
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")  // tira acentos
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60) || "pagina";
-}
-
-// Garante que o link tenha um apelido único, criando na hora se faltar
-async function garantirSlug(l) {
-  if (l.slug) return l.slug;
-
-  const base = gerarSlug(l.label);
-  let tentativa = base;
-  for (let i = 2; i <= 30; i++) {
-    const { data } = await sb.from("links").select("id").eq("slug", tentativa).maybeSingle();
-    if (!data || data.id === l.id) break;
-    tentativa = `${base}-${i}`;
-  }
-
-  const { error } = await sb.from("links").update({ slug: tentativa }).eq("id", l.id);
-  if (error) return null;
-  l.slug = tentativa;
-  return tentativa;
-}
-
-// Copia o endereço público da cópia arquivada
-async function copiarLinkPublico(id) {
-  const l = links.find(x => x.id === id);
-  if (!l) return;
-
-  mostrarProgresso("Preparando o endereço...");
   const slug = await garantirSlug(l);
   const url = `${location.origin}/p/${slug || id}`;
 
-  try {
-    await navigator.clipboard.writeText(url);
-    mostrarProgresso("Link copiado — funciona sem login");
-    setTimeout(esconderProgresso, 2400);
-  } catch {
-    esconderProgresso();
-    prompt("Copie o endereço:", url);
-  }
-}
-
-// Coloca o nome do link no título da aba e um selo discreto de "cópia arquivada"
-function injetarIdentificacao(html, l) {
-  const titulo = (l.label || "Página arquivada").replace(/[<>]/g, "");
-  const data = l.arquivado_em
-    ? new Date(l.arquivado_em).toLocaleDateString("pt-BR")
-    : "";
-
-  // Título: substitui o original ou cria um novo
-  if (/<title[^>]*>[\s\S]*?<\/title>/i.test(html)) {
-    html = html.replace(/<title[^>]*>[\s\S]*?<\/title>/i, `<title>${titulo}</title>`);
-  } else if (/<head[^>]*>/i.test(html)) {
-    html = html.replace(/<head[^>]*>/i, m => `${m}<title>${titulo}</title>`);
-  }
-
-  const selo = `
-<div id="kz-selo" style="position:fixed;top:12px;right:12px;z-index:2147483647;
-  background:rgba(6,11,31,.94);border:1px solid rgba(205,160,76,.5);border-radius:8px;
-  padding:8px 12px;font:400 12px/1.4 -apple-system,'Segoe UI',sans-serif;color:#e8eaf6;
-  box-shadow:0 4px 18px rgba(0,0,0,.5);max-width:290px;transition:opacity .4s">
-  <div style="color:#CDA04C;font-weight:600;margin-bottom:2px">Cópia arquivada</div>
-  <div style="color:#8b93b8;word-break:break-all">${titulo}${data ? " · " + data : ""}</div>
-  <div style="color:#3a4060;font-size:11px;margin-top:3px">Formulários e botões não funcionam aqui.</div>
-</div>
-<script>setTimeout(function(){var e=document.getElementById('kz-selo');
-  if(e){e.style.opacity='0';setTimeout(function(){e.remove()},400)}},6000)<\/script>`;
-
-  return /<\/body>/i.test(html)
-    ? html.replace(/<\/body>/i, selo + "</body>")
-    : html + selo;
+  if (aba) aba.location.href = url; else window.open(url, "_blank");
 }
 
 // Envia o .html salvo pelo SingleFile
