@@ -1327,7 +1327,7 @@ async function abrirArquivo(id) {
   const ehPdf = l.arquivo_path.toLowerCase().endsWith(".pdf");
   const aba = window.open("", "_blank");   // abre antes para o navegador não bloquear
   if (aba) aba.document.write(
-    "<title>Abrindo…</title><body style='font-family:sans-serif;background:#060B1F;color:#8b93b8;" +
+    `<title>${l.label}</title><body style='font-family:sans-serif;background:#060B1F;color:#8b93b8;` +
     "display:flex;align-items:center;justify-content:center;height:100vh;margin:0'>" +
     "<p>Carregando a página arquivada…</p></body>");
 
@@ -1336,18 +1336,56 @@ async function abrirArquivo(id) {
     const { data, error } = await sb.storage.from(BUCKET).download(l.arquivo_path);
     if (error) throw error;
 
-    // Recria o blob com o tipo certo para o navegador renderizar em vez de baixar
-    const blob = new Blob([data], { type: ehPdf ? "application/pdf" : "text/html; charset=utf-8" });
-    const endereco = URL.createObjectURL(blob);
+    let blob;
+    if (ehPdf) {
+      blob = new Blob([data], { type: "application/pdf" });
+    } else {
+      // Troca o título pelo nome do link e marca a página como arquivada
+      let html = await data.text();
+      html = injetarIdentificacao(html, l);
+      blob = new Blob([html], { type: "text/html; charset=utf-8" });
+    }
 
+    const endereco = URL.createObjectURL(blob);
     if (aba) aba.location.href = endereco; else window.open(endereco, "_blank");
-    setTimeout(() => URL.revokeObjectURL(endereco), 60000);
+    setTimeout(() => URL.revokeObjectURL(endereco), 120000);
     esconderProgresso();
   } catch (e) {
     if (aba) aba.close();
     esconderProgresso();
     alert("Não consegui abrir o arquivo: " + (e.message || "erro desconhecido"));
   }
+}
+
+// Coloca o nome do link no título da aba e um selo discreto de "cópia arquivada"
+function injetarIdentificacao(html, l) {
+  const titulo = (l.label || "Página arquivada").replace(/[<>]/g, "");
+  const data = l.arquivado_em
+    ? new Date(l.arquivado_em).toLocaleDateString("pt-BR")
+    : "";
+
+  // Título: substitui o original ou cria um novo
+  if (/<title[^>]*>[\s\S]*?<\/title>/i.test(html)) {
+    html = html.replace(/<title[^>]*>[\s\S]*?<\/title>/i, `<title>${titulo}</title>`);
+  } else if (/<head[^>]*>/i.test(html)) {
+    html = html.replace(/<head[^>]*>/i, m => `${m}<title>${titulo}</title>`);
+  }
+
+  const selo = `
+<div id="kz-selo" style="position:fixed;top:12px;right:12px;z-index:2147483647;
+  background:rgba(6,11,31,.94);border:1px solid rgba(205,160,76,.5);border-radius:8px;
+  padding:8px 12px;font:400 12px/1.4 -apple-system,'Segoe UI',sans-serif;color:#e8eaf6;
+  box-shadow:0 4px 18px rgba(0,0,0,.5);max-width:290px;transition:opacity .4s">
+  <div style="color:#CDA04C;font-weight:600;margin-bottom:2px">Cópia arquivada</div>
+  <div style="color:#8b93b8;word-break:break-all">${titulo}${data ? " · " + data : ""}</div>
+  <div style="color:#3a4060;font-size:11px;margin-top:3px">Formulários e botões não funcionam aqui.</div>
+</div>
+<script>setTimeout(function(){var e=document.getElementById('kz-selo');
+  if(e){e.style.opacity='0';setTimeout(function(){e.remove()},400)}},6000)<\/script>`;
+
+  return /<\/body>/i.test(html)
+    ? html.replace(/<\/body>/i, selo + "</body>")
+    : html + selo;
 }
 
 // Envia o .html salvo pelo SingleFile
