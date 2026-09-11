@@ -775,6 +775,23 @@
   .np-drop:hover { border-color: #CDA04C; color: #CDA04C; background: rgba(205,160,76,.05); }
   .np-drop svg { width: 30px; height: 30px; }
   #np-campos { margin-top: 14px; }
+
+  /* ── pastas no menu lateral ── */
+  .nav-pasta { position: relative; display: flex; align-items: center; gap: 6px;
+    padding: 7px 10px; margin-top: 4px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--text);
+    transition: background .12s; user-select: none; }
+  .nav-pasta:hover { background: rgba(255,255,255,.04); }
+  .nav-pasta.alvo { background: rgba(205,160,76,.16); box-shadow: inset 0 0 0 1px #CDA04C; }
+  .pasta-seta { width: 12px; height: 12px; flex-shrink: 0; color: var(--text-hint);
+    transition: transform .18s; transform: rotate(90deg); }
+  .nav-pasta.fechada .pasta-seta { transform: rotate(0deg); }
+  .nav-pasta .nav-count { background: rgba(205,160,76,.14); color: #CDA04C; }
+  .nav-pasta:hover .nav-del { display: flex; }
+
+  .nav-item.dentro { padding-left: 26px; }
+  .nav-item.dentro::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0;
+    width: 1px; background: var(--border); }
 </style>
 </head>
 <body>
@@ -810,7 +827,7 @@
   <aside class="sidebar">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <p class="sidebar-title" style="margin-bottom:0;">Grupos</p>
-      <div id="new-group-btn" onclick="openGroupModal()" title="Novo grupo" style="display:none;width:22px;height:22px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;align-items:center;justify-content:center;color:var(--text-hint);transition:border-color 0.15s,color 0.15s;">
+      <div id="new-group-btn" onclick="menuCriar()" title="Novo grupo" style="display:none;width:22px;height:22px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;align-items:center;justify-content:center;color:var(--text-hint);transition:border-color 0.15s,color 0.15s;">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
       </div>
     </div>
@@ -968,6 +985,12 @@ function goToSelector() {
 }
 
 // ── Criação de grupo ──────────────────────────────────
+function menuCriar() {
+  const escolha = prompt("O que você quer criar?\n\n1 — Grupo\n2 — Pasta\n\nDigite o número:");
+  if (escolha === "1") openGroupModal();
+  else if (escolha === "2") novaPasta();
+}
+
 function openGroupModal() {
   document.getElementById("group-name-input").value = "";
   document.getElementById("group-modal-overlay").classList.add("open");
@@ -1122,6 +1145,9 @@ let links = [];
 let groupOrder = [];
 let activeGrupo = "Todos";
 const collapsedGroups = new Set();
+let pastas = [];            // ordem das pastas
+let grupoPasta = {};        // { nomeDoGrupo: nomeDaPasta }
+const pastasFechadas = new Set();
 let dragSrc = null;
 
 // ── SUPABASE CRUD ──────────────────────────────────────
@@ -1130,6 +1156,12 @@ async function loadData() {
 
   const { data: dbLinks, error } = await sb.from("links").select("*").eq("deleted", false).order("created_at");
   const { data: dbOrder } = await sb.from("grupo_order").select("*").order("position");
+
+  // Pastas: agrupam os grupos no menu lateral
+  const { data: dbPastas } = await sb.from("pastas").select("*").order("position");
+  pastas = (dbPastas || []).map(r => r.nome);
+  grupoPasta = {};
+  (dbOrder || []).forEach(r => { if (r.pasta) grupoPasta[r.grupo] = r.pasta; });
 
   if (error) {
     document.getElementById("content").innerHTML = '<p class="empty">Erro ao carregar dados.</p>';
@@ -1187,8 +1219,14 @@ async function seedInitialData() {
 }
 
 async function saveGroupOrder() {
-  const rows = groupOrder.map((g, i) => ({ grupo: g, position: i }));
+  const rows = groupOrder.map((g, i) => ({ grupo: g, position: i, pasta: grupoPasta[g] || null }));
   await sb.from("grupo_order").upsert(rows, { onConflict: "grupo" });
+}
+
+async function savePastas() {
+  if (!pastas.length) return;
+  const rows = pastas.map((nome, i) => ({ nome, position: i }));
+  await sb.from("pastas").upsert(rows, { onConflict: "nome" });
 }
 
 const BUCKET = "paginas";
@@ -1836,43 +1874,124 @@ function renderNav(filtered) {
   const q = (document.getElementById("search")?.value || "").trim();
   const counts = {};
   filtered.forEach(l => { counts[l.grupo] = (counts[l.grupo]||0)+1; });
-  const total = filtered.length;
   const nav = document.getElementById("nav");
 
-  nav.innerHTML = ["Todos", ...groupOrder].map(g => {
-    const n = g==="Todos" ? total : (counts[g]||0);
-    // Grupo sem links continua na lista — foi criado de propósito.
-    // Só some enquanto há busca ativa, para não poluir o resultado.
-    if (g!=="Todos" && n===0 && q) return "";
+  const visivel = g => !(counts[g] === undefined && q);   // some só durante a busca
 
+  const itemGrupo = (g, dentroDePasta) => {
+    const n = counts[g] || 0;
+    if (n === 0 && q) return "";
     const gEsc = g.replace(/'/g,"&#39;");
-    if (g === "Todos") {
-      return `<li class="nav-item${activeGrupo===g?" active":""}" onclick="setGrupo('${gEsc}')">
-        <span class="nav-nome">${g}</span><span class="nav-count">${n}</span></li>`;
-    }
-
     const arrasta = isAdmin ? `draggable="true"
       ondragstart="navDragStart(event,'${gEsc}')"
       ondragover="navDragOver(event,'${gEsc}')"
       ondrop="navDrop(event,'${gEsc}')"
       ondragend="navDragEnd()"` : "";
-
-    const remover = isAdmin ? `
-      <button class="nav-del" title="Remover grupo"
+    const remover = isAdmin ? `<button class="nav-del" title="Remover grupo"
         onclick="event.stopPropagation();removerGrupo('${gEsc}')">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="3.5" y1="3.5" x2="10.5" y2="10.5"/><line x1="10.5" y1="3.5" x2="3.5" y2="10.5"/>
-        </svg>
+          <line x1="3.5" y1="3.5" x2="10.5" y2="10.5"/><line x1="10.5" y1="3.5" x2="3.5" y2="10.5"/></svg>
       </button>` : "";
-
-    return `<li class="nav-item${activeGrupo===g?" active":""}" data-grupo="${gEsc}" ${arrasta}
-      onclick="setGrupo('${gEsc}')">
+    return `<li class="nav-item${activeGrupo===g?" active":""}${dentroDePasta?" dentro":""}"
+      data-grupo="${gEsc}" ${arrasta} onclick="setGrupo('${gEsc}')">
       ${isAdmin ? '<span class="nav-drag"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="6" cy="12" r="1"/><circle cx="10" cy="4" r="1"/><circle cx="10" cy="8" r="1"/><circle cx="10" cy="12" r="1"/></svg></span>' : ""}
       <span class="nav-nome">${g}</span>
       <span class="nav-count">${n}</span>
       ${remover}
     </li>`;
-  }).join("");
+  };
+
+  const totalTodos = filtered.length;
+  let html = `<li class="nav-item${activeGrupo==="Todos"?" active":""}" onclick="setGrupo('Todos')"
+    ${isAdmin ? `ondragover="event.preventDefault()" ondrop="soltarNaRaiz(event)"` : ""}>
+    <span class="nav-nome">Todos</span><span class="nav-count">${totalTodos}</span></li>`;
+
+  // Pastas, na ordem salva
+  pastas.forEach(pasta => {
+    const dentro = groupOrder.filter(g => grupoPasta[g] === pasta && visivel(g));
+    if (!dentro.length && q) return;
+
+    const soma = dentro.reduce((s,g) => s + (counts[g]||0), 0);
+    const fechada = pastasFechadas.has(pasta) && !q;
+    const pEsc = pasta.replace(/'/g,"&#39;");
+
+    html += `<li class="nav-pasta${fechada?" fechada":""}"
+      ${isAdmin ? `ondragover="pastaDragOver(event,'${pEsc}')" ondrop="soltarNaPasta(event,'${pEsc}')" ondragleave="this.classList.remove('alvo')"` : ""}
+      onclick="togglePasta('${pEsc}')">
+      <svg class="pasta-seta" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 10,8 5,13"/></svg>
+      <span class="nav-nome">${pasta}</span>
+      <span class="nav-count">${soma}</span>
+      ${isAdmin ? `<button class="nav-del" title="Remover pasta"
+        onclick="event.stopPropagation();removerPasta('${pEsc}')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3.5" y1="3.5" x2="10.5" y2="10.5"/><line x1="10.5" y1="3.5" x2="3.5" y2="10.5"/></svg>
+      </button>` : ""}
+    </li>`;
+
+    if (!fechada) html += dentro.map(g => itemGrupo(g, true)).join("");
+  });
+
+  // Grupos fora de qualquer pasta
+  html += groupOrder.filter(g => !grupoPasta[g] && visivel(g)).map(g => itemGrupo(g, false)).join("");
+
+  nav.innerHTML = html;
+}
+
+function togglePasta(pasta) {
+  if (pastasFechadas.has(pasta)) pastasFechadas.delete(pasta);
+  else pastasFechadas.add(pasta);
+  render();
+}
+
+// ── Pastas ────────────────────────────────────────────
+function novaPasta() {
+  const nome = prompt("Nome da pasta:");
+  if (!nome || !nome.trim()) return;
+  const n = nome.trim();
+  if (pastas.includes(n)) { alert("Já existe uma pasta com esse nome."); return; }
+  pastas.push(n);
+  savePastas().then(render);
+}
+
+async function removerPasta(pasta) {
+  const dentro = groupOrder.filter(g => grupoPasta[g] === pasta);
+  const msg = dentro.length
+    ? `Remover a pasta "${pasta}"?\n\nOs ${dentro.length} grupo(s) dentro dela voltam para a lista principal — nenhum link é perdido.`
+    : `Remover a pasta "${pasta}"?`;
+  if (!confirm(msg)) return;
+
+  dentro.forEach(g => delete grupoPasta[g]);
+  pastas = pastas.filter(x => x !== pasta);
+  await sb.from("pastas").delete().eq("nome", pasta);
+  await saveGroupOrder();
+  render();
+}
+
+function pastaDragOver(e, pasta) {
+  if (!navArrastando) return;
+  e.preventDefault();
+  e.currentTarget.classList.add("alvo");
+}
+
+async function soltarNaPasta(e, pasta) {
+  e.preventDefault(); e.stopPropagation();
+  e.currentTarget.classList.remove("alvo");
+  if (!navArrastando) return;
+  grupoPasta[navArrastando] = pasta;
+  pastasFechadas.delete(pasta);
+  navArrastando = null;
+  await saveGroupOrder();
+  render();
+}
+
+// Soltar sobre "Todos" tira o grupo da pasta
+async function soltarNaRaiz(e) {
+  e.preventDefault(); e.stopPropagation();
+  if (!navArrastando) return;
+  delete grupoPasta[navArrastando];
+  navArrastando = null;
+  await saveGroupOrder();
+  render();
 }
 
 // ── Remoção de grupo ──────────────────────────────────
