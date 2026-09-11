@@ -792,6 +792,19 @@
   .nav-item.dentro { padding-left: 26px; }
   .nav-item.dentro::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0;
     width: 1px; background: var(--border); }
+
+  /* ── menu flutuante de criação ── */
+  .menu-flutuante { position: fixed; z-index: 220; background: var(--surface);
+    border: 1px solid var(--border-hover); border-radius: 10px; padding: 5px;
+    box-shadow: 0 10px 32px rgba(0,0,0,.55); min-width: 210px;
+    animation: menuEntra .13s ease; }
+  @keyframes menuEntra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .menu-op { display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+    border-radius: 7px; cursor: pointer; transition: background .12s; }
+  .menu-op:hover { background: var(--surface2); }
+  .menu-op svg { width: 16px; height: 16px; color: #CDA04C; flex-shrink: 0; }
+  .menu-op strong { display: block; font-size: 13px; font-weight: 500; color: var(--text); }
+  .menu-op span { display: block; font-size: 11px; color: var(--text-hint); margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -827,7 +840,7 @@
   <aside class="sidebar">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <p class="sidebar-title" style="margin-bottom:0;">Grupos</p>
-      <div id="new-group-btn" onclick="menuCriar()" title="Novo grupo" style="display:none;width:22px;height:22px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;align-items:center;justify-content:center;color:var(--text-hint);transition:border-color 0.15s,color 0.15s;">
+      <div id="new-group-btn" onclick="menuCriar(event)" title="Novo grupo" style="display:none;width:22px;height:22px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;align-items:center;justify-content:center;color:var(--text-hint);transition:border-color 0.15s,color 0.15s;">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
       </div>
     </div>
@@ -854,6 +867,35 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeGroupModal()">Cancelar</button>
       <button class="btn-confirm" onclick="confirmCreateGroup()">Criar grupo</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pasta-overlay" onclick="fecharModalPasta(event)">
+  <div class="modal" style="max-width:380px">
+    <h3>Nova pasta</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
+      Uma pasta reúne vários grupos no menu lateral. Depois é só arrastar os grupos para dentro.</p>
+    <label>Nome</label>
+    <input type="text" id="pasta-nome" placeholder="Ex: Lançamentos"
+      onkeydown="if(event.key==='Enter')confirmarNovaPasta()" />
+    <div id="pasta-erro" style="font-size:12px;color:#e05a5a;margin-top:6px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="fecharModalPasta(null,true)">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarNovaPasta()">Criar pasta</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="rg-overlay" onclick="fecharRemoverGrupo(event)">
+  <div class="modal" style="max-width:400px">
+    <h3 id="rg-titulo">Remover grupo</h3>
+    <p id="rg-texto" style="font-size:13px;color:var(--text-muted);margin-bottom:14px"></p>
+    <label>Mover os links para</label>
+    <select id="rg-destino"></select>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="fecharRemoverGrupo(null,true)">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarRemoverGrupo()">Mover e remover</button>
     </div>
   </div>
 </div>
@@ -985,10 +1027,35 @@ function goToSelector() {
 }
 
 // ── Criação de grupo ──────────────────────────────────
-function menuCriar() {
-  const escolha = prompt("O que você quer criar?\n\n1 — Grupo\n2 — Pasta\n\nDigite o número:");
-  if (escolha === "1") openGroupModal();
-  else if (escolha === "2") novaPasta();
+function menuCriar(e) {
+  e.stopPropagation();
+  const antigo = document.getElementById("menu-criar");
+  if (antigo) { antigo.remove(); return; }          // clicar de novo fecha
+
+  const botao = e.currentTarget.getBoundingClientRect();
+  const menu = document.createElement("div");
+  menu.id = "menu-criar";
+  menu.className = "menu-flutuante";
+  menu.style.top  = (botao.bottom + 6) + "px";
+  menu.style.left = botao.left + "px";
+  menu.innerHTML = `
+    <div class="menu-op" onclick="fecharMenuCriar();openGroupModal()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3.5" width="12" height="9" rx="1.5"/><line x1="2" y1="7" x2="14" y2="7"/></svg>
+      <div><strong>Novo grupo</strong><span>Guarda os links</span></div>
+    </div>
+    <div class="menu-op" onclick="fecharMenuCriar();modalNovaPasta()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M2 12.5v-9h4l1.5 2H14v7a1 1 0 01-1 1H3a1 1 0 01-1-1z"/></svg>
+      <div><strong>Nova pasta</strong><span>Reúne vários grupos</span></div>
+    </div>`;
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener("click", fecharMenuCriar, { once: true }), 0);
+}
+
+function fecharMenuCriar() {
+  const m = document.getElementById("menu-criar");
+  if (m) m.remove();
 }
 
 function openGroupModal() {
@@ -1944,13 +2011,27 @@ function togglePasta(pasta) {
 }
 
 // ── Pastas ────────────────────────────────────────────
-function novaPasta() {
-  const nome = prompt("Nome da pasta:");
-  if (!nome || !nome.trim()) return;
-  const n = nome.trim();
-  if (pastas.includes(n)) { alert("Já existe uma pasta com esse nome."); return; }
-  pastas.push(n);
-  savePastas().then(render);
+function modalNovaPasta() {
+  document.getElementById("pasta-nome").value = "";
+  document.getElementById("pasta-erro").textContent = "";
+  document.getElementById("pasta-overlay").classList.add("open");
+  document.getElementById("pasta-nome").focus();
+}
+
+function fecharModalPasta(e, forcar) {
+  if (forcar || !e || e.target === document.getElementById("pasta-overlay"))
+    document.getElementById("pasta-overlay").classList.remove("open");
+}
+
+async function confirmarNovaPasta() {
+  const nome = document.getElementById("pasta-nome").value.trim();
+  const erro = document.getElementById("pasta-erro");
+  if (!nome) { erro.textContent = "Dê um nome à pasta."; return; }
+  if (pastas.includes(nome)) { erro.textContent = "Já existe uma pasta com esse nome."; return; }
+  pastas.push(nome);
+  await savePastas();
+  fecharModalPasta(null, true);
+  render();
 }
 
 async function removerPasta(pasta) {
@@ -1995,36 +2076,55 @@ async function soltarNaRaiz(e) {
 }
 
 // ── Remoção de grupo ──────────────────────────────────
+let grupoParaRemover = null;
+
 async function removerGrupo(grupo) {
   const dentro = links.filter(l => l.grupo === grupo);
 
-  if (dentro.length) {
-    const destinos = groupOrder.filter(g => g !== grupo);
-    if (!destinos.length) {
-      alert(`"${grupo}" tem ${dentro.length} link(s) e não há outro grupo para movê-los.`);
-      return;
-    }
-    const escolha = prompt(
-      `"${grupo}" tem ${dentro.length} link(s).\n\n` +
-      `Para qual grupo mover?\n\n${destinos.map((g,i)=>`${i+1} — ${g}`).join("\n")}\n\n` +
-      `Digite o número (ou cancele para não remover):`);
-    if (!escolha) return;
-
-    const idx = parseInt(escolha, 10) - 1;
-    const destino = destinos[idx];
-    if (!destino) { alert("Número inválido."); return; }
-
-    mostrarProgresso(`Movendo ${dentro.length} link(s) para ${destino}...`);
-    const { error } = await sb.from("links").update({ grupo: destino }).eq("grupo", grupo);
-    esconderProgresso();
-    if (error) { alert("Erro ao mover os links: " + error.message); return; }
-    dentro.forEach(l => l.grupo = destino);
-  } else {
+  if (!dentro.length) {
     if (!confirm(`Remover o grupo "${grupo}"?`)) return;
+    return apagarGrupo(grupo);
   }
 
+  const destinos = groupOrder.filter(g => g !== grupo);
+  if (!destinos.length) {
+    alert(`"${grupo}" tem ${dentro.length} link(s) e não há outro grupo para movê-los.`);
+    return;
+  }
+
+  grupoParaRemover = grupo;
+  document.getElementById("rg-titulo").textContent = `Remover "${grupo}"`;
+  document.getElementById("rg-texto").innerHTML =
+    `Este grupo tem <strong>${dentro.length} link(s)</strong>. Escolha para onde movê-los:`;
+  document.getElementById("rg-destino").innerHTML =
+    destinos.map(g => `<option value="${g}">${g}</option>`).join("");
+  document.getElementById("rg-overlay").classList.add("open");
+}
+
+function fecharRemoverGrupo(e, forcar) {
+  if (forcar || !e || e.target === document.getElementById("rg-overlay"))
+    document.getElementById("rg-overlay").classList.remove("open");
+}
+
+async function confirmarRemoverGrupo() {
+  const destino = document.getElementById("rg-destino").value;
+  const grupo = grupoParaRemover;
+  if (!grupo || !destino) return;
+
+  mostrarProgresso(`Movendo os links para ${destino}...`);
+  const { error } = await sb.from("links").update({ grupo: destino }).eq("grupo", grupo);
+  esconderProgresso();
+  if (error) { alert("Erro ao mover os links: " + error.message); return; }
+
+  links.filter(l => l.grupo === grupo).forEach(l => l.grupo = destino);
+  fecharRemoverGrupo(null, true);
+  await apagarGrupo(grupo);
+}
+
+async function apagarGrupo(grupo) {
   await sb.from("grupo_order").delete().eq("grupo", grupo);
   groupOrder = groupOrder.filter(g => g !== grupo);
+  delete grupoPasta[grupo];
   collapsedGroups.delete(grupo);
   if (activeGrupo === grupo) activeGrupo = "Todos";
   await saveGroupOrder();
