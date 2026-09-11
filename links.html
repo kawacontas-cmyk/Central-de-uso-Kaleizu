@@ -190,11 +190,11 @@
   }
 
   .main {
-    max-width: 1200px;
+    max-width: 1280px;
     margin: 0 auto;
     padding: 1.5rem 2rem 3rem;
     display: grid;
-    grid-template-columns: 200px 1fr;
+    grid-template-columns: 260px 1fr;
     gap: 2rem;
     align-items: start;
   }
@@ -216,9 +216,9 @@
   .nav-list { list-style: none; }
   .nav-item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    padding: 6px 10px;
+    padding: 7px 10px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 13px;
@@ -228,7 +228,7 @@
   }
   .nav-item:hover { background: var(--surface); color: var(--text); }
   .nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
-  .nav-count { flex-shrink: 0;
+  .nav-count { flex-shrink: 0; margin-top: 1px;
     font-size: 11px;
     background: var(--surface2);
     color: var(--text-hint);
@@ -750,9 +750,10 @@
 
   /* ── menu lateral: arrastar e remover ── */
   .nav-item { position: relative; }
-  .nav-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-nome { flex: 1; min-width: 0; line-height: 1.35;
+    overflow-wrap: anywhere; word-break: break-word; }
 
-  .nav-drag { display: flex; align-items: center; flex-shrink: 0; cursor: grab;
+  .nav-drag { display: flex; align-items: center; flex-shrink: 0; cursor: grab; margin-top: 2px;
     color: var(--text-hint); opacity: 0; transition: opacity .15s; margin-left: -4px; }
   .nav-drag svg { width: 11px; height: 11px; }
   .nav-item:hover .nav-drag { opacity: 1; }
@@ -777,13 +778,13 @@
   #np-campos { margin-top: 14px; }
 
   /* ── pastas no menu lateral ── */
-  .nav-pasta { position: relative; display: flex; align-items: center; gap: 6px;
+  .nav-pasta { position: relative; display: flex; align-items: flex-start; gap: 6px;
     padding: 7px 10px; margin-top: 4px; border-radius: 6px; cursor: pointer;
     font-size: 13px; font-weight: 500; color: var(--text);
     transition: background .12s; user-select: none; }
   .nav-pasta:hover { background: rgba(255,255,255,.04); }
   .nav-pasta.alvo { background: rgba(205,160,76,.16); box-shadow: inset 0 0 0 1px #CDA04C; }
-  .pasta-seta { width: 12px; height: 12px; flex-shrink: 0; color: var(--text-hint);
+  .pasta-seta { width: 12px; height: 12px; flex-shrink: 0; margin-top: 3px; color: var(--text-hint);
     transition: transform .18s; transform: rotate(90deg); }
   .nav-pasta.fechada .pasta-seta { transform: rotate(0deg); }
   .nav-pasta .nav-count { background: rgba(205,160,76,.14); color: #CDA04C; }
@@ -864,6 +865,9 @@
     <h3>Criar novo grupo</h3>
     <label>Nome do grupo</label>
     <input type="text" id="group-name-input" placeholder="Ex: L18, Black Friday 2, Comercial 2..." onkeydown="if(event.key==='Enter')confirmCreateGroup()" />
+    <label>Pasta</label>
+    <select id="group-pasta-input"></select>
+    <div id="group-erro" style="font-size:12px;color:#e05a5a;margin-top:6px"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeGroupModal()">Cancelar</button>
       <button class="btn-confirm" onclick="confirmCreateGroup()">Criar grupo</button>
@@ -1058,8 +1062,16 @@ function fecharMenuCriar() {
   if (m) m.remove();
 }
 
-function openGroupModal() {
+function openGroupModal(pastaSugerida) {
   document.getElementById("group-name-input").value = "";
+  document.getElementById("group-erro").textContent = "";
+
+  // Se o grupo ativo estiver dentro de uma pasta, ela já vem escolhida
+  const atual = pastaSugerida || grupoPasta[activeGrupo] || "";
+  document.getElementById("group-pasta-input").innerHTML =
+    `<option value="">Nenhuma — fica solto na lista</option>` +
+    pastas.map(p => `<option value="${p}"${p===atual?" selected":""}>${p}</option>`).join("");
+
   document.getElementById("group-modal-overlay").classList.add("open");
   document.getElementById("group-name-input").focus();
 }
@@ -1070,13 +1082,20 @@ function closeGroupModal(e, forcar) {
 }
 
 async function confirmCreateGroup() {
-  const nome = document.getElementById("group-name-input").value.trim();
-  if (!nome) return;
-  if (groupOrder.includes(nome)) { alert("Já existe um grupo com esse nome."); return; }
+  const nome  = document.getElementById("group-name-input").value.trim();
+  const pasta = document.getElementById("group-pasta-input").value;
+  const erro  = document.getElementById("group-erro");
+
+  if (!nome) { erro.textContent = "Dê um nome ao grupo."; return; }
+  if (groupOrder.includes(nome)) { erro.textContent = "Já existe um grupo com esse nome."; return; }
+
   groupOrder.push(nome);
   collapsedGroups.add(nome);
+  if (pasta) { grupoPasta[nome] = pasta; pastasFechadas.delete(pasta); }
+
   await saveGroupOrder();
   closeGroupModal(null, true);
+  activeGrupo = nome;          // já abre no grupo recém-criado
   render();
 }
 
