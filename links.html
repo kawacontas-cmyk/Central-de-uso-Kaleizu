@@ -819,7 +819,8 @@
     border-radius: 4px; display: none; align-items: center; justify-content: center;
     transition: all .12s; }
   .nav-edit svg { width: 10px; height: 10px; }
-  .nav-pasta:hover .nav-edit { display: flex; }
+  .nav-pasta:hover .nav-edit,
+  .nav-item:hover .nav-edit { display: flex; }
   .nav-edit:hover { background: rgba(205,160,76,.15); color: #CDA04C; }
 </style>
 </head>
@@ -886,6 +887,19 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeGroupModal()">Cancelar</button>
       <button class="btn-confirm" onclick="confirmCreateGroup()">Criar grupo</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="rgn-overlay" onclick="fecharRenomearGrupo(event)">
+  <div class="modal" style="max-width:380px">
+    <h3>Renomear grupo</h3>
+    <label>Novo nome</label>
+    <input type="text" id="rgn-nome" onkeydown="if(event.key==='Enter')confirmarRenomearGrupo()" />
+    <div id="rgn-erro" style="font-size:12px;color:#e05a5a;margin-top:6px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="fecharRenomearGrupo(null,true)">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarRenomearGrupo()">Salvar</button>
     </div>
   </div>
 </div>
@@ -2004,7 +2018,11 @@ function renderNav(filtered) {
       ondragover="navDragOver(event,'${gEsc}')"
       ondrop="navDrop(event,'${gEsc}')"
       ondragend="navDragEnd()"` : "";
-    const remover = isAdmin ? `<button class="nav-del" title="Remover grupo"
+    const acoes = isAdmin ? `<button class="nav-edit" title="Renomear grupo"
+        onclick="event.stopPropagation();renomearGrupo('${gEsc}')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2l2.5 2.5-7 7H2.5v-2.5L9.5 2z"/></svg>
+      </button>
+      <button class="nav-del" title="Remover grupo"
         onclick="event.stopPropagation();removerGrupo('${gEsc}')">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3.5" y1="3.5" x2="10.5" y2="10.5"/><line x1="10.5" y1="3.5" x2="3.5" y2="10.5"/></svg>
@@ -2014,7 +2032,7 @@ function renderNav(filtered) {
       ${isAdmin ? '<span class="nav-drag"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="6" cy="12" r="1"/><circle cx="10" cy="4" r="1"/><circle cx="10" cy="8" r="1"/><circle cx="10" cy="12" r="1"/></svg></span>' : ""}
       <span class="nav-nome">${g}</span>
       <span class="nav-count">${n}</span>
-      ${remover}
+      ${acoes}
     </li>`;
   };
 
@@ -2121,6 +2139,60 @@ function pastaDragEnd() {
   pastaArrastando = null;
   document.querySelectorAll(".nav-pasta.alvo, .nav-pasta.alvo-ordem")
     .forEach(el => el.classList.remove("alvo", "alvo-ordem"));
+}
+
+// ── Renomear grupo ────────────────────────────────────
+let grupoRenomeando = null;
+
+function renomearGrupo(grupo) {
+  grupoRenomeando = grupo;
+  document.getElementById("rgn-nome").value = grupo;
+  document.getElementById("rgn-erro").textContent = "";
+  document.getElementById("rgn-overlay").classList.add("open");
+  const campo = document.getElementById("rgn-nome");
+  campo.focus(); campo.select();
+}
+
+function fecharRenomearGrupo(e, forcar) {
+  if (forcar || !e || e.target === document.getElementById("rgn-overlay"))
+    document.getElementById("rgn-overlay").classList.remove("open");
+}
+
+async function confirmarRenomearGrupo() {
+  const novo = document.getElementById("rgn-nome").value.trim();
+  const erro = document.getElementById("rgn-erro");
+  const antigo = grupoRenomeando;
+  if (!antigo) return;
+
+  if (!novo) { erro.textContent = "Dê um nome ao grupo."; return; }
+  if (novo === antigo) { fecharRenomearGrupo(null, true); return; }
+  if (groupOrder.includes(novo)) { erro.textContent = "Já existe um grupo com esse nome."; return; }
+
+  const quantos = links.filter(l => l.grupo === antigo).length;
+  mostrarProgresso(quantos ? `Renomeando e movendo ${quantos} link(s)...` : "Renomeando...");
+  try {
+    // Os links guardam o nome do grupo, então precisam acompanhar
+    if (quantos) {
+      const { error } = await sb.from("links").update({ grupo: novo }).eq("grupo", antigo);
+      if (error) throw error;
+      links.filter(l => l.grupo === antigo).forEach(l => l.grupo = novo);
+    }
+
+    groupOrder = groupOrder.map(g => g === antigo ? novo : g);
+    if (grupoPasta[antigo]) { grupoPasta[novo] = grupoPasta[antigo]; delete grupoPasta[antigo]; }
+    if (collapsedGroups.delete(antigo)) collapsedGroups.add(novo);
+    if (activeGrupo === antigo) activeGrupo = novo;
+
+    await sb.from("grupo_order").delete().eq("grupo", antigo);
+    await saveGroupOrder();
+
+    esconderProgresso();
+    fecharRenomearGrupo(null, true);
+    render();
+  } catch (e) {
+    esconderProgresso();
+    erro.textContent = "Erro ao renomear: " + e.message;
+  }
 }
 
 // ── Renomear pasta ────────────────────────────────────
@@ -2314,8 +2386,9 @@ function navDragEnd() {
 
 function setGrupo(g) {
   activeGrupo = g;
-  if (g==="Todos") groupOrder.forEach(gr => collapsedGroups.add(gr));
-  else collapsedGroups.clear();
+  // Tudo fechado por padrão. Ao escolher um grupo, só ele abre.
+  collapsedGroups.clear();
+  groupOrder.forEach(gr => { if (gr !== g) collapsedGroups.add(gr); });
   render();
 }
 
