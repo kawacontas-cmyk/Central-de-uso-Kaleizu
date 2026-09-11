@@ -806,6 +806,21 @@
   .menu-op svg { width: 16px; height: 16px; color: #CDA04C; flex-shrink: 0; }
   .menu-op strong { display: block; font-size: 13px; font-weight: 500; color: var(--text); }
   .menu-op span { display: block; font-size: 11px; color: var(--text-hint); margin-top: 1px; }
+
+  .pasta-drag { display: flex; align-items: center; flex-shrink: 0; margin-top: 2px;
+    cursor: grab; color: var(--text-hint); opacity: 0; transition: opacity .15s; margin-left: -3px; }
+  .pasta-drag:active { cursor: grabbing; }
+  .pasta-drag svg { width: 11px; height: 11px; }
+  .nav-pasta:hover .pasta-drag { opacity: 1; }
+  .nav-pasta.alvo-ordem { box-shadow: inset 0 2px 0 #CDA04C; background: rgba(205,160,76,.06); }
+
+  .nav-edit { flex-shrink: 0; width: 17px; height: 17px; padding: 0; margin-top: 1px;
+    border: none; background: transparent; color: var(--text-hint); cursor: pointer;
+    border-radius: 4px; display: none; align-items: center; justify-content: center;
+    transition: all .12s; }
+  .nav-edit svg { width: 10px; height: 10px; }
+  .nav-pasta:hover .nav-edit { display: flex; }
+  .nav-edit:hover { background: rgba(205,160,76,.15); color: #CDA04C; }
 </style>
 </head>
 <body>
@@ -871,6 +886,19 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeGroupModal()">Cancelar</button>
       <button class="btn-confirm" onclick="confirmCreateGroup()">Criar grupo</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="rp-overlay" onclick="fecharRenomearPasta(event)">
+  <div class="modal" style="max-width:380px">
+    <h3>Renomear pasta</h3>
+    <label>Novo nome</label>
+    <input type="text" id="rp-nome" onkeydown="if(event.key==='Enter')confirmarRenomearPasta()" />
+    <div id="rp-erro" style="font-size:12px;color:#e05a5a;margin-top:6px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="fecharRenomearPasta(null,true)">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarRenomearPasta()">Salvar</button>
     </div>
   </div>
 </div>
@@ -1314,6 +1342,9 @@ async function savePastas() {
   const rows = pastas.map((nome, i) => ({ nome, position: i }));
   await sb.from("pastas").upsert(rows, { onConflict: "nome" });
 }
+
+// Grupo solto sobre "Todos" também serve para tirar da pasta
+
 
 const BUCKET = "paginas";
 
@@ -2001,13 +2032,23 @@ function renderNav(filtered) {
     const fechada = pastasFechadas.has(pasta) && !q;
     const pEsc = pasta.replace(/'/g,"&#39;");
 
-    html += `<li class="nav-pasta${fechada?" fechada":""}"
-      ${isAdmin ? `ondragover="pastaDragOver(event,'${pEsc}')" ondrop="soltarNaPasta(event,'${pEsc}')" ondragleave="this.classList.remove('alvo')"` : ""}
+    html += `<li class="nav-pasta${fechada?" fechada":""}" data-pasta="${pEsc}"
+      ${isAdmin ? `ondragover="pastaDragOver(event,'${pEsc}')" ondrop="soltarNaPasta(event,'${pEsc}')"
+      ondragleave="this.classList.remove('alvo','alvo-ordem')" ondragend="pastaDragEnd()"` : ""}
       onclick="togglePasta('${pEsc}')">
+      ${isAdmin ? `<span class="pasta-drag" draggable="true"
+        ondragstart="pastaDragStart(event,'${pEsc}')" onclick="event.stopPropagation()"
+        title="Arrastar para reordenar">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="6" cy="12" r="1"/><circle cx="10" cy="4" r="1"/><circle cx="10" cy="8" r="1"/><circle cx="10" cy="12" r="1"/></svg>
+      </span>` : ""}
       <svg class="pasta-seta" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 10,8 5,13"/></svg>
       <span class="nav-nome">${pasta}</span>
       <span class="nav-count">${soma}</span>
-      ${isAdmin ? `<button class="nav-del" title="Remover pasta"
+      ${isAdmin ? `<button class="nav-edit" title="Renomear pasta"
+        onclick="event.stopPropagation();renomearPasta('${pEsc}')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2l2.5 2.5-7 7H2.5v-2.5L9.5 2z"/></svg>
+      </button>
+      <button class="nav-del" title="Remover pasta"
         onclick="event.stopPropagation();removerPasta('${pEsc}')">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3.5" y1="3.5" x2="10.5" y2="10.5"/><line x1="10.5" y1="3.5" x2="3.5" y2="10.5"/></svg>
@@ -2067,15 +2108,98 @@ async function removerPasta(pasta) {
   render();
 }
 
+let pastaArrastando = null;
+
+function pastaDragStart(e, pasta) {
+  pastaArrastando = pasta;
+  navArrastando = null;                      // é pasta, não grupo
+  e.dataTransfer.effectAllowed = "move";
+  e.stopPropagation();
+}
+
+function pastaDragEnd() {
+  pastaArrastando = null;
+  document.querySelectorAll(".nav-pasta.alvo, .nav-pasta.alvo-ordem")
+    .forEach(el => el.classList.remove("alvo", "alvo-ordem"));
+}
+
+// ── Renomear pasta ────────────────────────────────────
+let pastaRenomeando = null;
+
+function renomearPasta(pasta) {
+  pastaRenomeando = pasta;
+  document.getElementById("rp-nome").value = pasta;
+  document.getElementById("rp-erro").textContent = "";
+  document.getElementById("rp-overlay").classList.add("open");
+  const campo = document.getElementById("rp-nome");
+  campo.focus(); campo.select();
+}
+
+function fecharRenomearPasta(e, forcar) {
+  if (forcar || !e || e.target === document.getElementById("rp-overlay"))
+    document.getElementById("rp-overlay").classList.remove("open");
+}
+
+async function confirmarRenomearPasta() {
+  const novo = document.getElementById("rp-nome").value.trim();
+  const erro = document.getElementById("rp-erro");
+  const antigo = pastaRenomeando;
+  if (!antigo) return;
+
+  if (!novo) { erro.textContent = "Dê um nome à pasta."; return; }
+  if (novo === antigo) { fecharRenomearPasta(null, true); return; }
+  if (pastas.includes(novo)) { erro.textContent = "Já existe uma pasta com esse nome."; return; }
+
+  mostrarProgresso("Renomeando...");
+  try {
+    // A pasta é identificada pelo nome, então criamos a nova e migramos os grupos
+    await sb.from("pastas").insert([{ nome: novo, position: pastas.indexOf(antigo) }]);
+    pastas = pastas.map(p => p === antigo ? novo : p);
+    Object.keys(grupoPasta).forEach(g => { if (grupoPasta[g] === antigo) grupoPasta[g] = novo; });
+    await saveGroupOrder();
+    await sb.from("pastas").delete().eq("nome", antigo);
+    await savePastas();
+
+    if (pastasFechadas.delete(antigo)) pastasFechadas.add(novo);
+    esconderProgresso();
+    fecharRenomearPasta(null, true);
+    render();
+  } catch (e) {
+    esconderProgresso();
+    erro.textContent = "Erro ao renomear: " + e.message;
+  }
+}
+
 function pastaDragOver(e, pasta) {
-  if (!navArrastando) return;
-  e.preventDefault();
-  e.currentTarget.classList.add("alvo");
+  if (navArrastando) {              // grupo entrando na pasta
+    e.preventDefault();
+    e.currentTarget.classList.add("alvo");
+  } else if (pastaArrastando && pastaArrastando !== pasta) {   // reordenando pastas
+    e.preventDefault();
+    document.querySelectorAll(".nav-pasta.alvo-ordem").forEach(el => el.classList.remove("alvo-ordem"));
+    e.currentTarget.classList.add("alvo-ordem");
+  }
 }
 
 async function soltarNaPasta(e, pasta) {
   e.preventDefault(); e.stopPropagation();
-  e.currentTarget.classList.remove("alvo");
+  e.currentTarget.classList.remove("alvo", "alvo-ordem");
+
+  // Reordenando pastas
+  if (pastaArrastando && pastaArrastando !== pasta) {
+    const de = pastas.indexOf(pastaArrastando);
+    const para = pastas.indexOf(pasta);
+    if (de !== -1 && para !== -1) {
+      pastas.splice(de, 1);
+      pastas.splice(para, 0, pastaArrastando);
+      await savePastas();
+    }
+    pastaArrastando = null;
+    render();
+    return;
+  }
+
+  // Grupo entrando na pasta
   if (!navArrastando) return;
   grupoPasta[navArrastando] = pasta;
   pastasFechadas.delete(pasta);
