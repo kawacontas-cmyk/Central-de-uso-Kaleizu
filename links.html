@@ -2141,11 +2141,8 @@ function togglePasta(pasta) {
     activePasta = pasta;
     activeGrupo = null;
     pastasFechadas.delete(pasta);
-    // Os grupos da pasta abrem para já mostrarem os links
-    groupOrder.forEach(g => {
-      if (grupoPasta[g] === pasta) collapsedGroups.delete(g);
-      else collapsedGroups.add(g);
-    });
+    // Os grupos aparecem fechados; quem abre é o clique em cada um
+    groupOrder.forEach(g => collapsedGroups.add(g));
   }
   render();
 }
