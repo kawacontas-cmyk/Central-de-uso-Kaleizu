@@ -822,13 +822,6 @@
   .nav-pasta:hover .nav-edit,
   .nav-item:hover .nav-edit { display: flex; }
   .nav-edit:hover { background: rgba(205,160,76,.15); color: #CDA04C; }
-  .btn-topo { display: flex; align-items: center; gap: 6px; padding: 6px 12px;
-    background: transparent; border: 1px solid var(--border); border-radius: 7px;
-    font-size: 12px; color: var(--text-muted); cursor: pointer;
-    font-family: 'DM Sans', sans-serif; white-space: nowrap; transition: all .15s; }
-  .btn-topo:hover { border-color: #CDA04C; color: #CDA04C; }
-  .btn-topo svg { width: 12px; height: 12px; transition: transform .2s; transform: rotate(-90deg); }
-  .btn-topo.aberto svg { transform: rotate(0deg); }
 </style>
 </head>
 <body>
@@ -848,10 +841,6 @@
       <input type="search" id="search" name="busca-links" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" data-1p-ignore placeholder="Buscar link..." oninput="render()" readonly onfocus="this.removeAttribute('readonly')">
     </div>
     <span class="count-badge" id="count"></span>
-    <button id="toggle-todos" class="btn-topo" onclick="alternarTodos()" title="Abrir ou fechar todos os grupos">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4,6 8,10 12,6"/></svg>
-      <span id="toggle-txt">Abrir todos</span>
-    </button>
     <button id="lote-btn" class="admin-btn" onclick="abrirLoteModal()" title="Arquivar várias páginas de uma vez">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M2.5 11v2h11v-2"/></svg>
       Arquivar em lote
@@ -1330,6 +1319,10 @@ async function loadData() {
 
   collapsedGroups.clear();
   groupOrder.forEach(g => collapsedGroups.add(g));
+
+  // Pastas também começam fechadas
+  pastasFechadas.clear();
+  pastas.forEach(p => pastasFechadas.add(p));
 
   showLoading(false);
   render();
@@ -1972,31 +1965,11 @@ function closeAllDropdowns() {
 }
 document.addEventListener("click", closeAllDropdowns);
 
-// Abre ou fecha todos de uma vez
-function alternarTodos() {
-  const visiveis = groupOrder.filter(g => activeGrupo === "Todos" || g === activeGrupo);
-  const algumFechado = visiveis.some(g => collapsedGroups.has(g));
-  if (algumFechado) visiveis.forEach(g => collapsedGroups.delete(g));
-  else visiveis.forEach(g => collapsedGroups.add(g));
-  render();
-}
-
-function atualizarRotuloTodos() {
-  const el = document.getElementById("toggle-txt");
-  if (!el) return;
-  const visiveis = groupOrder.filter(g => activeGrupo === "Todos" || g === activeGrupo);
-  const algumFechado = visiveis.some(g => collapsedGroups.has(g));
-  el.textContent = algumFechado ? "Abrir todos" : "Fechar todos";
-  const btn = document.getElementById("toggle-todos");
-  if (btn) btn.classList.toggle("aberto", !algumFechado);
-}
-
 function toggleSection(grupo, id) {
   const el = document.getElementById(id);
   if (!el) return;
   if (collapsedGroups.has(grupo)) { collapsedGroups.delete(grupo); el.classList.remove("collapsed"); }
   else { collapsedGroups.add(grupo); el.classList.add("collapsed"); }
-  atualizarRotuloTodos();
 }
 
 // ── DRAG & DROP ────────────────────────────────────────
@@ -2431,7 +2404,6 @@ function render() {
 
   renderNav(allFiltered);
   document.getElementById("count").textContent = filtered.length + " links";
-  atualizarRotuloTodos();
 
   const byGroupMap = {};
   filtered.forEach(l => { if (!byGroupMap[l.grupo]) byGroupMap[l.grupo]=[]; byGroupMap[l.grupo].push(l); });
