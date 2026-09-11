@@ -827,6 +827,20 @@
   .nav-todos .nav-nome { color: var(--text); }
   .todos-icone { width: 13px; height: 13px; flex-shrink: 0; margin-top: 2px; color: var(--text-hint); }
   .nav-todos.active .todos-icone { color: #CDA04C; }
+  .nav-pasta.ativa { background: rgba(205,160,76,.14); }
+  .nav-pasta.ativa .nav-nome { color: #e8c97a; }
+  .nav-pasta.ativa .pasta-seta { color: #CDA04C; }
+
+  .pasta-aviso { display: flex; align-items: center; gap: 9px; margin-bottom: 18px;
+    padding: 9px 14px; background: rgba(205,160,76,.08);
+    border: 1px solid rgba(205,160,76,.25); border-radius: 9px;
+    font-size: 13px; color: var(--text-muted); }
+  .pasta-aviso svg { width: 14px; height: 14px; color: #CDA04C; flex-shrink: 0; }
+  .pasta-aviso strong { color: #e8c97a; font-weight: 500; }
+  .pasta-aviso button { margin-left: auto; background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 11px; font-size: 12px; color: var(--text-muted);
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .15s; }
+  .pasta-aviso button:hover { border-color: #CDA04C; color: #CDA04C; }
 </style>
 </head>
 <body>
@@ -1279,6 +1293,7 @@ const tipoInfo = {
 let links = [];
 let groupOrder = [];
 let activeGrupo = "Todos";
+let activePasta = null;   // pasta selecionada: filtra o conteúdo à direita
 const collapsedGroups = new Set();
 let pastas = [];            // ordem das pastas
 let grupoPasta = {};        // { nomeDoGrupo: nomeDaPasta }
@@ -1914,6 +1929,16 @@ async function setType(id, url, tipo) {
 
 // ── UI HELPERS ─────────────────────────────────────────
 function showLoading(on) {
+  // Faixa indicando qual pasta está sendo mostrada
+  const aviso = activePasta
+    ? `<div class="pasta-aviso">
+         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+           <path d="M2 12.5v-9h4l1.5 2H14v7a1 1 0 01-1 1H3a1 1 0 01-1-1z"/></svg>
+         <span>Mostrando a pasta <strong>${activePasta}</strong> · ${byGroupCount(activePasta)} grupo(s)</span>
+         <button onclick="setGrupo('Todos')">Ver tudo</button>
+       </div>`
+    : "";
+
   const content = document.getElementById("content");
   const nav = document.getElementById("nav");
   if (on) {
@@ -2049,7 +2074,7 @@ function renderNav(filtered) {
 
   // "Todos" fica acima do rótulo, porque não é um grupo e sim a visão geral
   document.getElementById("nav-todos").innerHTML =
-    `<li class="nav-item nav-todos${activeGrupo==="Todos"?" active":""}" onclick="setGrupo('Todos')"
+    `<li class="nav-item nav-todos${activeGrupo==="Todos"&&!activePasta?" active":""}" onclick="setGrupo('Todos')"
       ${isAdmin ? `ondragover="event.preventDefault()" ondrop="soltarNaRaiz(event)" title="Arraste um grupo aqui para tirá-lo da pasta"` : ""}>
       <svg class="todos-icone" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="2" y="2.5" width="5" height="5" rx="1"/><rect x="9" y="2.5" width="5" height="5" rx="1"/>
@@ -2069,7 +2094,7 @@ function renderNav(filtered) {
     const fechada = pastasFechadas.has(pasta) && !q;
     const pEsc = pasta.replace(/'/g,"&#39;");
 
-    html += `<li class="nav-pasta${fechada?" fechada":""}" data-pasta="${pEsc}"
+    html += `<li class="nav-pasta${fechada?" fechada":""}${activePasta===pasta?" ativa":""}" data-pasta="${pEsc}"
       ${isAdmin ? `ondragover="pastaDragOver(event,'${pEsc}')" ondrop="soltarNaPasta(event,'${pEsc}')"
       ondragleave="this.classList.remove('alvo','alvo-ordem')" ondragend="pastaDragEnd()"` : ""}
       onclick="togglePasta('${pEsc}')">
@@ -2101,9 +2126,27 @@ function renderNav(filtered) {
   nav.innerHTML = html;
 }
 
+// Clicar na pasta seleciona (mostra os grupos dela à direita) e abre no menu.
+// Clicar de novo, já selecionada, fecha e volta para a visão geral.
+function byGroupCount(pasta) {
+  return groupOrder.filter(g => grupoPasta[g] === pasta).length;
+}
+
 function togglePasta(pasta) {
-  if (pastasFechadas.has(pasta)) pastasFechadas.delete(pasta);
-  else pastasFechadas.add(pasta);
+  if (activePasta === pasta) {
+    activePasta = null;
+    pastasFechadas.add(pasta);
+    activeGrupo = "Todos";
+  } else {
+    activePasta = pasta;
+    activeGrupo = null;
+    pastasFechadas.delete(pasta);
+    // Os grupos da pasta abrem para já mostrarem os links
+    groupOrder.forEach(g => {
+      if (grupoPasta[g] === pasta) collapsedGroups.delete(g);
+      else collapsedGroups.add(g);
+    });
+  }
   render();
 }
 
@@ -2405,6 +2448,7 @@ function navDragEnd() {
 
 function setGrupo(g) {
   activeGrupo = g;
+  activePasta = null;
   // Tudo fechado por padrão. Ao escolher um grupo, só ele abre.
   collapsedGroups.clear();
   groupOrder.forEach(gr => { if (gr !== g) collapsedGroups.add(gr); });
@@ -2415,7 +2459,10 @@ function setGrupo(g) {
 function render() {
   const q = document.getElementById("search").value.toLowerCase();
   const allFiltered = links.filter(l => !q || l.label.toLowerCase().includes(q) || l.url.toLowerCase().includes(q));
-  const filtered = allFiltered.filter(l => activeGrupo==="Todos" || l.grupo===activeGrupo);
+  const filtered = allFiltered.filter(l => {
+    if (activePasta) return grupoPasta[l.grupo] === activePasta;   // pasta selecionada
+    return activeGrupo === "Todos" || l.grupo === activeGrupo;
+  });
 
   renderNav(allFiltered);
   document.getElementById("count").textContent = filtered.length + " links";
@@ -2426,15 +2473,28 @@ function render() {
   // Grupos recém-criados ainda não têm links. Sem busca ativa eles
   // aparecem vazios, para dar onde clicar em "Adicionar link".
   const byGroup = groupOrder
-    .filter(g => byGroupMap[g] || (!q && (activeGrupo === "Todos" || activeGrupo === g)))
+    .filter(g => {
+      if (activePasta) return grupoPasta[g] === activePasta;       // só os da pasta
+      return byGroupMap[g] || (!q && (activeGrupo === "Todos" || activeGrupo === g));
+    })
     .map(g => [g, byGroupMap[g] || []]);
+
+  // Faixa indicando qual pasta está sendo mostrada
+  const aviso = activePasta
+    ? `<div class="pasta-aviso">
+         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+           <path d="M2 12.5v-9h4l1.5 2H14v7a1 1 0 01-1 1H3a1 1 0 01-1-1z"/></svg>
+         <span>Mostrando a pasta <strong>${activePasta}</strong> · ${byGroupCount(activePasta)} grupo(s)</span>
+         <button onclick="setGrupo('Todos')">Ver tudo</button>
+       </div>`
+    : "";
 
   const content = document.getElementById("content");
   if (!filtered.length && !byGroup.length) {
     content.innerHTML = '<p class="empty">Nenhum link encontrado.</p>'; return;
   }
 
-  content.innerHTML = byGroup.map(([grupo, items]) => {
+  content.innerHTML = aviso + byGroup.map(([grupo, items]) => {
     const id = "sec-" + grupo.replace(/\s+/g,"_");
     const isCollapsed = collapsedGroups.has(grupo);
     const gEsc = grupo.replace(/'/g,"&#39;");
