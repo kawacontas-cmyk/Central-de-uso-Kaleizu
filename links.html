@@ -822,6 +822,11 @@
   .nav-pasta:hover .nav-edit,
   .nav-item:hover .nav-edit { display: flex; }
   .nav-edit:hover { background: rgba(205,160,76,.15); color: #CDA04C; }
+  .sidebar-sep { height: 1px; background: var(--border); margin: 12px 0 14px; }
+  .nav-todos { font-weight: 500; }
+  .nav-todos .nav-nome { color: var(--text); }
+  .todos-icone { width: 13px; height: 13px; flex-shrink: 0; margin-top: 2px; color: var(--text-hint); }
+  .nav-todos.active .todos-icone { color: #CDA04C; }
 </style>
 </head>
 <body>
@@ -855,6 +860,8 @@
 
 <div class="main">
   <aside class="sidebar">
+    <ul class="nav-list" id="nav-todos"></ul>
+    <div class="sidebar-sep"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <p class="sidebar-title" style="margin-bottom:0;">Grupos</p>
       <div id="new-group-btn" onclick="menuCriar(event)" title="Novo grupo" style="display:none;width:22px;height:22px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;align-items:center;justify-content:center;color:var(--text-hint);transition:border-color 0.15s,color 0.15s;">
@@ -2040,10 +2047,18 @@ function renderNav(filtered) {
     </li>`;
   };
 
-  const totalTodos = filtered.length;
-  let html = `<li class="nav-item${activeGrupo==="Todos"?" active":""}" onclick="setGrupo('Todos')"
-    ${isAdmin ? `ondragover="event.preventDefault()" ondrop="soltarNaRaiz(event)"` : ""}>
-    <span class="nav-nome">Todos</span><span class="nav-count">${totalTodos}</span></li>`;
+  // "Todos" fica acima do rótulo, porque não é um grupo e sim a visão geral
+  document.getElementById("nav-todos").innerHTML =
+    `<li class="nav-item nav-todos${activeGrupo==="Todos"?" active":""}" onclick="setGrupo('Todos')"
+      ${isAdmin ? `ondragover="event.preventDefault()" ondrop="soltarNaRaiz(event)" title="Arraste um grupo aqui para tirá-lo da pasta"` : ""}>
+      <svg class="todos-icone" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="2.5" width="5" height="5" rx="1"/><rect x="9" y="2.5" width="5" height="5" rx="1"/>
+        <rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+      <span class="nav-nome">Todos os links</span>
+      <span class="nav-count">${filtered.length}</span>
+    </li>`;
+
+  let html = "";
 
   // Pastas, na ordem salva
   pastas.forEach(pasta => {
