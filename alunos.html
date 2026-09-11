@@ -419,6 +419,14 @@
   .kpi-split-val{ font-family:var(--mono); font-weight:500; color:var(--text); }
   .kpi-split-val.warn{ color:var(--amber); }
   .kpi-split-det{ font-family:var(--mono); font-size:11px; color:var(--hint); min-width:52px; text-align:right; }
+
+  /* ---------- ALUNOS: resumo do filtro com números coloridos ---------- */
+  .resumo-n{ font-family:var(--mono); font-weight:600; }
+  .resumo-n.total{ color:var(--text); }
+  .resumo-n.amber{ color:var(--amber); }
+  .resumo-n.blue{ color:var(--blue); }
+  .resumo-n.red{ color:var(--red); }
+  .resumo-n.zero{ color:var(--gray-text); font-weight:500; }
 </style>
 </head>
 <body>
@@ -1832,16 +1840,18 @@
     const docPendente = filtrados.filter(a => a.statusMatricula === "Documentos não enviados").length;
     const foraDoGrupo = filtrados.filter(a => a.status === "Ativo" && a.grupoWhats !== "No grupo").length;
     const inadimplentes = filtrados.filter(isInadimplente30).length;
+    // Número colorido só quando há algo a olhar; zero fica neutro
+    const n = (v, cor) => `<strong class="resumo-n ${v ? cor : "zero"}">${v}</strong>`;
     resumo.innerHTML = `
-      <span><strong style="color:var(--navy-2);">${filtrados.length}</strong> aluno(s) nesse filtro</span>
+      <span>${n(filtrados.length, "total")} aluno(s) nesse filtro</span>
       <span>·</span>
-      <span><strong style="color:var(--navy-2);">${semMatricula}</strong> sem matrícula</span>
+      <span>${n(semMatricula, "amber")} sem matrícula</span>
       <span>·</span>
-      <span><strong style="color:var(--navy-2);">${docPendente}</strong> com documentação pendente</span>
+      <span>${n(docPendente, "amber")} com documentação pendente</span>
       <span>·</span>
-      <span><strong style="color:var(--navy-2);">${foraDoGrupo}</strong> ativos fora do grupo do WhatsApp</span>
+      <span>${n(foraDoGrupo, "blue")} ativos fora do grupo do WhatsApp</span>
       <span>·</span>
-      <span>🚩 <strong style="color:var(--navy-2);">${inadimplentes}</strong> inadimplente(s) 30+ dias</span>
+      <span>🚩 ${n(inadimplentes, "red")} inadimplente(s) 30+ dias</span>
     `;
 
     body.innerHTML = filtrados.length ? filtrados.map(a => {
