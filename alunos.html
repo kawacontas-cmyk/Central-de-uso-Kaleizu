@@ -410,6 +410,15 @@
 
   /* campo de busca nasce readonly para escapar do autofill — não deve parecer desabilitado */
   input[type="search"][readonly] { cursor: text; opacity: 1; }
+
+  /* ---------- DASHBOARD: KPIs divididos por curso ---------- */
+  .kpi-split{ margin-top:12px; padding-top:10px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px; }
+  .kpi-split-row{ display:grid; grid-template-columns:8px 1fr auto auto; align-items:center; gap:8px; font-size:12px; }
+  .kpi-split-dot{ width:7px; height:7px; border-radius:50%; }
+  .kpi-split-nome{ color:var(--gray-text); }
+  .kpi-split-val{ font-family:var(--mono); font-weight:500; color:var(--text); }
+  .kpi-split-val.warn{ color:var(--amber); }
+  .kpi-split-det{ font-family:var(--mono); font-size:11px; color:var(--hint); min-width:52px; text-align:right; }
 </style>
 </head>
 <body>
@@ -1469,46 +1478,66 @@
     }
   }
 
-  // ---------- DASHBOARD: KPIs globais ----------
+  // ---------- DASHBOARD: KPIs globais (com divisão por curso) ----------
   function renderDashboardKPIs() {
     const el = document.getElementById("dash-kpis");
     if (!el) return;
 
-    const ativos = alunosCache.filter(a => a.status === "Ativo");
-    const cardio = ativos.filter(a => a.curso === "Pós Cardio").length;
-    const clinica = ativos.filter(a => a.curso === "Pós Clínica").length;
-
-    const comObrigacao = ativos.filter(a => ["Em dia", "Pendente", "Atrasado"].includes(a.statusPagamento));
-    const atrasados = comObrigacao.filter(a => a.statusPagamento === "Atrasado").length;
-    const taxaInadimplencia = comObrigacao.length ? Math.round((atrasados / comObrigacao.length) * 1000) / 10 : 0;
-
-    const inativos = alunosCache.filter(a => a.status !== "Ativo").length;
-    const taxaCancelamento = alunosCache.length ? Math.round((inativos / alunosCache.length) * 1000) / 10 : 0;
-
+    const CURSOS = [
+      { nome: "Pós Cardio",  curto: "Cardio",  cor: "var(--blue)" },
+      { nome: "Pós Clínica", curto: "Clínica", cor: "var(--teal)" },
+    ];
+    const pct = (n, d) => d ? Math.round((n / d) * 1000) / 10 : 0;
     const hoje = new Date();
     const anoMes = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
-    const novasEsteMes = alunosCache.filter(a => (a.dataInicio || "").startsWith(anoMes)).length;
+
+    // Mesma regra de cálculo para o geral e para cada curso
+    const calc = (lista) => {
+      const ativos = lista.filter(a => a.status === "Ativo");
+      const comObrig = ativos.filter(a => ["Em dia", "Pendente", "Atrasado"].includes(a.statusPagamento));
+      const atrasados = comObrig.filter(a => a.statusPagamento === "Atrasado").length;
+      const inativos = lista.filter(a => a.status !== "Ativo").length;
+      return {
+        total: lista.length, ativos: ativos.length,
+        atrasados, comObrig: comObrig.length, inad: pct(atrasados, comObrig.length),
+        inativos, canc: pct(inativos, lista.length),
+        novas: lista.filter(a => (a.dataInicio || "").startsWith(anoMes)).length,
+      };
+    };
+
+    const geral = calc(alunosCache);
+    const porCurso = CURSOS.map(c => ({ ...c, ...calc(alunosCache.filter(a => a.curso === c.nome)) }));
+
+    const divisao = (fn) => `<div class="kpi-split">${porCurso.map(c => {
+      const { valor, det = "", warn } = fn(c);
+      return `<div class="kpi-split-row">
+        <span class="kpi-split-dot" style="background:${c.cor}"></span>
+        <span class="kpi-split-nome">${c.curto}</span>
+        <span class="kpi-split-val${warn ? " warn" : ""}">${valor}</span>
+        <span class="kpi-split-det">${det}</span>
+      </div>`;
+    }).join("")}</div>`;
 
     el.innerHTML = `
       <div class="metric-card">
         <div class="label">Alunos ativos</div>
-        <div class="value">${ativos.length}</div>
-        <div class="sub">${cardio} Pós Cardio · ${clinica} Pós Clínica</div>
+        <div class="value">${geral.ativos}</div>
+        ${divisao(c => ({ valor: c.ativos, det: `de ${c.total}` }))}
       </div>
       <div class="metric-card">
         <div class="label">Taxa de inadimplência</div>
-        <div class="value ${taxaInadimplencia > 15 ? "warn" : ""}">${taxaInadimplencia}%</div>
-        <div class="sub">${atrasados} de ${comObrigacao.length} ativos com parcela em aberto</div>
+        <div class="value ${geral.inad > 15 ? "warn" : ""}">${geral.inad}%</div>
+        ${divisao(c => ({ valor: `${c.inad}%`, det: `${c.atrasados}/${c.comObrig}`, warn: c.inad > 15 }))}
       </div>
       <div class="metric-card">
         <div class="label">Taxa de cancelamento</div>
-        <div class="value ${taxaCancelamento > 20 ? "warn" : ""}">${taxaCancelamento}%</div>
-        <div class="sub">${inativos} de ${alunosCache.length} cadastros totais</div>
+        <div class="value ${geral.canc > 20 ? "warn" : ""}">${geral.canc}%</div>
+        ${divisao(c => ({ valor: `${c.canc}%`, det: `${c.inativos}/${c.total}`, warn: c.canc > 20 }))}
       </div>
       <div class="metric-card">
         <div class="label">Novas matrículas (mês atual)</div>
-        <div class="value">${novasEsteMes}</div>
-        <div class="sub">Contagem por data de início</div>
+        <div class="value">${geral.novas}</div>
+        ${divisao(c => ({ valor: c.novas }))}
       </div>
     `;
   }
