@@ -351,8 +351,14 @@
       <div class="field"><label for="f-email">E-mail *</label><input type="text" id="f-email" placeholder="email@exemplo.com"></div>
       <div class="field"><label for="f-telefone">WhatsApp</label><input type="text" id="f-telefone" placeholder="(00) 00000-0000"></div>
       <div class="field"><label for="f-cpf">CPF</label><input type="text" id="f-cpf" placeholder="000.000.000-00"></div>
-      <div class="field"><label for="f-vendedor">Vendedor responsável *</label><input type="text" id="f-vendedor" placeholder="Nome do vendedor"></div>
-      <div class="field"><label for="f-origem">Produto que gerou o bônus</label><input type="text" id="f-origem" placeholder="Ex.: Vet360, CardioPrime"></div>
+      <div class="field"><label for="f-vendedor">Vendedor responsável *</label>
+        <select id="f-vendedor"></select>
+        <input type="text" id="f-vendedor-novo" placeholder="Nome do novo vendedor" style="display:none;margin-top:6px">
+      </div>
+      <div class="field"><label for="f-origem">Produto que gerou o bônus</label>
+        <select id="f-origem"></select>
+        <input type="text" id="f-origem-novo" placeholder="Nome do novo produto" style="display:none;margin-top:6px">
+      </div>
       <div class="field"><label for="f-venda">Data da venda *</label><input type="date" id="f-venda"></div>
       <div class="field"><label for="f-mesref">Mês de referência da meta</label><input type="text" id="f-mesref" placeholder="2026-09"></div>
       <div class="field"><label for="f-meses">Meses de acesso</label>
@@ -450,6 +456,13 @@
   const TABELA = "clube_vet";
   const JANELA_AVISO = 60; // dias antes do vencimento em que o aluno entra na régua
 
+  // Opções iniciais dos campos de seleção. O que for cadastrado pelo
+  // "+ Adicionar novo" entra na lista sozinho a partir do primeiro
+  // registro salvo — não precisa voltar aqui para incluir.
+  const VENDEDORES_BASE = ["Mohana", "Patrícia"];
+  const PRODUTOS_BASE   = ["Vet360", "CardioPrime"];
+  const NOVO = "__novo__";
+
   let registros = [];
   let isAdmin = false;
   let editandoId = null;
@@ -503,6 +516,44 @@
   }
   function celAluno(r){
     return '<div class="cel-nome">'+esc(r.nome)+'</div><div class="cel-sub">'+esc(r.email||"")+(r.telefone ? " · "+esc(r.telefone) : "")+'</div>';
+  }
+
+  // ---------- CAMPOS DE SELEÇÃO ----------
+  // A lista é a união entre as opções base e tudo que já foi usado nos
+  // registros, para que um nome novo apareça para todo mundo depois de salvo.
+  function opcoesDe(base, campo){
+    const usados = registros.map(r => r[campo]).filter(Boolean);
+    return [...new Set([...base, ...usados])].sort((a,b) => a.localeCompare(b, "pt-BR"));
+  }
+  function montarSelect(id, base, campo, valor){
+    const sel = document.getElementById(id);
+    const lista = opcoesDe(base, campo);
+    if (valor && !lista.includes(valor)) lista.push(valor);
+    sel.innerHTML = '<option value="">— selecione —</option>' +
+      lista.map(v => '<option value="'+esc(v)+'">'+esc(v)+'</option>').join("") +
+      '<option value="'+NOVO+'">+ Adicionar novo…</option>';
+    sel.value = valor || "";
+    const novo = document.getElementById(id + "-novo");
+    novo.style.display = "none";
+    novo.value = "";
+  }
+  function ligarSelectNovo(id){
+    const sel = document.getElementById(id);
+    const novo = document.getElementById(id + "-novo");
+    sel.addEventListener("change", () => {
+      if (sel.value !== NOVO) { novo.style.display = "none"; novo.value = ""; return; }
+      sel.value = "";
+      novo.style.display = "block";
+      novo.focus();
+    });
+  }
+  ligarSelectNovo("f-vendedor");
+  ligarSelectNovo("f-origem");
+
+  function valorDe(id){
+    const novo = document.getElementById(id + "-novo");
+    if (novo.style.display !== "none" && novo.value.trim()) return novo.value.trim();
+    return document.getElementById(id).value.trim();
   }
 
   // ---------- TOAST / MODAIS ----------
@@ -676,7 +727,7 @@
   function preencherVendedores(){
     const sel = document.getElementById("filtro-vendedor");
     const atual = sel.value;
-    const nomes = [...new Set(registros.map(r => r.vendedor).filter(Boolean))].sort();
+    const nomes = opcoesDe(VENDEDORES_BASE, "vendedor");
     sel.innerHTML = '<option value="">Todos os vendedores</option>' +
       nomes.map(n => '<option value="'+esc(n)+'">'+esc(n)+'</option>').join("");
     sel.value = atual;
@@ -774,8 +825,8 @@
     document.getElementById("f-email").value     = r?.email || "";
     document.getElementById("f-telefone").value  = r?.telefone || "";
     document.getElementById("f-cpf").value       = r?.cpf || "";
-    document.getElementById("f-vendedor").value  = r?.vendedor || "";
-    document.getElementById("f-origem").value    = r?.origem || "";
+    montarSelect("f-vendedor", VENDEDORES_BASE, "vendedor", r?.vendedor || "");
+    montarSelect("f-origem",   PRODUTOS_BASE,   "origem",   r?.origem || "");
     document.getElementById("f-venda").value     = r?.data_venda ? String(r.data_venda).slice(0,10) : hojeISO();
     document.getElementById("f-mesref").value    = r?.mes_ref || hojeISO().slice(0,7);
     document.getElementById("f-meses").value     = String(r?.meses || 12);
@@ -790,7 +841,7 @@
     if (!exigeAdmin()) return;
     const nome     = document.getElementById("f-nome").value.trim();
     const email    = document.getElementById("f-email").value.trim();
-    const vendedor = document.getElementById("f-vendedor").value.trim();
+    const vendedor = valorDe("f-vendedor");
     const venda    = document.getElementById("f-venda").value;
     if (!nome || !email || !vendedor || !venda) { showToast("Preencha nome, e-mail, vendedor e data da venda."); return; }
 
@@ -798,7 +849,7 @@
       nome, email, vendedor,
       telefone: document.getElementById("f-telefone").value.trim() || null,
       cpf:      document.getElementById("f-cpf").value.trim() || null,
-      origem:   document.getElementById("f-origem").value.trim() || null,
+      origem:   valorDe("f-origem") || null,
       data_venda: venda,
       mes_ref:  document.getElementById("f-mesref").value.trim() || venda.slice(0,7),
       meses:    Number(document.getElementById("f-meses").value) || 12,
