@@ -369,7 +369,7 @@
           <option value="24">24 meses</option>
         </select>
       </div>
-      <div class="field"><label for="f-liberacao">Data de liberação (se já liberado)</label><input type="date" id="f-liberacao"></div>
+      <div class="field" id="campo-liberacao"><label for="f-liberacao">Data de liberação (se já liberado)</label><input type="date" id="f-liberacao"></div>
       <div class="field full"><label for="f-obs">Observações</label><textarea id="f-obs" rows="2" placeholder="Condição negociada, combinados com o aluno"></textarea></div>
     </div>
     <div class="modal-actions">
@@ -531,7 +531,7 @@
     if (valor && !lista.includes(valor)) lista.push(valor);
     sel.innerHTML = '<option value="">— selecione —</option>' +
       lista.map(v => '<option value="'+esc(v)+'">'+esc(v)+'</option>').join("") +
-      '<option value="'+NOVO+'">+ Adicionar novo…</option>';
+      (isAdmin ? '<option value="'+NOVO+'">+ Adicionar novo…</option>' : "");
     sel.value = valor || "";
     const novo = document.getElementById(id + "-novo");
     novo.style.display = "none";
@@ -569,7 +569,7 @@
   });
 
   function exigeAdmin(){
-    if (!isAdmin) { showToast("Seu perfil é somente leitura."); return false; }
+    if (!isAdmin) { showToast("Só um admin pode fazer essa alteração."); return false; }
     return true;
   }
 
@@ -818,7 +818,7 @@
 
   // ---------- MODAL: registro ----------
   function abrirRegistro(r){
-    if (!exigeAdmin()) return;
+    if (r && !exigeAdmin()) return;   // cadastrar é de todos; editar é só do admin
     editandoId = r ? r.id : null;
     document.getElementById("modal-registro-title").textContent = r ? "Editar registro" : "Registrar venda";
     document.getElementById("f-nome").value      = r?.nome || "";
@@ -832,13 +832,15 @@
     document.getElementById("f-meses").value     = String(r?.meses || 12);
     document.getElementById("f-liberacao").value = r?.data_liberacao ? String(r.data_liberacao).slice(0,10) : "";
     document.getElementById("f-obs").value       = r?.obs || "";
+    // liberar é ato de admin: para membro o registro sempre nasce na fila
+    document.getElementById("campo-liberacao").style.display = isAdmin ? "" : "none";
     abrirModal("modal-registro");
   }
   document.getElementById("btn-novo-dash").addEventListener("click", () => abrirRegistro(null));
   document.getElementById("btn-novo-fila").addEventListener("click", () => abrirRegistro(null));
 
   document.getElementById("btn-salvar-registro").addEventListener("click", async () => {
-    if (!exigeAdmin()) return;
+    if (editandoId && !exigeAdmin()) return;
     const nome     = document.getElementById("f-nome").value.trim();
     const email    = document.getElementById("f-email").value.trim();
     const vendedor = valorDe("f-vendedor");
