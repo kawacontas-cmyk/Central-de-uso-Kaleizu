@@ -349,7 +349,7 @@
     <div class="form-grid">
       <div class="field"><label for="f-nome">Nome do aluno *</label><input type="text" id="f-nome" placeholder="Nome completo"></div>
       <div class="field"><label for="f-email">E-mail *</label><input type="text" id="f-email" placeholder="email@exemplo.com"></div>
-      <div class="field"><label for="f-telefone">WhatsApp</label><input type="text" id="f-telefone" placeholder="(00) 00000-0000"></div>
+      <div class="field"><label for="f-telefone">WhatsApp</label><input type="text" id="f-telefone" inputmode="numeric" placeholder="+55 (00) 00000-0000"></div>
       <div class="field"><label for="f-cpf">CPF</label><input type="text" id="f-cpf" placeholder="000.000.000-00"></div>
       <div class="field"><label for="f-vendedor">Vendedor responsável *</label>
         <select id="f-vendedor"></select>
@@ -515,7 +515,34 @@
     return '<span class="mono '+cls+'">'+d+' dias</span>' + (meses >= 2 ? '<div class="cel-sub">~'+meses+' meses</div>' : "");
   }
   function celAluno(r){
-    return '<div class="cel-nome">'+esc(r.nome)+'</div><div class="cel-sub">'+esc(r.email||"")+(r.telefone ? " · "+esc(r.telefone) : "")+'</div>';
+    return '<div class="cel-nome">'+esc(r.nome)+'</div><div class="cel-sub">'+esc(r.email||"")+(r.telefone ? " · "+esc(telParaTela(r.telefone)) : "")+'</div>';
+  }
+
+  // ---------- TELEFONE ----------
+  // Guardamos só dígitos com DDI ("5543999998888") e exibimos formatado.
+  // Dígito é o que serve para montar link de WhatsApp; a formatação é enfeite.
+  function soDigitos(v){ return String(v == null ? "" : v).replace(/\D/g, ""); }
+  function localDe(v){
+    let d = soDigitos(v);
+    // só tira o 55 da frente quando sobra número demais — existe DDD 55 (Santa Maria/RS)
+    if (d.length > 11 && d.startsWith("55")) d = d.slice(2);
+    return d.slice(0, 11);
+  }
+  function mascaraTel(v){
+    const d = localDe(v);
+    if (!d) return "";
+    let out = "+55 (" + d.slice(0, 2);
+    if (d.length <= 2) return out;
+    out += ") ";
+    if (d.length <= 6)  return out + d.slice(2);
+    if (d.length <= 10) return out + d.slice(2, 6) + "-" + d.slice(6);     // fixo, 8 dígitos
+    return out + d.slice(2, 7) + "-" + d.slice(7, 11);                      // celular, 9 dígitos
+  }
+  function telParaBanco(v){ const d = localDe(v); return d ? "55" + d : null; }
+  function telParaTela(v){
+    const d = localDe(v);
+    if (d.length >= 10) return mascaraTel(v);
+    return String(v || "");   // registro antigo, incompleto: mostra como está
   }
 
   // ---------- CAMPOS DE SELEÇÃO ----------
@@ -549,6 +576,10 @@
   }
   ligarSelectNovo("f-vendedor");
   ligarSelectNovo("f-origem");
+
+  document.getElementById("f-telefone").addEventListener("input", e => {
+    e.target.value = mascaraTel(e.target.value);
+  });
 
   function valorDe(id){
     const novo = document.getElementById(id + "-novo");
@@ -824,7 +855,7 @@
     document.getElementById("modal-registro-title").textContent = r ? "Editar registro" : "Registrar venda";
     document.getElementById("f-nome").value      = r?.nome || "";
     document.getElementById("f-email").value     = r?.email || "";
-    document.getElementById("f-telefone").value  = r?.telefone || "";
+    document.getElementById("f-telefone").value  = r?.telefone ? mascaraTel(r.telefone) : "";
     document.getElementById("f-cpf").value       = r?.cpf || "";
     montarSelect("f-vendedor", VENDEDORES_BASE, "vendedor", r?.vendedor || "");
     montarSelect("f-origem",   PRODUTOS_BASE,   "origem",   r?.origem || "");
@@ -848,9 +879,15 @@
     const venda    = document.getElementById("f-venda").value;
     if (!nome || !email || !vendedor || !venda) { showToast("Preencha nome, e-mail, vendedor e data da venda."); return; }
 
+    const telDigitado = document.getElementById("f-telefone").value;
+    if (telDigitado && localDe(telDigitado).length < 10) {
+      showToast("WhatsApp incompleto — informe DDD e número, ou deixe em branco.");
+      return;
+    }
+
     const payload = {
       nome, email, vendedor,
-      telefone: document.getElementById("f-telefone").value.trim() || null,
+      telefone: telParaBanco(document.getElementById("f-telefone").value),
       cpf:      document.getElementById("f-cpf").value.trim() || null,
       origem:   valorDe("f-origem") || null,
       data_venda: venda,
