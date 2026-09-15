@@ -222,17 +222,17 @@
       <div class="page-header">
         <div>
           <h1>Dashboard</h1>
-          <p>Concessões de acesso ao Clube do Vet e régua de renovação</p>
+          <p>Bônus de acesso ao Clube do Vet e régua de renovação</p>
         </div>
         <button class="btn btn-primary" id="btn-novo-dash">+ Registrar venda</button>
       </div>
 
       <div class="metrics-grid" id="dash-kpis"></div>
 
-      <div class="secao-titulo">Concessões por mês de referência</div>
+      <div class="secao-titulo">Bônus por mês de referência</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Mês</th><th>Concessões</th><th>Liberadas</th><th>Pendentes</th><th>Renovaram</th></tr></thead>
+          <thead><tr><th>Mês</th><th>Bônus</th><th>Liberadas</th><th>Pendentes</th><th>Renovaram</th></tr></thead>
           <tbody id="tb-mes"></tbody>
         </table>
       </div>
@@ -240,7 +240,7 @@
       <div class="secao-titulo">Por vendedor</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Vendedor</th><th>Concessões</th><th>Ativos</th><th>Renovaram</th><th>Não renovaram</th><th>Conversão</th></tr></thead>
+          <thead><tr><th>Vendedor</th><th>Bônus</th><th>Ativos</th><th>Renovaram</th><th>Não renovaram</th><th>Conversão</th></tr></thead>
           <tbody id="tb-vendedor"></tbody>
         </table>
       </div>
@@ -274,7 +274,7 @@
       <div class="page-header">
         <div>
           <h1>Acessos</h1>
-          <p>Todas as concessões registradas, com o tempo restante de cada uma</p>
+          <p>Todos os bônus registrados, com o tempo restante de cada um</p>
         </div>
         <button class="btn btn-sm" id="btn-exportar">Exportar CSV</button>
       </div>
@@ -742,7 +742,7 @@
     const semContato = exp.filter(r => !r.contato_em).length;
 
     const kpis = [
-      { label:"Total de concessões", valor: registros.length },
+      { label:"Total de bônus", valor: registros.length },
       { label:"Pendentes de liberação", valor: cont.pendente, cls: cont.pendente ? "warn" : "zero" },
       { label:"Acessos ativos", valor: ativos.length, sub: cont.vencendo + " vencendo" },
       { label:"Vencem em 60 dias", valor: cont.vencendo, cls: cont.vencendo ? "warn" : "zero" },
