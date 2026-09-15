@@ -41,12 +41,11 @@
   .selector-header h1 { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
   .selector-header p { font-size: 14px; color: var(--text-muted); }
   .apps-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; width: 100%; max-width: 900px; }
-  /* cada card ocupa 2 das 6 colunas: 3 em cima, 2 embaixo centralizados */
+  /* cada card ocupa 2 das 6 colunas: 3 em cima, 3 embaixo */
   .app-card { grid-column: span 2; }
-  .app-card:nth-child(4) { grid-column: 2 / span 2; }
   @media (max-width: 860px) {
     .apps-grid { grid-template-columns: repeat(2, 1fr); max-width: 460px; }
-    .app-card, .app-card:nth-child(4) { grid-column: auto; }
+    .app-card { grid-column: auto; }
   }
   @media (max-width: 480px) {
     .apps-grid { grid-template-columns: 1fr; max-width: 320px; }
@@ -284,6 +283,18 @@
       </div>
       <div class="app-card-name">Controle de Alunos</div>
       <div class="app-card-desc">Cadastro, matrículas, financeiro e duplicados dos alunos.</div>
+    </a>
+
+    <a class="app-card" href="clube.html">
+      <span class="app-card-badge badge-live">Disponível</span>
+      <div class="app-card-icon" style="background:rgba(124,196,168,0.12);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#7cc4a8" stroke-width="2">
+          <path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/>
+          <path d="M12 12.5v2M11 13.5h2"/>
+        </svg>
+      </div>
+      <div class="app-card-name">Clube do Vet</div>
+      <div class="app-card-desc">Liberação dos acessos bônus, prazo restante e régua de renovação.</div>
     </a>
 
   </div>

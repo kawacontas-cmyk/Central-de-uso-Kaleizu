@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instituto Kaleizu — Clube do Vet</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #060B1F;
+    --surface: #0e1530;
+    --surface2: #131a38;
+    --card: #0f1428;
+    --navy: #0a0e1f;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.18);
+
+    --gold: #CDA04C;
+    --gold-light: #e8c97a;
+    --gold-dim: rgba(205,160,76,0.12);
+
+    --text: #e8eaf6;
+    --gray-text: #8b93b8;
+    --hint: #3a4060;
+
+    --green: #5fcd8a;
+    --green-bg: rgba(95,205,138,0.12);
+    --red: #e05a5a;
+    --red-bg: rgba(224,90,90,0.12);
+    --amber: #e8c97a;
+    --amber-bg: rgba(205,160,76,0.12);
+    --blue: #5b8aff;
+    --teal: #7cc4a8;
+
+    --font: 'DM Sans', -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: 'DM Mono', ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{ font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+  h1,h2,h3,.brand-font{ font-family:var(--font); font-weight:500; letter-spacing:-0.01em; }
+
+  /* ---------- APP SHELL ---------- */
+  #app{ display:block; min-height:100vh; }
+  .sidebar{
+    width:220px; background:var(--navy); color:var(--text); min-height:100vh;
+    position:fixed; top:0; left:0; padding:20px 0; display:flex; flex-direction:column;
+    border-right:1px solid var(--border);
+  }
+  .sidebar .brand{ padding:0 20px 20px; border-bottom:1px solid var(--border); margin-bottom:14px;}
+  .sidebar .brand-logo{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .sidebar .brand-logo img{ width:32px; height:32px; object-fit:contain; mix-blend-mode:lighten; }
+  .sidebar .brand-title{ font-size:15px; font-weight:600; color:var(--gold); line-height:1.3;}
+  .sidebar .brand-sub{ font-size:10px; color:var(--gray-text); letter-spacing:0.1em; margin-top:2px; font-family:var(--mono);}
+  .nav-item{
+    display:flex; align-items:center; gap:10px; padding:11px 20px; cursor:pointer;
+    color:var(--gray-text); font-size:13px; border-left:2px solid transparent; transition:all .15s;
+  }
+  .nav-item:hover{ background:rgba(255,255,255,0.04); color:var(--text); }
+  .nav-item.active{ background:var(--gold-dim); color:var(--gold-light); border-left-color:var(--gold); font-weight:500;}
+  .nav-item .dot{ width:5px; height:5px; border-radius:50%; background:currentColor; opacity:0.6;}
+  .nav-item .count{ margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--gold); }
+  .sidebar-footer{ margin-top:auto; padding:16px 20px 0; border-top:1px solid var(--border); font-size:11px; color:var(--hint); display:flex; flex-direction:column; gap:8px;}
+  .sidebar-footer #user-email-label{ color:var(--gray-text) !important; font-size:11px; word-break:break-all; }
+  .sidebar-footer button{
+    background:none; border:1px solid var(--border); border-radius:7px; color:var(--gray-text);
+    font-size:12px; cursor:pointer; padding:6px 12px; font-family:var(--font); transition:all .15s; text-align:center;
+  }
+  .sidebar-footer button:hover{ color:var(--text); border-color:var(--gold); }
+  .sidebar-footer button.gold{ color:var(--gold); border-color:rgba(205,160,76,0.4); }
+  .sidebar-footer button.gold:hover{ background:var(--gold-dim); }
+
+  .main{ margin-left:220px; padding:28px 36px 60px; max-width:1240px; }
+  .page{ display:none; }
+  .page.active{ display:block; }
+  .page-header{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px;}
+  .page-header h1{ font-size:20px; font-weight:500; color:var(--text); }
+  .page-header p{ font-size:13px; color:var(--gray-text); margin-top:4px;}
+
+  .btn{
+    display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px;
+    font-size:13px; font-weight:500; cursor:pointer; border:1px solid var(--border); background:transparent;
+    color:var(--gray-text); transition:all .15s; font-family:var(--font);
+  }
+  .btn:hover{ border-color:var(--gold); color:var(--text); background:var(--surface); }
+  .btn-primary{ background:var(--gold); color:#060B1F; border-color:var(--gold); font-weight:600;}
+  .btn-primary:hover{ background:var(--gold-light); color:#060B1F; border-color:var(--gold-light); }
+  .btn-sm{ padding:5px 11px; font-size:12px; }
+  .btn-danger{ color:var(--red); border-color:rgba(224,90,90,0.3); }
+  .btn-danger:hover{ background:var(--red-bg); border-color:var(--red); color:var(--red); }
+
+  /* metrics */
+  .metrics-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:26px;}
+  .metric-card{ background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; border-top:2px solid var(--gold); transition:border-color .15s;}
+  .metric-card:hover{ border-color:var(--border-hover); border-top-color:var(--gold); }
+  .metric-card .label{ font-size:10px; color:var(--gray-text); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.06em; font-family:var(--mono);}
+  .metric-card .value{ font-size:24px; font-weight:500; color:var(--gold-light); letter-spacing:-0.5px; line-height:1; }
+  .metric-card .value.zero{ color:var(--gray-text); }
+  .metric-card .value.warn{ color:var(--amber); }
+  .metric-card .value.danger{ color:var(--red); }
+  .metric-card .sub{ font-size:11px; color:var(--hint); margin-top:7px; font-family:var(--mono); }
+
+  /* filtros */
+  .filters-bar{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+  .filters-bar select, .filters-bar input[type=text], .filters-bar input[type=search], .filters-bar input[type=date]{
+    padding:8px 12px; border-radius:8px; border:1px solid var(--border); font-size:13px;
+    background:var(--surface); color:var(--text); font-family:var(--font); outline:none; transition:border-color .15s;
+  }
+  .filters-bar select:focus, .filters-bar input[type=text]:focus, .filters-bar input[type=search]:focus, .filters-bar input[type=date]:focus{ border-color:var(--gold); }
+  .filters-bar select option{ background:#0e1530; color:var(--text); }
+  .filters-bar input[type=text], .filters-bar input[type=search]{ min-width:340px; }
+  .filters-bar input::placeholder{ color:var(--hint); }
+  input[type=date]{ color-scheme:dark; }
+  input[type=date]::-webkit-calendar-picker-indicator{ cursor:pointer; opacity:.6; }
+  input[type=date]::-webkit-calendar-picker-indicator:hover{ opacity:1; }
+
+  /* tabela */
+  .table-wrap{ background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:auto; max-width:100%; }
+  .table-wrap::-webkit-scrollbar{ height:8px; width:8px; }
+  .table-wrap::-webkit-scrollbar-track{ background:var(--surface); border-radius:4px; }
+  .table-wrap::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.15); border-radius:4px; }
+  .table-wrap::-webkit-scrollbar-thumb:hover{ background:rgba(205,160,76,0.4); }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  thead th{ text-align:left; padding:11px 16px; background:var(--surface); color:var(--gold); font-weight:500; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2; font-family:var(--mono); white-space:nowrap; }
+  tbody td{ padding:11px 16px; border-bottom:1px solid var(--border); color:var(--text); vertical-align:top; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  th.col-acoes, td.col-acoes{ position:sticky; right:0; background:var(--card); box-shadow:-4px 0 8px -4px rgba(0,0,0,0.4); }
+  thead th.col-acoes{ background:var(--surface); z-index:3; }
+  tbody tr:hover td.col-acoes{ background:var(--surface2); }
+  .cel-nome{ font-weight:500; }
+  .cel-sub{ font-size:11px; color:var(--gray-text); margin-top:3px; font-family:var(--mono); }
+  .mono{ font-family:var(--mono); }
+  .row-actions{ display:flex; gap:6px; }
+  .empty-state{ text-align:center; padding:48px 20px; color:var(--gray-text); font-size:13px;}
+
+  .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:500; white-space:nowrap; }
+  .badge-pendente{ background:var(--amber-bg); color:var(--amber); }
+  .badge-ativo{ background:var(--green-bg); color:var(--green); }
+  .badge-vencendo{ background:var(--amber-bg); color:var(--amber); }
+  .badge-expirado{ background:var(--red-bg); color:var(--red); }
+  .badge-renovado{ background:rgba(124,196,168,0.14); color:var(--teal); }
+  .badge-perdido{ background:rgba(255,255,255,0.06); color:var(--gray-text); }
+
+  .restante-ok{ color:var(--text); }
+  .restante-warn{ color:var(--amber); }
+  .restante-danger{ color:var(--red); }
+
+  /* modal */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); align-items:flex-start; justify-content:center;
+    padding:40px 20px; overflow-y:auto; z-index:100;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{ background:var(--card); border:1px solid var(--gold); border-radius:14px; width:100%; max-width:560px; padding:26px 30px; }
+  .modal h2{ font-size:16px; font-weight:500; color:var(--gold-light); }
+  .modal-header-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .modal-x{ background:none; border:none; font-size:20px; cursor:pointer; color:var(--gray-text); transition:color .15s; }
+  .modal-x:hover{ color:var(--text); }
+  .modal-nota{ font-size:12px; color:var(--gray-text); line-height:1.6; margin-bottom:16px; }
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-grid .full{ grid-column:1 / -1; }
+  .field label{ display:block; font-size:12px; font-weight:400; color:var(--gray-text); margin-bottom:5px; }
+  .field input, .field select, .field textarea{
+    width:100%; padding:9px 11px; border-radius:8px; border:1px solid var(--border); font-size:13px;
+    background:var(--surface); color:var(--text); font-family:var(--font); outline:none; transition:border-color .15s; resize:vertical;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--gold); }
+  .field input::placeholder, .field textarea::placeholder{ color:var(--hint); }
+  .field select option{ background:#0e1530; color:var(--text); }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
+
+  .toast{
+    position:fixed; bottom:24px; right:24px; background:var(--surface); color:var(--text);
+    border:1px solid var(--border); padding:11px 18px;
+    border-radius:8px; font-size:13px; box-shadow:0 8px 28px rgba(0,0,0,0.5); display:none; z-index:200;
+  }
+  .toast.show{ display:block; }
+
+  .secao-titulo{ font-size:11px; font-weight:500; color:var(--gold); text-transform:uppercase;
+    letter-spacing:.07em; font-family:var(--mono); margin:26px 0 12px; }
+  .secao-titulo:first-child{ margin-top:0; }
+
+  @media (max-width:1000px){
+    .metrics-grid{ grid-template-columns:repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <img src="Icone_Kaleizu.png" alt="Instituto Kaleizu" />
+        <div>
+          <div class="brand-title brand-font">Kaleizu</div>
+          <div class="brand-sub">CLUBE DO VET</div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-item active" data-page="dashboard"><span class="dot"></span>Dashboard</div>
+    <div class="nav-item" data-page="liberacao"><span class="dot"></span>Fila de liberação<span class="count" id="nav-c-fila"></span></div>
+    <div class="nav-item" data-page="acessos"><span class="dot"></span>Acessos<span class="count" id="nav-c-acessos"></span></div>
+    <div class="nav-item" data-page="renovacoes"><span class="dot"></span>Renovações<span class="count" id="nav-c-renov"></span></div>
+    <div class="sidebar-footer">
+      <div id="user-email-label"></div>
+      <button class="gold" onclick="window.location.href='index.html'">&#8592; Voltar</button>
+      <button id="logout-btn">Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Concessões de acesso ao Clube do Vet e régua de renovação</p>
+        </div>
+        <button class="btn btn-primary" id="btn-novo-dash">+ Registrar venda</button>
+      </div>
+
+      <div class="metrics-grid" id="dash-kpis"></div>
+
+      <div class="secao-titulo">Concessões por mês de referência</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mês</th><th>Concessões</th><th>Liberadas</th><th>Pendentes</th><th>Renovaram</th></tr></thead>
+          <tbody id="tb-mes"></tbody>
+        </table>
+      </div>
+
+      <div class="secao-titulo">Por vendedor</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Vendedor</th><th>Concessões</th><th>Ativos</th><th>Renovaram</th><th>Não renovaram</th><th>Conversão</th></tr></thead>
+          <tbody id="tb-vendedor"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FILA DE LIBERAÇÃO -->
+    <div class="page" id="page-liberacao">
+      <div class="page-header">
+        <div>
+          <h1>Fila de liberação</h1>
+          <p>Cadastre o aluno na plataforma do Clube do Vet e marque como liberado. O prazo de acesso começa a contar da liberação, não da venda.</p>
+        </div>
+        <button class="btn btn-primary" id="btn-novo-fila">+ Registrar venda</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Aluno</th><th>Vendedor</th><th>Origem</th><th>Venda</th>
+              <th>Na fila há</th><th>Acesso</th><th class="col-acoes">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tb-fila"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ACESSOS -->
+    <div class="page" id="page-acessos">
+      <div class="page-header">
+        <div>
+          <h1>Acessos</h1>
+          <p>Todas as concessões registradas, com o tempo restante de cada uma</p>
+        </div>
+        <button class="btn btn-sm" id="btn-exportar">Exportar CSV</button>
+      </div>
+
+      <div class="filters-bar">
+        <input type="search" id="busca" placeholder="Buscar por nome, e-mail, CPF ou vendedor" />
+        <select id="filtro-status">
+          <option value="">Todos os status</option>
+          <option value="pendente">Pendente de liberação</option>
+          <option value="ativo">Ativo</option>
+          <option value="vencendo">Vencendo (60 dias)</option>
+          <option value="expirado">Expirado</option>
+          <option value="renovado">Renovou</option>
+          <option value="perdido">Não renovou</option>
+        </select>
+        <select id="filtro-vendedor"><option value="">Todos os vendedores</option></select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Aluno</th><th>Status</th><th>Vendedor</th><th>Venda</th>
+              <th>Liberação</th><th>Expira</th><th>Restante</th><th class="col-acoes">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tb-acessos"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RENOVAÇÕES -->
+    <div class="page" id="page-renovacoes">
+      <div class="page-header">
+        <div>
+          <h1>Renovações</h1>
+          <p>Quem precisa ser contatado para ouvir o feedback e oferecer a renovação paga</p>
+        </div>
+      </div>
+
+      <div class="secao-titulo">Vencem nos próximos 60 dias</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Aluno</th><th>Vendedor</th><th>Expira</th><th>Restante</th><th>Contato</th><th class="col-acoes">Ações</th></tr>
+          </thead>
+          <tbody id="tb-vencendo"></tbody>
+        </table>
+      </div>
+
+      <div class="secao-titulo">Expirados sem desfecho registrado</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Aluno</th><th>Vendedor</th><th>Expirou em</th><th>Há</th><th>Contato</th><th class="col-acoes">Ações</th></tr>
+          </thead>
+          <tbody id="tb-expirados"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL: cadastro / edição -->
+<div class="modal-overlay" id="modal-registro">
+  <div class="modal">
+    <div class="modal-header-row">
+      <h2 id="modal-registro-title">Registrar venda</h2>
+      <button class="modal-x" onclick="fecharModal('modal-registro')">&times;</button>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label for="f-nome">Nome do aluno *</label><input type="text" id="f-nome" placeholder="Nome completo"></div>
+      <div class="field"><label for="f-email">E-mail *</label><input type="text" id="f-email" placeholder="email@exemplo.com"></div>
+      <div class="field"><label for="f-telefone">WhatsApp</label><input type="text" id="f-telefone" placeholder="(00) 00000-0000"></div>
+      <div class="field"><label for="f-cpf">CPF</label><input type="text" id="f-cpf" placeholder="000.000.000-00"></div>
+      <div class="field"><label for="f-vendedor">Vendedor responsável *</label><input type="text" id="f-vendedor" placeholder="Nome do vendedor"></div>
+      <div class="field"><label for="f-origem">Produto que gerou o bônus</label><input type="text" id="f-origem" placeholder="Ex.: Vet360, CardioPrime"></div>
+      <div class="field"><label for="f-venda">Data da venda *</label><input type="date" id="f-venda"></div>
+      <div class="field"><label for="f-mesref">Mês de referência da meta</label><input type="text" id="f-mesref" placeholder="2026-09"></div>
+      <div class="field"><label for="f-meses">Meses de acesso</label>
+        <select id="f-meses">
+          <option value="12" selected>12 meses</option>
+          <option value="6">6 meses</option>
+          <option value="3">3 meses</option>
+          <option value="24">24 meses</option>
+        </select>
+      </div>
+      <div class="field"><label for="f-liberacao">Data de liberação (se já liberado)</label><input type="date" id="f-liberacao"></div>
+      <div class="field full"><label for="f-obs">Observações</label><textarea id="f-obs" rows="2" placeholder="Condição negociada, combinados com o aluno"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="fecharModal('modal-registro')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-registro">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: liberar -->
+<div class="modal-overlay" id="modal-liberar">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header-row">
+      <h2>Marcar como liberado</h2>
+      <button class="modal-x" onclick="fecharModal('modal-liberar')">&times;</button>
+    </div>
+    <p class="modal-nota" id="liberar-nota"></p>
+    <div class="form-grid">
+      <div class="field full"><label for="f-lib-data">Data da liberação na plataforma</label><input type="date" id="f-lib-data"></div>
+      <div class="field full"><label for="f-lib-por">Quem liberou</label><input type="text" id="f-lib-por" placeholder="Nome de quem cadastrou"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="fecharModal('modal-liberar')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-liberar">Confirmar liberação</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: renovação -->
+<div class="modal-overlay" id="modal-renovacao">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header-row">
+      <h2>Contato de renovação</h2>
+      <button class="modal-x" onclick="fecharModal('modal-renovacao')">&times;</button>
+    </div>
+    <p class="modal-nota" id="renov-nota"></p>
+    <div class="form-grid">
+      <div class="field"><label for="f-contato-em">Data do contato</label><input type="date" id="f-contato-em"></div>
+      <div class="field"><label for="f-contato-por">Quem contatou</label><input type="text" id="f-contato-por" placeholder="Nome"></div>
+      <div class="field full"><label for="f-desfecho">Desfecho</label>
+        <select id="f-desfecho">
+          <option value="">Em andamento</option>
+          <option value="renovado">Renovou (pagante)</option>
+          <option value="perdido">Não renovou</option>
+        </select>
+      </div>
+      <div class="field full"><label for="f-feedback">Feedback do aluno</label><textarea id="f-feedback" rows="3" placeholder="O que ele achou do Clube do Vet"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="fecharModal('modal-renovacao')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-renovacao">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: confirmar exclusão -->
+<div class="modal-overlay" id="modal-excluir">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header-row">
+      <h2>Excluir registro</h2>
+      <button class="modal-x" onclick="fecharModal('modal-excluir')">&times;</button>
+    </div>
+    <p class="modal-nota" id="excluir-nota"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="fecharModal('modal-excluir')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirmar-excluir">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ── Supabase: mesmo projeto do painel ──
+  const sb = supabase.createClient(
+    "https://iabugpuqlcfftwabuxsj.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYnVncHVxbGNmZnR3YWJ1eHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTA5MTIsImV4cCI6MjA5MTY2NjkxMn0.Rs2OJlbd8_2TMroE9iehTtZLFdBImVfBpKEH-RT_3UY"
+  );
+
+  const TABELA = "clube_vet";
+  const JANELA_AVISO = 60; // dias antes do vencimento em que o aluno entra na régua
+
+  let registros = [];
+  let isAdmin = false;
+  let editandoId = null;
+  let alvoId = null;   // id em foco nos modais de liberar / renovar / excluir
+
+  // ---------- DATAS ----------
+  function hojeISO(){ const d=new Date(); return isoDe(d); }
+  function isoDe(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function paraData(s){ if(!s) return null; const p=String(s).slice(0,10).split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function somaMeses(iso, n){
+    const d = paraData(iso); if(!d) return null;
+    const dia = d.getDate();
+    d.setMonth(d.getMonth() + (Number(n)||12));
+    if (d.getDate() < dia) d.setDate(0); // 31/01 + 1 mês = 28/02, não 03/03
+    return isoDe(d);
+  }
+  function fmt(iso){ if(!iso) return "—"; const p=String(iso).slice(0,10).split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
+  function diasAte(iso){ if(!iso) return null; return Math.round((paraData(iso) - paraData(hojeISO())) / 86400000); }
+  function diasDesde(iso){ const d = diasAte(iso); return d === null ? null : -d; }
+  function esc(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  // ---------- ESTADO DERIVADO ----------
+  // A expiração vem da coluna gerada do Postgres; o cálculo local é só reserva.
+  function expiracao(r){
+    return r.data_expiracao ? String(r.data_expiracao).slice(0,10)
+         : (r.data_liberacao ? somaMeses(r.data_liberacao, r.meses) : null);
+  }
+  function estado(r){
+    if (!r.data_liberacao) return "pendente";
+    if (r.desfecho === "renovado") return "renovado";
+    if (r.desfecho === "perdido")  return "perdido";
+    const d = diasAte(expiracao(r));
+    if (d === null) return "ativo";
+    if (d < 0) return "expirado";
+    if (d <= JANELA_AVISO) return "vencendo";
+    return "ativo";
+  }
+  const ROTULO = { pendente:"Pendente", ativo:"Ativo", vencendo:"Vencendo", expirado:"Expirado", renovado:"Renovou", perdido:"Não renovou" };
+  function badge(r){ const e = estado(r); return '<span class="badge badge-'+e+'">'+ROTULO[e]+'</span>'; }
+
+  function restanteHTML(r){
+    if (!r.data_liberacao) return '<span class="cel-sub">não liberado</span>';
+    const d = diasAte(expiracao(r));
+    if (d === null) return "—";
+    if (d < 0) return '<span class="mono restante-danger">expirou há '+Math.abs(d)+'d</span>';
+    const meses = Math.floor(d/30);
+    const cls = d <= 30 ? "restante-danger" : (d <= JANELA_AVISO ? "restante-warn" : "restante-ok");
+    return '<span class="mono '+cls+'">'+d+' dias</span>' + (meses >= 2 ? '<div class="cel-sub">~'+meses+' meses</div>' : "");
+  }
+  function celAluno(r){
+    return '<div class="cel-nome">'+esc(r.nome)+'</div><div class="cel-sub">'+esc(r.email||"")+(r.telefone ? " · "+esc(r.telefone) : "")+'</div>';
+  }
+
+  // ---------- TOAST / MODAIS ----------
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
+  }
+  function abrirModal(id){ document.getElementById(id).classList.add("open"); }
+  window.fecharModal = function(id){ document.getElementById(id).classList.remove("open"); };
+  document.querySelectorAll(".modal-overlay").forEach(ov => {
+    ov.addEventListener("click", e => { if (e.target === ov) ov.classList.remove("open"); });
+  });
+
+  function exigeAdmin(){
+    if (!isAdmin) { showToast("Seu perfil é somente leitura."); return false; }
+    return true;
+  }
+
+  // ---------- NAVEGAÇÃO ----------
+  document.querySelectorAll(".nav-item").forEach(item => {
+    item.addEventListener("click", () => {
+      document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+      item.classList.add("active");
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+      document.getElementById("page-" + item.dataset.page).classList.add("active");
+    });
+  });
+
+  // ---------- CARGA ----------
+  async function carregar(){
+    const { data, error } = await sb.from(TABELA).select("*").order("data_venda", { ascending:false });
+    if (error) { mostrarErro(error); return; }
+    registros = data || [];
+    renderAll();
+  }
+
+  function mostrarErro(err){
+    const msg = (err && err.message) || "erro desconhecido";
+    const bloqueio = /permission|policy|rls|denied/i.test(msg + (err.code || ""));
+    document.getElementById("dash-kpis").innerHTML =
+      '<div style="grid-column:1/-1; background:var(--card); border:1px solid rgba(224,90,90,.35); border-radius:12px; padding:20px 22px;">'+
+        '<div style="font-size:13px; font-weight:600; color:var(--red); margin-bottom:8px;">Não foi possível carregar os dados</div>'+
+        '<div style="font-size:13px; color:var(--gray-text); line-height:1.6;">'+esc(msg)+
+          '<div style="margin-top:8px; color:var(--hint);">'+
+          (bloqueio ? "Confirme que a tabela 'clube_vet' existe, que o RLS está ligado e que as políticas foram criadas."
+                    : "Verifique a conexão e o console do navegador.")+
+          '</div></div></div>';
+    showToast("Erro ao carregar os dados");
+  }
+
+  // ---------- RENDER ----------
+  function linhasVazias(tbody, cols, msg){
+    tbody.innerHTML = '<tr><td colspan="'+cols+'"><div class="empty-state">'+msg+'</div></td></tr>';
+  }
+
+  function acoes(r){
+    if (!isAdmin) return "";
+    const e = estado(r);
+    const b = [];
+    if (e === "pendente") b.push('<button class="btn btn-sm btn-primary" data-act="liberar" data-id="'+r.id+'">Liberar</button>');
+    else                  b.push('<button class="btn btn-sm" data-act="renovar" data-id="'+r.id+'">Renovação</button>');
+    b.push('<button class="btn btn-sm" data-act="editar" data-id="'+r.id+'">Editar</button>');
+    b.push('<button class="btn btn-sm btn-danger" data-act="excluir" data-id="'+r.id+'">Excluir</button>');
+    return '<div class="row-actions">'+b.join("")+'</div>';
+  }
+
+  function renderAll(){
+    const pend = [], venc = [], exp = [], ativos = [];
+    registros.forEach(r => {
+      const e = estado(r);
+      if (e === "pendente") pend.push(r);
+      if (e === "vencendo") venc.push(r);
+      if (e === "expirado") exp.push(r);
+      if (e === "ativo" || e === "vencendo") ativos.push(r);
+    });
+
+    document.getElementById("nav-c-fila").textContent    = pend.length || "";
+    document.getElementById("nav-c-acessos").textContent = ativos.length || "";
+    document.getElementById("nav-c-renov").textContent   = (venc.length + exp.length) || "";
+
+    renderFila(pend);
+    renderVencendo(venc);
+    renderExpirados(exp);
+    renderAcessos();
+    renderDashboard(pend, venc, exp, ativos);
+    preencherVendedores();
+  }
+
+  function renderFila(pend){
+    const tb = document.getElementById("tb-fila");
+    if (!pend.length) { linhasVazias(tb, 7, "Nenhuma liberação pendente. Fila limpa."); return; }
+    tb.innerHTML = pend
+      .slice().sort((a,b) => String(a.data_venda).localeCompare(String(b.data_venda)))
+      .map(r => {
+        const espera = diasDesde(r.data_venda);
+        const cls = espera >= 7 ? "restante-danger" : (espera >= 3 ? "restante-warn" : "restante-ok");
+        return '<tr>'+
+          '<td>'+celAluno(r)+'</td>'+
+          '<td>'+esc(r.vendedor||"—")+'</td>'+
+          '<td>'+esc(r.origem||"—")+'</td>'+
+          '<td class="mono">'+fmt(r.data_venda)+'</td>'+
+          '<td><span class="mono '+cls+'">'+(espera===null?"—":espera+"d")+'</span></td>'+
+          '<td class="mono">'+(r.meses||12)+' meses</td>'+
+          '<td class="col-acoes">'+acoes(r)+'</td>'+
+        '</tr>';
+      }).join("");
+  }
+
+  function renderVencendo(venc){
+    const tb = document.getElementById("tb-vencendo");
+    if (!venc.length) { linhasVazias(tb, 6, "Ninguém vencendo nos próximos "+JANELA_AVISO+" dias."); return; }
+    tb.innerHTML = venc
+      .slice().sort((a,b) => String(expiracao(a)).localeCompare(String(expiracao(b))))
+      .map(r => '<tr>'+
+        '<td>'+celAluno(r)+'</td>'+
+        '<td>'+esc(r.vendedor||"—")+'</td>'+
+        '<td class="mono">'+fmt(expiracao(r))+'</td>'+
+        '<td>'+restanteHTML(r)+'</td>'+
+        '<td>'+contatoCel(r)+'</td>'+
+        '<td class="col-acoes">'+acoes(r)+'</td>'+
+      '</tr>').join("");
+  }
+
+  function renderExpirados(exp){
+    const tb = document.getElementById("tb-expirados");
+    if (!exp.length) { linhasVazias(tb, 6, "Nenhum acesso expirado sem desfecho."); return; }
+    tb.innerHTML = exp
+      .slice().sort((a,b) => String(expiracao(a)).localeCompare(String(expiracao(b))))
+      .map(r => '<tr>'+
+        '<td>'+celAluno(r)+'</td>'+
+        '<td>'+esc(r.vendedor||"—")+'</td>'+
+        '<td class="mono">'+fmt(expiracao(r))+'</td>'+
+        '<td><span class="mono restante-danger">'+Math.abs(diasAte(expiracao(r)))+'d</span></td>'+
+        '<td>'+contatoCel(r)+'</td>'+
+        '<td class="col-acoes">'+acoes(r)+'</td>'+
+      '</tr>').join("");
+  }
+
+  function contatoCel(r){
+    if (!r.contato_em) return '<span class="cel-sub">sem contato</span>';
+    return '<span class="mono">'+fmt(r.contato_em)+'</span>'+(r.contato_por ? '<div class="cel-sub">'+esc(r.contato_por)+'</div>' : "");
+  }
+
+  function renderAcessos(){
+    const q  = (document.getElementById("busca").value || "").toLowerCase().trim();
+    const fs = document.getElementById("filtro-status").value;
+    const fv = document.getElementById("filtro-vendedor").value;
+
+    const lista = registros.filter(r => {
+      if (fs && estado(r) !== fs) return false;
+      if (fv && (r.vendedor || "") !== fv) return false;
+      if (!q) return true;
+      return [r.nome, r.email, r.cpf, r.vendedor, r.origem].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+
+    const tb = document.getElementById("tb-acessos");
+    if (!lista.length) { linhasVazias(tb, 8, "Nenhum registro encontrado."); return; }
+    tb.innerHTML = lista.map(r => '<tr>'+
+      '<td>'+celAluno(r)+'</td>'+
+      '<td>'+badge(r)+'</td>'+
+      '<td>'+esc(r.vendedor||"—")+'</td>'+
+      '<td class="mono">'+fmt(r.data_venda)+'</td>'+
+      '<td class="mono">'+fmt(r.data_liberacao)+'</td>'+
+      '<td class="mono">'+fmt(expiracao(r))+'</td>'+
+      '<td>'+restanteHTML(r)+'</td>'+
+      '<td class="col-acoes">'+acoes(r)+'</td>'+
+    '</tr>').join("");
+  }
+
+  function preencherVendedores(){
+    const sel = document.getElementById("filtro-vendedor");
+    const atual = sel.value;
+    const nomes = [...new Set(registros.map(r => r.vendedor).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">Todos os vendedores</option>' +
+      nomes.map(n => '<option value="'+esc(n)+'">'+esc(n)+'</option>').join("");
+    sel.value = atual;
+  }
+
+  function renderDashboard(pend, venc, exp, ativos){
+    const cont = { pendente:0, ativo:0, vencendo:0, expirado:0, renovado:0, perdido:0 };
+    registros.forEach(r => cont[estado(r)]++);
+    const decididos = cont.renovado + cont.perdido;
+    const taxa = decididos ? Math.round(cont.renovado / decididos * 100) + "%" : "—";
+    const semContato = exp.filter(r => !r.contato_em).length;
+
+    const kpis = [
+      { label:"Total de concessões", valor: registros.length },
+      { label:"Pendentes de liberação", valor: cont.pendente, cls: cont.pendente ? "warn" : "zero" },
+      { label:"Acessos ativos", valor: ativos.length, sub: cont.vencendo + " vencendo" },
+      { label:"Vencem em 60 dias", valor: cont.vencendo, cls: cont.vencendo ? "warn" : "zero" },
+      { label:"Expirados sem contato", valor: semContato, cls: semContato ? "danger" : "zero" },
+      { label:"Renovaram pagando", valor: cont.renovado, cls: cont.renovado ? "" : "zero" },
+      { label:"Não renovaram", valor: cont.perdido, cls: cont.perdido ? "" : "zero" },
+      { label:"Conversão de renovação", valor: taxa, sub: decididos + " decididos" }
+    ];
+    document.getElementById("dash-kpis").innerHTML = kpis.map(k =>
+      '<div class="metric-card"><div class="label">'+k.label+'</div>'+
+      '<div class="value '+(k.cls||"")+'">'+k.valor+'</div>'+
+      (k.sub ? '<div class="sub">'+k.sub+'</div>' : "")+'</div>'
+    ).join("");
+
+    // por mês de referência
+    const porMes = {};
+    registros.forEach(r => {
+      const m = r.mes_ref || String(r.data_venda||"").slice(0,7) || "—";
+      porMes[m] = porMes[m] || { total:0, lib:0, ren:0 };
+      porMes[m].total++;
+      if (r.data_liberacao) porMes[m].lib++;
+      if (r.desfecho === "renovado") porMes[m].ren++;
+    });
+    const tbMes = document.getElementById("tb-mes");
+    const meses = Object.keys(porMes).sort().reverse();
+    if (!meses.length) linhasVazias(tbMes, 5, "Sem dados ainda.");
+    else tbMes.innerHTML = meses.map(m => '<tr>'+
+      '<td class="mono">'+esc(m)+'</td>'+
+      '<td class="mono">'+porMes[m].total+'</td>'+
+      '<td class="mono">'+porMes[m].lib+'</td>'+
+      '<td class="mono">'+(porMes[m].total - porMes[m].lib)+'</td>'+
+      '<td class="mono">'+porMes[m].ren+'</td>'+
+    '</tr>').join("");
+
+    // por vendedor
+    const porV = {};
+    registros.forEach(r => {
+      const v = r.vendedor || "—";
+      porV[v] = porV[v] || { total:0, ativos:0, ren:0, perd:0 };
+      porV[v].total++;
+      const e = estado(r);
+      if (e === "ativo" || e === "vencendo") porV[v].ativos++;
+      if (r.desfecho === "renovado") porV[v].ren++;
+      if (r.desfecho === "perdido")  porV[v].perd++;
+    });
+    const tbV = document.getElementById("tb-vendedor");
+    const vends = Object.keys(porV).sort((a,b) => porV[b].total - porV[a].total);
+    if (!vends.length) linhasVazias(tbV, 6, "Sem dados ainda.");
+    else tbV.innerHTML = vends.map(v => {
+      const d = porV[v].ren + porV[v].perd;
+      return '<tr>'+
+        '<td>'+esc(v)+'</td>'+
+        '<td class="mono">'+porV[v].total+'</td>'+
+        '<td class="mono">'+porV[v].ativos+'</td>'+
+        '<td class="mono">'+porV[v].ren+'</td>'+
+        '<td class="mono">'+porV[v].perd+'</td>'+
+        '<td class="mono">'+(d ? Math.round(porV[v].ren/d*100)+"%" : "—")+'</td>'+
+      '</tr>';
+    }).join("");
+  }
+
+  // ---------- AÇÕES DA TABELA ----------
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-act]");
+    if (!b) return;
+    const r = registros.find(x => String(x.id) === b.dataset.id);
+    if (!r) return;
+    const act = b.dataset.act;
+    if (act === "liberar") abrirLiberar(r);
+    else if (act === "renovar") abrirRenovacao(r);
+    else if (act === "editar") abrirRegistro(r);
+    else if (act === "excluir") abrirExcluir(r);
+  });
+
+  // ---------- MODAL: registro ----------
+  function abrirRegistro(r){
+    if (!exigeAdmin()) return;
+    editandoId = r ? r.id : null;
+    document.getElementById("modal-registro-title").textContent = r ? "Editar registro" : "Registrar venda";
+    document.getElementById("f-nome").value      = r?.nome || "";
+    document.getElementById("f-email").value     = r?.email || "";
+    document.getElementById("f-telefone").value  = r?.telefone || "";
+    document.getElementById("f-cpf").value       = r?.cpf || "";
+    document.getElementById("f-vendedor").value  = r?.vendedor || "";
+    document.getElementById("f-origem").value    = r?.origem || "";
+    document.getElementById("f-venda").value     = r?.data_venda ? String(r.data_venda).slice(0,10) : hojeISO();
+    document.getElementById("f-mesref").value    = r?.mes_ref || hojeISO().slice(0,7);
+    document.getElementById("f-meses").value     = String(r?.meses || 12);
+    document.getElementById("f-liberacao").value = r?.data_liberacao ? String(r.data_liberacao).slice(0,10) : "";
+    document.getElementById("f-obs").value       = r?.obs || "";
+    abrirModal("modal-registro");
+  }
+  document.getElementById("btn-novo-dash").addEventListener("click", () => abrirRegistro(null));
+  document.getElementById("btn-novo-fila").addEventListener("click", () => abrirRegistro(null));
+
+  document.getElementById("btn-salvar-registro").addEventListener("click", async () => {
+    if (!exigeAdmin()) return;
+    const nome     = document.getElementById("f-nome").value.trim();
+    const email    = document.getElementById("f-email").value.trim();
+    const vendedor = document.getElementById("f-vendedor").value.trim();
+    const venda    = document.getElementById("f-venda").value;
+    if (!nome || !email || !vendedor || !venda) { showToast("Preencha nome, e-mail, vendedor e data da venda."); return; }
+
+    const payload = {
+      nome, email, vendedor,
+      telefone: document.getElementById("f-telefone").value.trim() || null,
+      cpf:      document.getElementById("f-cpf").value.trim() || null,
+      origem:   document.getElementById("f-origem").value.trim() || null,
+      data_venda: venda,
+      mes_ref:  document.getElementById("f-mesref").value.trim() || venda.slice(0,7),
+      meses:    Number(document.getElementById("f-meses").value) || 12,
+      data_liberacao: document.getElementById("f-liberacao").value || null,
+      obs:      document.getElementById("f-obs").value.trim() || null,
+      atualizado_em: new Date().toISOString()
+    };
+
+    const btn = document.getElementById("btn-salvar-registro");
+    btn.disabled = true; btn.textContent = "Salvando...";
+    let error;
+    if (editandoId) ({ error } = await sb.from(TABELA).update(payload).eq("id", editandoId));
+    else            ({ error } = await sb.from(TABELA).insert(payload));
+    btn.disabled = false; btn.textContent = "Salvar";
+
+    if (error) { showToast("Erro ao salvar: " + error.message); return; }
+    fecharModal("modal-registro");
+    showToast(editandoId ? "Registro atualizado" : "Venda registrada — está na fila de liberação");
+    editandoId = null;
+    await carregar();
+  });
+
+  // ---------- MODAL: liberar ----------
+  function abrirLiberar(r){
+    if (!exigeAdmin()) return;
+    alvoId = r.id;
+    document.getElementById("liberar-nota").textContent =
+      r.nome + " — o acesso de " + (r.meses||12) + " meses passa a contar a partir da data informada aqui.";
+    document.getElementById("f-lib-data").value = hojeISO();
+    document.getElementById("f-lib-por").value  = document.getElementById("user-email-label").textContent || "";
+    abrirModal("modal-liberar");
+  }
+  document.getElementById("btn-confirmar-liberar").addEventListener("click", async () => {
+    const data = document.getElementById("f-lib-data").value;
+    if (!data) { showToast("Informe a data da liberação."); return; }
+    const { error } = await sb.from(TABELA).update({
+      data_liberacao: data,
+      liberado_por: document.getElementById("f-lib-por").value.trim() || null,
+      atualizado_em: new Date().toISOString()
+    }).eq("id", alvoId);
+    if (error) { showToast("Erro: " + error.message); return; }
+    fecharModal("modal-liberar");
+    const r = registros.find(x => x.id === alvoId);
+    showToast("Acesso liberado até " + fmt(somaMeses(data, r ? r.meses : 12)));
+    await carregar();
+  });
+
+  // ---------- MODAL: renovação ----------
+  function abrirRenovacao(r){
+    if (!exigeAdmin()) return;
+    alvoId = r.id;
+    document.getElementById("renov-nota").textContent =
+      r.nome + " — acesso até " + fmt(expiracao(r)) + ". Registre o feedback e o desfecho da oferta de renovação.";
+    document.getElementById("f-contato-em").value  = r.contato_em ? String(r.contato_em).slice(0,10) : hojeISO();
+    document.getElementById("f-contato-por").value = r.contato_por || "";
+    document.getElementById("f-desfecho").value    = r.desfecho || "";
+    document.getElementById("f-feedback").value    = r.feedback || "";
+    abrirModal("modal-renovacao");
+  }
+  document.getElementById("btn-salvar-renovacao").addEventListener("click", async () => {
+    const { error } = await sb.from(TABELA).update({
+      contato_em:  document.getElementById("f-contato-em").value || null,
+      contato_por: document.getElementById("f-contato-por").value.trim() || null,
+      desfecho:    document.getElementById("f-desfecho").value || null,
+      feedback:    document.getElementById("f-feedback").value.trim() || null,
+      atualizado_em: new Date().toISOString()
+    }).eq("id", alvoId);
+    if (error) { showToast("Erro: " + error.message); return; }
+    fecharModal("modal-renovacao");
+    showToast("Contato registrado");
+    await carregar();
+  });
+
+  // ---------- MODAL: excluir ----------
+  function abrirExcluir(r){
+    if (!exigeAdmin()) return;
+    alvoId = r.id;
+    document.getElementById("excluir-nota").textContent =
+      "Remover o registro de " + r.nome + "? Esta ação não pode ser desfeita.";
+    abrirModal("modal-excluir");
+  }
+  document.getElementById("btn-confirmar-excluir").addEventListener("click", async () => {
+    const { error } = await sb.from(TABELA).delete().eq("id", alvoId);
+    if (error) { showToast("Erro: " + error.message); return; }
+    fecharModal("modal-excluir");
+    showToast("Registro excluído");
+    await carregar();
+  });
+
+  // ---------- FILTROS ----------
+  document.getElementById("busca").addEventListener("input", renderAcessos);
+  document.getElementById("filtro-status").addEventListener("change", renderAcessos);
+  document.getElementById("filtro-vendedor").addEventListener("change", renderAcessos);
+
+  // ---------- EXPORTAR ----------
+  document.getElementById("btn-exportar").addEventListener("click", () => {
+    if (!registros.length) { showToast("Nada para exportar"); return; }
+    const cols = ["nome","email","telefone","cpf","vendedor","origem","data_venda","mes_ref","meses",
+                  "data_liberacao","liberado_por","desfecho","contato_em","contato_por","feedback","obs"];
+    const linhas = [cols.concat(["expiracao","status","dias_restantes"]).join(";")];
+    registros.forEach(r => {
+      const v = cols.map(c => '"' + String(r[c] == null ? "" : r[c]).replace(/"/g,'""') + '"');
+      v.push('"'+ (expiracao(r) || "") +'"');
+      v.push('"'+ ROTULO[estado(r)] +'"');
+      v.push(expiracao(r) ? diasAte(expiracao(r)) : "");
+      linhas.push(v.join(";"));
+    });
+    const blob = new Blob(["\uFEFF" + linhas.join("\n")], { type:"text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "clube-do-vet-" + hojeISO() + ".csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast("CSV exportado");
+  });
+
+  // ---------- AUTH ----------
+  // Quem controla o acesso é o index.html. Aqui só lemos a sessão.
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    await sb.auth.signOut();
+    window.location.href = "index.html";
+  });
+
+  (async () => {
+    const { data } = await sb.auth.getSession();
+    const user = data?.session?.user;
+    if (!user) { window.location.href = "index.html"; return; }
+    isAdmin = user.user_metadata?.role === "admin";
+    document.getElementById("user-email-label").textContent = user.email;
+
+    await carregar();
+
+    try {
+      sb.channel("clube-vet-sync")
+        .on("postgres_changes", { event:"*", schema:"public", table:TABELA }, () => carregar())
+        .subscribe();
+    } catch(e) {
+      console.warn("Realtime indisponível — os dados atualizam a cada ação.", e);
+    }
+  })();
+
+})();
+</script>
+</body>
+</html>
