@@ -611,11 +611,12 @@
   }
 
   function acoes(r){
-    if (!isAdmin) return "";
     const e = estado(r);
     const b = [];
+    // Liberar é de todos: quem cadastra o aluno na plataforma nem sempre é admin.
     if (e === "pendente") b.push('<button class="btn btn-sm btn-primary" data-act="liberar" data-id="'+r.id+'">Liberar</button>');
-    else                  b.push('<button class="btn btn-sm" data-act="renovar" data-id="'+r.id+'">Renovação</button>');
+    if (!isAdmin) return b.length ? '<div class="row-actions">'+b.join("")+'</div>' : "";
+    if (e !== "pendente") b.push('<button class="btn btn-sm" data-act="renovar" data-id="'+r.id+'">Renovação</button>');
     b.push('<button class="btn btn-sm" data-act="editar" data-id="'+r.id+'">Editar</button>');
     b.push('<button class="btn btn-sm btn-danger" data-act="excluir" data-id="'+r.id+'">Excluir</button>');
     return '<div class="row-actions">'+b.join("")+'</div>';
@@ -876,7 +877,6 @@
 
   // ---------- MODAL: liberar ----------
   function abrirLiberar(r){
-    if (!exigeAdmin()) return;
     alvoId = r.id;
     document.getElementById("liberar-nota").textContent =
       r.nome + " — o acesso de " + (r.meses||12) + " meses passa a contar a partir da data informada aqui.";
@@ -887,11 +887,13 @@
   document.getElementById("btn-confirmar-liberar").addEventListener("click", async () => {
     const data = document.getElementById("f-lib-data").value;
     if (!data) { showToast("Informe a data da liberação."); return; }
-    const { error } = await sb.from(TABELA).update({
-      data_liberacao: data,
-      liberado_por: document.getElementById("f-lib-por").value.trim() || null,
-      atualizado_em: new Date().toISOString()
-    }).eq("id", alvoId);
+    // Função no banco: grava só data_liberacao e liberado_por, e só em
+    // registro ainda pendente. Assim o membro libera sem ganhar update na tabela.
+    const { error } = await sb.rpc("liberar_acesso", {
+      p_id: alvoId,
+      p_data: data,
+      p_por: document.getElementById("f-lib-por").value.trim() || null
+    });
     if (error) { showToast("Erro: " + error.message); return; }
     fecharModal("modal-liberar");
     const r = registros.find(x => x.id === alvoId);
