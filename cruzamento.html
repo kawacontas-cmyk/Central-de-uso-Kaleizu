@@ -144,6 +144,15 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .summary .metric { padding: 12px; }
 .summary .metric-value { font-size: 20px; }
 .warn { font-size: 12px; color: var(--gold-light); margin-top: 8px; }
+.order-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 6px; background: var(--surface); transition: border-color .12s; }
+.order-row.over { border-color: var(--gold); }
+.order-row.dragging { opacity: .4; }
+.order-handle { cursor: grab; color: var(--hint); font-size: 14px; letter-spacing: -2px; user-select: none; }
+.order-num { font-family: var(--mono); font-size: 11px; color: var(--hint); width: 18px; text-align: right; }
+.order-row input { flex: 1; padding: 6px 8px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--text); font-family: var(--font); outline: none; }
+.order-row input:focus { border-color: var(--gold); }
+.order-btn { padding: 4px 8px; font-size: 12px; }
+.order-btn:disabled { opacity: .3; cursor: default; }
 @media (max-width: 700px) { .up-grid, .cfg-row, .summary { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
@@ -294,6 +303,19 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   </div>
 </div>
 
+<!-- Modal Renomear / ordenar -->
+<div class="overlay" id="orderOverlay" onclick="closeOrderModal(event)">
+  <div class="modal" style="width:520px">
+    <div class="modal-title">Renomear e ordenar lançamentos</div>
+    <div class="modal-sub">Edite os nomes e arraste (ou use as setas) para mudar a ordem.</div>
+    <div id="order-list"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeOrderModal(null,true)">Cancelar</button>
+      <button class="btn btn-primary" id="btn-order-save" onclick="saveOrder()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Ajustar respostas -->
 <div class="overlay" id="fixOverlay" onclick="closeFixModal(event)">
   <div class="modal" style="width:640px">
@@ -424,7 +446,9 @@ async function loadProducts() {
   const { data, error } = await sb.from('cruzamentos').select('*').order('criado_em');
   if (error) { document.getElementById('app-content').innerHTML = `<div class="loading-state" style="color:var(--danger)">Erro: ${esc(error.message)}</div>`; return; }
   if (!data || data.length === 0) { PRODUCTS = []; renderEmpty(); return; }
-  PRODUCTS = data.map(r => ({ ...r, dados: r.dados || {} }));
+  // Ordem manual (coluna posicao); sem posição, segue a data de criação
+  PRODUCTS = data.map((r, i) => ({ ...r, dados: r.dados || {}, _i: i }))
+    .sort((a, b) => (a.posicao ?? 1e6 + a._i) - (b.posicao ?? 1e6 + b._i));
   const keep = [...selectedProducts].filter(id => PRODUCTS.some(p => p.id === id));
   selectedProducts = new Set(keep.length ? keep : [PRODUCTS[PRODUCTS.length - 1].id]);
   renderApp();
@@ -442,7 +466,10 @@ function renderEmpty() {
 // ── RENDER APP ────────────────────────────────────────
 function renderApp() {
   document.getElementById('app-content').innerHTML = `
-    <div class="section-label">Lançamentos</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
+      <div class="section-label" style="margin:0">Lançamentos</div>
+      <div id="launch-actions" style="display:flex;gap:6px"></div>
+    </div>
     <div class="product-toggle" id="product-toggle"></div>
     <div class="section-label">Categoria</div>
     <div class="tabs" id="cat-tabs"></div>
@@ -482,13 +509,11 @@ function buildProductToggle() {
     container.appendChild(btn);
   });
 
-  if (isAdmin) {
-    const del = document.createElement('button');
-    del.id = 'btn-delete';
-    del.className = 'btn btn-danger';
-    del.style.cssText = 'font-size:12px;padding:6px 12px;margin-left:4px';
-    del.onclick = openDeleteModal;
-    container.appendChild(del);
+  const actions = document.getElementById('launch-actions');
+  if (isAdmin && actions) {
+    actions.innerHTML = `
+      <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="openOrderModal()">✎ Renomear / ordenar</button>
+      <button class="btn btn-danger" id="btn-delete" style="font-size:11px;padding:5px 10px" onclick="openDeleteModal()"></button>`;
     updateDeleteBtn();
   }
 }
@@ -688,6 +713,71 @@ function renderChart() {
       }
     }
   });
+}
+
+// ── RENOMEAR / ORDENAR ────────────────────────────────
+let ORDER = [];   // [{id, name, orig, pos}]
+let dragIdx = null;
+
+function openOrderModal() {
+  ORDER = PRODUCTS.map((p, i) => ({ id: p.id, name: p.name, orig: p.name, pos: p.posicao }));
+  renderOrder();
+  document.getElementById('orderOverlay').classList.add('open');
+}
+function closeOrderModal(e, force) {
+  if (force || (e && e.target === document.getElementById('orderOverlay')))
+    document.getElementById('orderOverlay').classList.remove('open');
+}
+function renderOrder() {
+  const n = ORDER.length;
+  document.getElementById('order-list').innerHTML = ORDER.map((o, i) => `
+    <div class="order-row" draggable="true"
+      ondragstart="dragIdx=${i};this.classList.add('dragging')"
+      ondragend="this.classList.remove('dragging')"
+      ondragover="event.preventDefault();this.classList.add('over')"
+      ondragleave="this.classList.remove('over')"
+      ondrop="event.preventDefault();dropOrder(${i})">
+      <span class="order-handle" title="Arraste para mover">⋮⋮</span>
+      <span class="order-num">${i + 1}</span>
+      <input type="text" value="${esc(o.name)}" oninput="ORDER[${i}].name=this.value" ondragstart="event.preventDefault()" draggable="false">
+      <button class="btn btn-ghost order-btn" onclick="moveOrder(${i},-1)" ${i === 0 ? 'disabled' : ''}>↑</button>
+      <button class="btn btn-ghost order-btn" onclick="moveOrder(${i},1)" ${i === n - 1 ? 'disabled' : ''}>↓</button>
+    </div>`).join('');
+}
+function moveOrder(i, d) {
+  const j = i + d;
+  if (j < 0 || j >= ORDER.length) return;
+  [ORDER[i], ORDER[j]] = [ORDER[j], ORDER[i]];
+  renderOrder();
+}
+function dropOrder(to) {
+  if (dragIdx === null || dragIdx === to) { renderOrder(); return; }
+  const [item] = ORDER.splice(dragIdx, 1);
+  ORDER.splice(to, 0, item);
+  dragIdx = null;
+  renderOrder();
+}
+async function saveOrder() {
+  if (ORDER.some(o => !o.name.trim())) { toast('Nenhum nome pode ficar vazio', 'error'); return; }
+  const changed = ORDER.map((o, i) => ({ ...o, i })).filter(o => o.name.trim() !== o.orig || o.pos !== o.i);
+  if (!changed.length) { closeOrderModal(null, true); return; }
+  const btn = document.getElementById('btn-order-save');
+  btn.disabled = true;
+  let noCol = false, fails = 0;
+  for (const o of changed) {
+    let { data, error } = await sb.from('cruzamentos').update({ name: o.name.trim(), posicao: o.i }).eq('id', o.id).select('id');
+    if (error && /posicao/i.test(error.message)) {
+      noCol = true;
+      ({ data, error } = await sb.from('cruzamentos').update({ name: o.name.trim() }).eq('id', o.id).select('id'));
+    }
+    if (error || !data || !data.length) fails++;
+  }
+  btn.disabled = false;
+  if (noCol) toast('Nomes salvos, mas a ordem precisa da coluna "posicao" no banco (ver SQL).', 'error');
+  else if (fails) toast(`${fails} lançamento(s) não foram atualizados — verifique o RLS de UPDATE.`, 'error');
+  else toast('Lançamentos atualizados!', 'success');
+  closeOrderModal(null, true);
+  await loadProducts();
 }
 
 // ── DELETE ────────────────────────────────────────────
