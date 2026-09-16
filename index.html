@@ -191,6 +191,25 @@
     cursor: pointer; color: var(--hint); transition: background .12s, border-color .12s, color .12s; }
   .user-key:hover { background: rgba(205,160,76,.12); border-color: var(--gold); color: var(--gold); }
   .user-key svg { width: 13px; height: 13px; }
+
+  /* Modal interno (substitui alert/confirm/prompt) */
+  .km-overlay { position: fixed; inset: 0; background: rgba(3,6,18,0.72); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 1.5rem; z-index: 10000; animation: kmFade .15s ease; }
+  .km-box { width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,.5); animation: kmPop .15s ease; }
+  .km-box h3 { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; word-break: break-word; }
+  .km-box p { font-size: 13px; color: var(--text-muted); line-height: 1.5; white-space: pre-line; }
+  .km-input { width: 100%; margin-top: 14px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; color: var(--text); font-family: 'DM Sans', sans-serif; outline: none; }
+  .km-input:focus { border-color: var(--gold); }
+  .km-error { min-height: 16px; margin-top: 6px; font-size: 12px; color: #f07a7a; }
+  .km-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .km-actions button { padding: 9px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; border: 1px solid transparent; }
+  .km-cancel { background: transparent; color: var(--text-muted); border-color: var(--border) !important; }
+  .km-cancel:hover { color: var(--text); }
+  .km-ok { background: var(--gold); color: #060B1F; }
+  .km-ok:hover { background: #e0b45a; }
+  .km-ok.danger { background: #d9534f; color: #fff; }
+  .km-ok.danger:hover { background: #e46a66; }
+  @keyframes kmFade { from { opacity: 0; } }
+  @keyframes kmPop { from { transform: scale(.96); opacity: 0; } }
 </style>
 </head>
 <body>
@@ -392,6 +411,50 @@ function showSelector(user) {
 // Fica aqui, no seletor, porque vale para o painel inteiro
 // e não para uma ferramenta específica.
 // ══════════════════════════════════════════════════════════
+// ===== Modal interno (substitui alert/confirm/prompt nativos) =====
+function appModal({ title, message = "", input = false, inputType = "password", minLength = 0,
+                    okText = "OK", cancelText = null, danger = false }) {
+  return new Promise(resolve => {
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const ov = document.createElement("div");
+    ov.className = "km-overlay";
+    ov.innerHTML = `
+      <div class="km-box" role="dialog" aria-modal="true">
+        <h3>${esc(title)}</h3>
+        ${message ? `<p>${esc(message)}</p>` : ""}
+        ${input ? `<input class="km-input" type="${inputType}" autocomplete="new-password"><div class="km-error"></div>` : ""}
+        <div class="km-actions">
+          ${cancelText ? `<button class="km-cancel">${esc(cancelText)}</button>` : ""}
+          <button class="km-ok${danger ? " danger" : ""}">${esc(okText)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+
+    const inp = ov.querySelector(".km-input");
+    const err = ov.querySelector(".km-error");
+    const cancelValue = input ? null : false;
+    (inp || ov.querySelector(".km-ok")).focus();
+
+    const close = v => { document.removeEventListener("keydown", onKey); ov.remove(); resolve(v); };
+    const ok = () => {
+      if (!input) return close(true);
+      const v = inp.value.trim();
+      if (v.length < minLength) { err.textContent = `Mínimo de ${minLength} caracteres.`; inp.focus(); return; }
+      close(v);
+    };
+    const onKey = e => {
+      if (e.key === "Enter") { e.preventDefault(); ok(); }
+      if (e.key === "Escape") close(cancelText ? cancelValue : true);
+    };
+    document.addEventListener("keydown", onKey);
+    ov.querySelector(".km-ok").onclick = ok;
+    const c = ov.querySelector(".km-cancel");
+    if (c) c.onclick = () => close(cancelValue);
+    ov.onclick = e => { if (e.target === ov && cancelText) close(cancelValue); };
+  });
+}
+const appAlert = (title, message = "") => appModal({ title, message });
+
 let isAdmin = false;
 const EDGE_URL = "https://iabugpuqlcfftwabuxsj.supabase.co/functions/v1/manage-users";
 
@@ -401,7 +464,7 @@ async function callEdge(body) {
   // e derrubava a sessão nas chamadas seguintes.
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
-    alert("Sua sessão expirou. Faça login novamente.");
+    await appAlert("Sessão expirada", "Faça login novamente.");
     await doLogout();
     throw new Error("Sessão expirada.");
   }
@@ -427,7 +490,7 @@ async function callEdge(body) {
     const { data: novaSessao } = await sb.auth.refreshSession();
     const token = novaSessao?.session?.access_token;
     if (!token) {
-      alert("Sua sessão expirou. Faça login novamente.");
+      await appAlert("Sessão expirada", "Faça login novamente.");
       await doLogout();
       throw new Error("Sessão expirada.");
     }
@@ -531,24 +594,37 @@ async function createUser() {
 
 async function updateRole(userId, role) {
   const { error } = await callEdge({ action: "update_role", userId, role });
-  if (error) alert("Erro ao atualizar papel: " + error);
+  if (error) await appAlert("Erro ao atualizar papel", error);
   else await loadUsers();
 }
 
 async function resetSenha(userId, email) {
-  const nova = prompt(`Nova senha para ${email}:\n\nMínimo de 6 caracteres.`);
+  const nova = await appModal({
+    title: `Nova senha para ${email}`,
+    message: "Mínimo de 6 caracteres.",
+    input: true,
+    minLength: 6,
+    okText: "Salvar",
+    cancelText: "Cancelar"
+  });
   if (nova === null) return;
-  if (nova.trim().length < 6) { alert("A senha precisa ter ao menos 6 caracteres."); return; }
 
-  const { error } = await callEdge({ action: "reset_password", userId, password: nova.trim() });
-  if (error) { alert("Erro ao redefinir: " + error); return; }
-  alert(`Senha de ${email} redefinida.\n\nAvise a pessoa da senha nova — ela não recebe e-mail.`);
+  const { error } = await callEdge({ action: "reset_password", userId, password: nova });
+  if (error) { await appAlert("Erro ao redefinir", error); return; }
+  await appAlert("Senha redefinida", `A senha de ${email} foi alterada.\nAvise a pessoa da senha nova — ela não recebe e-mail.`);
 }
 
 async function deleteUser(userId) {
-  if (!confirm("Remover este usuário? Esta ação não pode ser desfeita.")) return;
+  const ok = await appModal({
+    title: "Remover este usuário?",
+    message: "Esta ação não pode ser desfeita.",
+    okText: "Remover",
+    cancelText: "Cancelar",
+    danger: true
+  });
+  if (!ok) return;
   const { error } = await callEdge({ action: "delete", userId });
-  if (error) alert("Erro ao remover: " + error);
+  if (error) await appAlert("Erro ao remover", error);
   else await loadUsers();
 }
 
