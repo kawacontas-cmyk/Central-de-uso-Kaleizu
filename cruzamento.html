@@ -720,26 +720,33 @@ async function doDelete() {
 // ── AJUSTAR RESPOSTAS DE LANÇAMENTOS SALVOS ────────────
 let FIX = null; // { cat, items: [{pid, label, target}] }
 
-function openFixModal() {
+function openFixModal(showAll = false) {
   const cat = currentCategory;
   const withCat = PRODUCTS.filter(p => p.dados[cat]);
   // Resposta "padrão" = aparece (pela escrita normalizada) em 2+ lançamentos
   const freq = new Map(), display = new Map();
   withCat.forEach(p => new Set(p.dados[cat].labels.map(labelKey)).forEach(k => freq.set(k, (freq.get(k) || 0) + 1)));
   withCat.forEach(p => p.dados[cat].labels.forEach(l => { const k = labelKey(l); if (!display.has(k)) display.set(k, l); }));
-  let canon = [...freq.entries()].filter(([, n]) => n >= 2).map(([k]) => display.get(k));
+  // Padrão = respostas presentes em pelo menos metade do máximo de lançamentos.
+  // Ex.: se "Vet. formado" está em 6 lançamentos, uma resposta que só existe em L20 e L21 fica fora.
+  const maxF = Math.max(0, ...freq.values());
+  const minF = Math.max(2, Math.ceil(maxF / 2));
+  let canon = [...freq.entries()].filter(([, n]) => n >= minF).sort((a, b) => b[1] - a[1]).map(([k]) => display.get(k));
   if (!canon.length) canon = [...display.values()];
   const canonKeys = new Set(canon.map(labelKey));
 
   const items = [];
   withCat.filter(p => selectedProducts.has(p.id)).forEach(p => p.dados[cat].labels.forEach(l => {
-    if (!canonKeys.has(labelKey(l))) items.push({ pid: p.id, label: l, target: suggestLabel(l, canon) });
+    if (showAll || !canonKeys.has(labelKey(l))) {
+      const opts = showAll ? [...display.values()].filter(x => labelKey(x) !== labelKey(l)) : canon;
+      items.push({ pid: p.id, label: l, opts, target: showAll ? '' : suggestLabel(l, canon) });
+    }
   }));
   FIX = { cat, canon, items };
 
   const body = document.getElementById('fix-body');
   if (!items.length) {
-    body.innerHTML = '<div style="color:var(--muted);font-size:13px">Todas as respostas dos lançamentos selecionados já estão alinhadas nesta categoria.</div>';
+    body.innerHTML = '<div style="color:var(--muted);font-size:13px">Nenhuma resposta fora do padrão nos lançamentos selecionados.</div>';
   } else {
     const byP = {};
     items.forEach((it, i) => (byP[it.pid] = byP[it.pid] || []).push(i));
@@ -751,10 +758,14 @@ function openFixModal() {
           <div style="color:var(--hint);align-self:center">→</div>
           <div class="field" style="margin:0"><select onchange="FIX.items[${i}].target=this.value">
             <option value="">(manter como está)</option>
-            ${canon.map(c => `<option value="${esc(c)}"${items[i].target === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}
+            ${items[i].opts.map(c => `<option value="${esc(c)}"${items[i].target === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}
           </select></div>`).join('')}
       </div>`).join('');
   }
+  body.insertAdjacentHTML('beforeend', `
+    <label style="display:flex;gap:6px;align-items:center;margin-top:16px;font-size:12px;color:var(--muted);cursor:pointer">
+      <input type="checkbox" ${showAll ? 'checked' : ''} onchange="openFixModal(this.checked)"> Mostrar todas as respostas dos lançamentos selecionados
+    </label>`);
   document.getElementById('fix-title').textContent = 'Ajustar respostas — ' + catTitle(cat);
   document.getElementById('btn-fix-save').style.display = items.length ? 'inline-block' : 'none';
   document.getElementById('fixOverlay').classList.add('open');
