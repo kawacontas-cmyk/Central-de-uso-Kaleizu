@@ -210,6 +210,23 @@
   .km-ok.danger:hover { background: #e46a66; }
   @keyframes kmFade { from { opacity: 0; } }
   @keyframes kmPop { from { transform: scale(.96); opacity: 0; } }
+
+  /* Acesso por ferramenta */
+  .no-tools { max-width: 420px; text-align: center; font-size: 14px; color: var(--text-muted); padding: 1.25rem; border: 1px dashed var(--border); border-radius: 12px; }
+  .tool-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .tool-picker.single { grid-template-columns: 1fr; }
+  .tool-opt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--text-muted); user-select: none; transition: border-color .12s, background .12s, color .12s; }
+  .tool-opt:hover { border-color: rgba(205,160,76,.5); }
+  .tool-opt.on { border-color: var(--gold); background: rgba(205,160,76,.08); color: var(--text); }
+  .tool-opt .tick { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .tool-opt.on .tick { background: var(--gold); border-color: var(--gold); }
+  .tool-opt.on .tick::after { content: ""; width: 7px; height: 4px; border-left: 2px solid #060B1F; border-bottom: 2px solid #060B1F; transform: rotate(-45deg) translate(1px,-1px); }
+  .tool-opt.all { grid-column: 1 / -1; }
+  .tool-picker.locked .tool-opt { pointer-events: none; opacity: .6; }
+  .tool-hint { font-size: 11px; color: var(--text-hint); margin-top: 6px; }
+  .user-tools { font-size: 11px; color: var(--text-muted); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-tools b { color: var(--gold); font-weight: 600; }
+  .km-box .tool-picker { margin-top: 14px; }
 </style>
 </head>
 <body>
@@ -243,7 +260,7 @@
   </div>
   <div class="apps-grid">
 
-    <a class="app-card" href="links.html">
+    <a class="app-card" href="links.html" data-tool="links">
       <span class="app-card-badge badge-live">Disponível</span>
       <div class="app-card-icon" style="background:rgba(205,160,76,0.12);">
         <svg viewBox="0 0 24 24" fill="none" stroke="#CDA04C" stroke-width="2">
@@ -255,7 +272,7 @@
       <div class="app-card-desc">Gerencie e organize todos os links das páginas do funil em um só lugar.</div>
     </a>
 
-    <a class="app-card" href="pesquisas.html">
+    <a class="app-card" href="pesquisas.html" data-tool="pesquisas">
       <span class="app-card-badge badge-live">Disponível</span>
       <div class="app-card-icon" style="background:rgba(124,196,168,0.12);">
         <svg viewBox="0 0 24 24" fill="none" stroke="#7cc4a8" stroke-width="2">
@@ -267,7 +284,7 @@
       <div class="app-card-desc">Centraliza todas as pesquisas do Instituto Kaleizu.</div>
     </a>
 
-    <a class="app-card" href="cruzamento.html">
+    <a class="app-card" href="cruzamento.html" data-tool="cruzamento">
       <span class="app-card-badge badge-live">Disponível</span>
       <div class="app-card-icon" style="background:rgba(169,139,255,0.12);">
         <svg viewBox="0 0 24 24" fill="none" stroke="#a98bff" stroke-width="2">
@@ -279,7 +296,7 @@
       <div class="app-card-desc">Leads × Compradores por lançamento e categoria demográfica.</div>
     </a>
 
-    <a class="app-card" href="dashboard.html">
+    <a class="app-card" href="dashboard.html" data-tool="dashboard">
       <span class="app-card-badge badge-live">Disponível</span>
       <div class="app-card-icon" style="background:rgba(205,160,76,0.12);">
         <svg viewBox="0 0 24 24" fill="none" stroke="#CDA04C" stroke-width="2">
@@ -291,7 +308,7 @@
       <div class="app-card-desc">KPIs, gráficos e tabela consolidada de lançamentos KR.</div>
     </a>
 
-    <a class="app-card" href="alunos.html">
+    <a class="app-card" href="alunos.html" data-tool="alunos">
       <span class="app-card-badge badge-live">Disponível</span>
       <div class="app-card-icon" style="background:rgba(240,122,176,0.12);">
         <svg viewBox="0 0 24 24" fill="none" stroke="#f07ab0" stroke-width="2">
@@ -304,7 +321,7 @@
       <div class="app-card-desc">Cadastro, matrículas, financeiro e duplicados dos alunos.</div>
     </a>
 
-    <a class="app-card" href="clube.html">
+    <a class="app-card" href="clube.html" data-tool="clube">
       <span class="app-card-badge badge-live">Disponível</span>
       <div class="app-card-icon" style="background:rgba(124,196,168,0.12);">
         <svg viewBox="0 0 24 24" fill="none" stroke="#7cc4a8" stroke-width="2">
@@ -317,6 +334,7 @@
     </a>
 
   </div>
+  <div id="no-tools" class="no-tools" style="display:none">Você ainda não tem acesso a nenhuma ferramenta. Fale com um administrador.</div>
   <div class="selector-footer">
     <span id="selector-email"></span>
     <span>·</span>
@@ -352,6 +370,8 @@
           <option value="member">Membro (só visualiza)</option>
           <option value="admin">Admin (acesso total)</option>
         </select>
+        <label>Ferramentas</label>
+        <div id="new-tools" class="tool-picker"></div>
         <div style="margin-top:12px;">
           <button class="btn-confirm" style="width:100%" onclick="createUser()">Criar usuário</button>
         </div>
@@ -395,7 +415,7 @@ async function doLogout() {
   document.getElementById("login-pass").value = "";
 }
 
-function showSelector(user) {
+async function showSelector(user) {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("selector-screen").classList.add("active");
   if (user?.email) document.getElementById("selector-email").textContent = user.email;
@@ -403,6 +423,130 @@ function showSelector(user) {
   isAdmin = user?.user_metadata?.role === "admin";
   document.getElementById("admin-btn").style.display  = isAdmin ? "inline" : "none";
   document.getElementById("admin-sep").style.display  = isAdmin ? "inline" : "none";
+
+  // Busca o usuário no servidor para pegar as ferramentas atualizadas
+  // (o token local pode estar com a lista antiga por até 1h).
+  let fresh = user;
+  try { const { data } = await sb.auth.getUser(); if (data?.user) fresh = data.user; } catch {}
+  applyToolAccess(fresh);
+}
+
+// ── ACESSO POR FERRAMENTA ─────────────────────────────
+const TOOLS = [
+  { id: "links",      name: "Central de Links" },
+  { id: "pesquisas",  name: "Central de Pesquisas" },
+  { id: "cruzamento", name: "Cruzamento de Pesquisas" },
+  { id: "dashboard",  name: "Dashboard de Métricas" },
+  { id: "alunos",     name: "Controle de Alunos" },
+  { id: "clube",      name: "Clube do Vet" }
+];
+const ALL_TOOL_IDS = TOOLS.map(t => t.id);
+
+// Admin vê tudo. Usuário sem lista gravada (contas antigas) também vê tudo.
+function userTools(u, role) {
+  if ((role ?? u?.user_metadata?.role) === "admin") return ALL_TOOL_IDS;
+  const t = u?.app_metadata?.tools ?? u?.tools;
+  return Array.isArray(t) ? t.filter(id => ALL_TOOL_IDS.includes(id)) : ALL_TOOL_IDS;
+}
+
+function applyToolAccess(user) {
+  const allowed = userTools(user);
+  let visible = 0;
+  document.querySelectorAll(".app-card[data-tool]").forEach(card => {
+    const ok = allowed.includes(card.dataset.tool);
+    card.style.display = ok ? "" : "none";
+    if (ok) visible++;
+  });
+  document.getElementById("no-tools").style.display = visible ? "none" : "block";
+}
+
+// Monta o seletor de ferramentas dentro de um container
+function renderToolPicker(container, selected = ALL_TOOL_IDS) {
+  const sel = new Set(selected);
+  container.innerHTML =
+    `<div class="tool-opt all" data-id="__all"><span class="tick"></span>Todas as ferramentas</div>` +
+    TOOLS.map(t => `<div class="tool-opt" data-id="${t.id}"><span class="tick"></span>${t.name}</div>`).join("");
+
+  const sync = () => {
+    container.querySelectorAll(".tool-opt[data-id]").forEach(el => {
+      const id = el.dataset.id;
+      el.classList.toggle("on", id === "__all" ? sel.size === ALL_TOOL_IDS.length : sel.has(id));
+    });
+  };
+  container.onclick = e => {
+    const el = e.target.closest(".tool-opt");
+    if (!el) return;
+    const id = el.dataset.id;
+    if (id === "__all") {
+      if (sel.size === ALL_TOOL_IDS.length) sel.clear(); else ALL_TOOL_IDS.forEach(x => sel.add(x));
+    } else {
+      sel.has(id) ? sel.delete(id) : sel.add(id);
+    }
+    sync();
+  };
+  container.getSelected = () => ALL_TOOL_IDS.filter(id => sel.has(id));
+  sync();
+}
+
+function syncNewToolsLock() {
+  const picker = document.getElementById("new-tools");
+  const isAdm = document.getElementById("new-role").value === "admin";
+  picker.classList.toggle("locked", isAdm);
+  let hint = document.getElementById("new-tools-hint");
+  if (!hint) { hint = document.createElement("div"); hint.id = "new-tools-hint"; hint.className = "tool-hint"; picker.after(hint); }
+  hint.textContent = isAdm ? "Admin acessa todas as ferramentas." : "";
+}
+
+function toolsSummary(u) {
+  if (u.role === "admin") return "Todas as ferramentas";
+  const t = userTools(u, u.role);
+  if (t.length === ALL_TOOL_IDS.length) return "Todas as ferramentas";
+  if (!t.length) return "Nenhuma ferramenta";
+  return t.map(id => TOOLS.find(x => x.id === id).name).join(", ");
+}
+
+let usersCache = [];
+
+async function editTools(userId) {
+  const u = usersCache.find(x => x.id === userId);
+  if (!u) return;
+  const ov = document.createElement("div");
+  ov.className = "km-overlay";
+  ov.innerHTML = `
+    <div class="km-box" role="dialog" aria-modal="true">
+      <h3>Ferramentas de ${u.email.replace(/[&<>"]/g, "")}</h3>
+      <p>Escolha o que essa pessoa pode acessar.</p>
+      <div class="tool-picker single"></div>
+      <div class="km-error"></div>
+      <div class="km-actions">
+        <button class="km-cancel">Cancelar</button>
+        <button class="km-ok">Salvar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  const picker = ov.querySelector(".tool-picker");
+  renderToolPicker(picker, userTools(u, u.role));
+
+  const close = () => { document.removeEventListener("keydown", onKey); ov.remove(); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+  ov.onclick = e => { if (e.target === ov) close(); };
+  ov.querySelector(".km-cancel").onclick = close;
+
+  const okBtn = ov.querySelector(".km-ok");
+  okBtn.onclick = async () => {
+    const tools = picker.getSelected();
+    okBtn.textContent = "Salvando..."; okBtn.disabled = true;
+    try {
+      const { error } = await callEdge({ action: "update_tools", userId, tools });
+      if (error) throw new Error(error);
+      close();
+      await loadUsers();
+    } catch (e) {
+      ov.querySelector(".km-error").textContent = "Erro: " + e.message;
+      okBtn.textContent = "Salvar"; okBtn.disabled = false;
+    }
+  };
 }
 
 
@@ -509,6 +653,12 @@ async function callEdge(body) {
 async function openAdminPanel() {
   if (!isAdmin) return;   // membro não abre o painel nem pelo console
   document.getElementById("admin-panel").classList.add("open");
+  const picker = document.getElementById("new-tools");
+  if (!picker.getSelected) {
+    renderToolPicker(picker);
+    document.getElementById("new-role").addEventListener("change", syncNewToolsLock);
+  }
+  syncNewToolsLock();
   await loadUsers();
 }
 
@@ -534,6 +684,7 @@ async function loadUsers() {
     return;
   }
 
+  usersCache = result.users;
   const { data: { user: me } } = await sb.auth.getUser();
   list.innerHTML = result.users.map(u => {
     const initials = u.email.slice(0,2).toUpperCase();
@@ -544,11 +695,15 @@ async function loadUsers() {
       <div class="user-info">
         <div class="user-email">${u.email}${isMe ? ' <span style="font-size:11px;color:var(--text-hint)">(você)</span>' : ""}</div>
         <div class="user-meta">Último acesso: ${lastLogin}</div>
+        <div class="user-tools" title="${toolsSummary(u)}"><b>Acessa:</b> ${toolsSummary(u)}</div>
       </div>
       <select class="role-select" onchange="updateRole('${u.id}', this.value)">
         <option value="admin"${u.role==="admin"?" selected":""}>Admin</option>
         <option value="member"${u.role!=="admin"?" selected":""}>Membro</option>
       </select>
+      ${u.role !== "admin" ? `<div class="user-key" onclick="editTools('${u.id}')" title="Ferramentas liberadas">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+      </div>` : ""}
       <div class="user-key" onclick="resetSenha('${u.id}','${u.email}')" title="Redefinir a senha">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="8" r="2.5"/><path d="M7.5 8H14M11.5 8v2.2M13.5 8v1.6"/></svg>
       </div>
@@ -563,17 +718,19 @@ async function createUser() {
   const email = document.getElementById("new-email").value.trim();
   const pass  = document.getElementById("new-pass").value;
   const role  = document.getElementById("new-role").value;
+  const tools = role === "admin" ? ALL_TOOL_IDS : document.getElementById("new-tools").getSelected();
   const msg   = document.getElementById("admin-msg");
   const btn   = document.querySelector("#admin-panel .btn-confirm");
   msg.className = "admin-msg";
 
   if (!email || !pass) { msg.textContent = "Preencha email e senha."; msg.className = "admin-msg err"; return; }
+  if (!tools.length)    { msg.textContent = "Selecione ao menos uma ferramenta."; msg.className = "admin-msg err"; return; }
   if (pass.length < 6)  { msg.textContent = "Senha deve ter ao menos 6 caracteres."; msg.className = "admin-msg err"; return; }
 
   btn.textContent = "Criando..."; btn.disabled = true;
 
   try {
-    const result = await callEdge({ action: "create", email, password: pass, role });
+    const result = await callEdge({ action: "create", email, password: pass, role, tools });
     if (result.error) {
       msg.textContent = "Erro: " + result.error;
       msg.className = "admin-msg err";
@@ -582,6 +739,7 @@ async function createUser() {
       msg.className = "admin-msg ok";
       document.getElementById("new-email").value = "";
       document.getElementById("new-pass").value = "";
+      renderToolPicker(document.getElementById("new-tools"));
       await loadUsers();
     }
   } catch(e) {
