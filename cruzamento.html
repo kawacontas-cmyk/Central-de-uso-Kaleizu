@@ -355,6 +355,17 @@ function slugify(s) {
   return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
 }
+function labelKey(l) {
+  let t = String(l).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  t = t.replace(/[\u2010-\u2015\u2212]/g, '-')
+       .replace(/\b(anos?|de idade)\b/g, ' ')
+       .replace(/\s+(a|ate)\s+/g, '-')
+       .replace(/^(mais de|acima de)\s*(\d+)/, '$2+')
+       .replace(/^(menos de|abaixo de)\s*(\d+)/, '-$2')
+       .replace(/^ate\s*(\d+)/, '-$1')
+       .replace(/[^a-z0-9+\-]/g, '');
+  return t;
+}
 function catTitle(key) {
   if (CATEGORIES[key]) return CATEGORIES[key];
   for (const p of PRODUCTS) if (p.dados?.[key]?.title) return p.dados[key].title;
@@ -515,9 +526,16 @@ function renderChart() {
   if (!selected.length) { wrap.style.height = 'auto'; wrap.innerHTML = '<div class="loading-state">Sem dados nesta categoria para os lançamentos selecionados.</div>'; return; }
 
   // União das respostas, na ordem em que aparecem — alinha lançamentos com ordens diferentes
-  const labels = [];
-  selected.forEach(p => p.dados[currentCategory].labels.forEach(l => { if (!labels.includes(l)) labels.push(l); }));
-  const align = (d, arr) => labels.map(l => { const i = d.labels.indexOf(l); return i >= 0 ? (arr[i] || 0) : 0; });
+  // Respostas equivalentes com escrita diferente ("35–44 anos" / "35 a 44 anos") viram a mesma linha
+  const labels = [], keys = [];
+  selected.forEach(p => p.dados[currentCategory].labels.forEach(l => {
+    const k = labelKey(l);
+    if (!keys.includes(k)) { keys.push(k); labels.push(l); }
+  }));
+  const align = (d, arr) => {
+    const dk = d.labels.map(labelKey);
+    return keys.map(k => dk.reduce((sum, x, i) => x === k ? sum + (arr[i] || 0) : sum, 0));
+  };
 
   const datasets = [];
   datasetsCountsRef = [];
@@ -836,7 +854,47 @@ function renderQuestions() {
         ${catOpts.map(o => `<option value="${esc(o.k)}"${q.cat === o.k ? ' selected' : ''}>${esc(o.t)}</option>`).join('')}
       </select></td>
       <td><input type="text" value="${esc(q.title)}" ${q.on && q.cat === '__new' ? '' : 'disabled'} oninput="QUESTIONS[${i}].title=this.value;recomputeDebounced()"></td>
-    </tr>`).join('');
+    </tr>${q.on && q.cat !== '__new' ? mapRow(q, i) : ''}`).join('');
+}
+
+// Rótulos já usados numa categoria existente (em todos os lançamentos salvos)
+function existingLabels(cat) {
+  const out = [];
+  PRODUCTS.forEach(p => (p.dados[cat]?.labels || []).forEach(l => { if (!out.includes(l)) out.push(l); }));
+  return out;
+}
+function surveyAnswers(q) {
+  const c = new Map();
+  SURVEY.rows.forEach(r => { const v = r[q.col]; if (v) c.set(v, (c.get(v) || 0) + 1); });
+  return [...c.keys()].sort((a, b) => c.get(b) - c.get(a)).slice(0, 30);
+}
+function mapRow(q, i) {
+  const targets = existingLabels(q.cat);
+  if (!targets.length) return '';
+  const answers = surveyAnswers(q);
+  if (!q.map || q.mapCat !== q.cat) {
+    q.map = {}; q.mapCat = q.cat;
+    answers.forEach(a => { const t = targets.find(x => labelKey(x) === labelKey(a)); if (t) q.map[a] = t; });
+  }
+  const cells = answers.map((a, ai) => `
+    <div style="display:contents">
+      <div style="color:var(--muted);align-self:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(a)}">${esc(a)}</div>
+      <div style="color:var(--hint);align-self:center">→</div>
+      <select onchange="setMap(${i}, ${ai}, this.value)">
+        <option value="">(manter como está)</option>
+        ${targets.map(t => `<option value="${esc(t)}"${q.map[a] === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}
+      </select>
+    </div>`).join('');
+  return `<tr><td></td><td colspan="4" style="padding:4px 8px 12px">
+    <div style="font-size:10px;font-family:var(--mono);color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Associar respostas a ${esc(catTitle(q.cat))}</div>
+    <div style="display:grid;grid-template-columns:1fr 16px 1fr;gap:5px 8px">${cells}</div>
+  </td></tr>`;
+}
+function setMap(i, ai, val) {
+  const q = QUESTIONS[i];
+  const a = surveyAnswers(q)[ai];
+  if (val) q.map[a] = val; else delete q.map[a];
+  recompute();
 }
 function toggleQ(i, on) { QUESTIONS[i].on = on; renderQuestions(); recompute(); }
 function setQCat(i, v) { QUESTIONS[i].cat = v; renderQuestions(); recompute(); }
@@ -882,7 +940,8 @@ function computeCross() {
     const countL = new Map(), countB = new Map();
     let totL = 0, totB = 0;
     leads.forEach(([e, r]) => {
-      const v = r[q.col]; if (!v) return;
+      let v = r[q.col]; if (!v) return;
+      if (q.cat !== '__new' && q.map && q.map[v]) v = q.map[v];
       countL.set(v, (countL.get(v) || 0) + 1); totL++;
       if (buyerSet.has(e)) { countB.set(v, (countB.get(v) || 0) + 1); totB++; }
     });
