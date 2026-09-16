@@ -294,6 +294,19 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   </div>
 </div>
 
+<!-- Modal Ajustar respostas -->
+<div class="overlay" id="fixOverlay" onclick="closeFixModal(event)">
+  <div class="modal" style="width:640px">
+    <div class="modal-title" id="fix-title">Ajustar respostas</div>
+    <div class="modal-sub">Respostas escritas de forma diferente das dos outros lançamentos. Associe cada uma à resposta padrão para compará-las no gráfico. Os valores são somados e salvos no banco.</div>
+    <div id="fix-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeFixModal(null,true)">Cancelar</button>
+      <button class="btn btn-primary" id="btn-fix-save" onclick="saveFix()">Salvar ajustes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Remover -->
 <div class="overlay" id="deleteOverlay" onclick="closeDeleteModal(event)">
   <div class="modal" style="width:440px;border-color:var(--danger)">
@@ -366,6 +379,28 @@ function labelKey(l) {
        .replace(/[^a-z0-9+\-]/g, '');
   return t;
 }
+// Sugere a resposta padrão equivalente: primeiro pela escrita normalizada, depois por palavras-chave
+const SYNONYMS = [
+  [/estudante|graduando|graduacao|cursando|faculdade|academic/, 'estudante'],
+  [/nao trabalh|desempregad|sem trabalh|nao estou trabalh/, 'naotrabalha'],
+  [/propriet|\bdon[oa]\b|\bsoci[oa]\b|empreendedor|tenho (minha|meu) (clinica|consultorio|negocio)/, 'propriet'],
+  [/funcionari|\bclt\b|contratad|empregad|colaborador|assalariad/, 'funcion'],
+  [/formad|medic[oa] veterinari|ja sou veterinari|sou veterinari/, 'formado'],
+  [/feminino|mulher/, 'feminino'], [/masculino|homem/, 'masculino'],
+];
+function suggestLabel(answer, options) {
+  const k = labelKey(answer);
+  const direct = options.find(o => labelKey(o) === k);
+  if (direct) return direct;
+  const plain = String(answer).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  for (const [re, key] of SYNONYMS) {
+    if (re.test(plain)) {
+      const hit = options.find(o => labelKey(o).includes(key));
+      if (hit) return hit;
+    }
+  }
+  return '';
+}
 function catTitle(key) {
   if (CATEGORIES[key]) return CATEGORIES[key];
   for (const p of PRODUCTS) if (p.dados?.[key]?.title) return p.dados[key].title;
@@ -413,7 +448,10 @@ function renderApp() {
     <div class="tabs" id="cat-tabs"></div>
     <div class="metrics" id="metrics-row"></div>
     <div class="chart-card">
-      <div class="legend" id="legend-row"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div class="legend" id="legend-row"></div>
+        ${isAdmin ? '<button class="btn btn-ghost" style="font-size:11px;padding:5px 10px" onclick="openFixModal()">⇄ Ajustar respostas</button>' : ''}
+      </div>
       <div class="chart-wrap" id="chart-wrap"><canvas id="mainChart"></canvas></div>
     </div>`;
   buildProductToggle();
@@ -679,6 +717,89 @@ async function doDelete() {
   await loadProducts();
 }
 
+// ── AJUSTAR RESPOSTAS DE LANÇAMENTOS SALVOS ────────────
+let FIX = null; // { cat, items: [{pid, label, target}] }
+
+function openFixModal() {
+  const cat = currentCategory;
+  const withCat = PRODUCTS.filter(p => p.dados[cat]);
+  // Resposta "padrão" = aparece (pela escrita normalizada) em 2+ lançamentos
+  const freq = new Map(), display = new Map();
+  withCat.forEach(p => new Set(p.dados[cat].labels.map(labelKey)).forEach(k => freq.set(k, (freq.get(k) || 0) + 1)));
+  withCat.forEach(p => p.dados[cat].labels.forEach(l => { const k = labelKey(l); if (!display.has(k)) display.set(k, l); }));
+  let canon = [...freq.entries()].filter(([, n]) => n >= 2).map(([k]) => display.get(k));
+  if (!canon.length) canon = [...display.values()];
+  const canonKeys = new Set(canon.map(labelKey));
+
+  const items = [];
+  withCat.filter(p => selectedProducts.has(p.id)).forEach(p => p.dados[cat].labels.forEach(l => {
+    if (!canonKeys.has(labelKey(l))) items.push({ pid: p.id, label: l, target: suggestLabel(l, canon) });
+  }));
+  FIX = { cat, canon, items };
+
+  const body = document.getElementById('fix-body');
+  if (!items.length) {
+    body.innerHTML = '<div style="color:var(--muted);font-size:13px">Todas as respostas dos lançamentos selecionados já estão alinhadas nesta categoria.</div>';
+  } else {
+    const byP = {};
+    items.forEach((it, i) => (byP[it.pid] = byP[it.pid] || []).push(i));
+    body.innerHTML = Object.entries(byP).map(([pid, idxs]) => `
+      <div class="section-label" style="margin-top:12px">${esc(PRODUCTS.find(p => p.id === pid).name)}</div>
+      <div style="display:grid;grid-template-columns:1fr 16px 1fr;gap:6px 8px;font-size:12px">
+        ${idxs.map(i => `
+          <div style="color:var(--text);align-self:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(items[i].label)}">${esc(items[i].label)}</div>
+          <div style="color:var(--hint);align-self:center">→</div>
+          <div class="field" style="margin:0"><select onchange="FIX.items[${i}].target=this.value">
+            <option value="">(manter como está)</option>
+            ${canon.map(c => `<option value="${esc(c)}"${items[i].target === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}
+          </select></div>`).join('')}
+      </div>`).join('');
+  }
+  document.getElementById('fix-title').textContent = 'Ajustar respostas — ' + catTitle(cat);
+  document.getElementById('btn-fix-save').style.display = items.length ? 'inline-block' : 'none';
+  document.getElementById('fixOverlay').classList.add('open');
+}
+function closeFixModal(e, force) {
+  if (force || (e && e.target === document.getElementById('fixOverlay')))
+    document.getElementById('fixOverlay').classList.remove('open');
+}
+
+// Soma a resposta antiga na resposta padrão (percentuais têm o mesmo denominador, então somam)
+function mergeLabels(d, mapping) {
+  const out = { ...d, labels: [], leads: [], leads_n: [], buyers: [], buyers_n: [] };
+  d.labels.forEach((l, i) => {
+    const target = mapping[l] || l;
+    let j = out.labels.findIndex(x => labelKey(x) === labelKey(target));
+    if (j < 0) { out.labels.push(target); out.leads.push(0); out.leads_n.push(0); out.buyers.push(0); out.buyers_n.push(0); j = out.labels.length - 1; }
+    out.leads[j] = Math.round((out.leads[j] + (d.leads[i] || 0)) * 100) / 100;
+    out.buyers[j] = Math.round((out.buyers[j] + (d.buyers[i] || 0)) * 100) / 100;
+    out.leads_n[j] += d.leads_n[i] || 0;
+    out.buyers_n[j] += d.buyers_n[i] || 0;
+  });
+  return out;
+}
+
+async function saveFix() {
+  const changes = {};
+  FIX.items.filter(it => it.target).forEach(it => (changes[it.pid] = changes[it.pid] || {})[it.label] = it.target);
+  const pids = Object.keys(changes);
+  if (!pids.length) { toast('Nenhuma associação escolhida', 'error'); return; }
+  const btn = document.getElementById('btn-fix-save');
+  btn.disabled = true;
+  let fails = 0;
+  for (const pid of pids) {
+    const p = PRODUCTS.find(x => x.id === pid);
+    const dados = { ...p.dados, [FIX.cat]: mergeLabels(p.dados[FIX.cat], changes[pid]) };
+    const { data, error } = await sb.from('cruzamentos').update({ dados }).eq('id', pid).select('id');
+    if (error || !data || !data.length) fails++;
+  }
+  btn.disabled = false;
+  if (fails) toast(`${fails} lançamento(s) não foram atualizados — verifique a política de UPDATE (RLS).`, 'error');
+  else toast('Respostas ajustadas!', 'success');
+  closeFixModal(null, true);
+  await loadProducts();
+}
+
 // ── CSV PARSER ────────────────────────────────────────
 function detectDelimiter(text) {
   const firstLine = text.slice(0, text.indexOf('\n') > -1 ? text.indexOf('\n') : text.length);
@@ -874,7 +995,7 @@ function mapRow(q, i) {
   const answers = surveyAnswers(q);
   if (!q.map || q.mapCat !== q.cat) {
     q.map = {}; q.mapCat = q.cat;
-    answers.forEach(a => { const t = targets.find(x => labelKey(x) === labelKey(a)); if (t) q.map[a] = t; });
+    answers.forEach(a => { const t = suggestLabel(a, targets); if (t) q.map[a] = t; });
   }
   const cells = answers.map((a, ai) => `
     <div style="display:contents">
