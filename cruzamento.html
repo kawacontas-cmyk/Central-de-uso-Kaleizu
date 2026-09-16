@@ -524,7 +524,13 @@ function renderChart() {
   const conversionByProduct = [];
   const LEADS_COLOR  = { bg: 'rgba(205,160,76,0.75)',  border: '#CDA04C' };
   const BUYERS_COLOR = { bg: 'rgba(124,196,168,0.75)', border: '#7cc4a8' };
-  const barOpts = selected.length > 1 ? { categoryPercentage: 0.78, barPercentage: 0.9 } : { categoryPercentage: 0.8, barPercentage: 0.9 };
+  // Vários lançamentos: cada resposta vira um bloco com título em cima e o código
+  // do lançamento à esquerda de cada par de barras (eixo Y fica oculto)
+  const multi = selected.length > 1;
+  const PAIR_H = 44, HEADER_H = 64;
+  const bandH = multi ? selected.length * PAIR_H + HEADER_H : 52;
+  const catPct = multi ? (selected.length * PAIR_H) / bandH : 0.8;
+  const barOpts = { categoryPercentage: catPct, barPercentage: 0.88 };
 
   selected.forEach(p => {
     const d = p.dados[currentCategory];
@@ -537,22 +543,46 @@ function renderChart() {
     conversionByProduct.push({ short: shortName(p), leads, buyers });
   });
 
-  wrap.style.height = Math.max(labels.length * (selected.length > 1 ? selected.length * 58 : 52) + 80, 220) + 'px';
+  wrap.style.height = Math.max(labels.length * bandH + 50, 220) + 'px';
 
   const conversionPlugin = {
     id: 'conversionIndex',
     afterDatasetsDraw(ci) {
-      const ctx = ci.ctx, xScale = ci.scales.x;
-      labels.forEach((_, li) => {
+      const ctx = ci.ctx, xScale = ci.scales.x, yScale = ci.scales.y, area = ci.chartArea;
+      labels.forEach((label, li) => {
+        if (multi) {
+          const center = yScale.getPixelForValue(li);
+          const top = center - bandH / 2;
+          const gap = (bandH - selected.length * PAIR_H) / 2;
+          // separador entre blocos
+          if (li > 0) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(8, top + 0.5); ctx.lineTo(area.right, top + 0.5); ctx.stroke();
+            ctx.restore();
+          }
+          // título da resposta, alinhado à esquerda, acima do bloco
+          ctx.save();
+          ctx.font = `500 12px 'DM Sans', sans-serif`;
+          ctx.fillStyle = '#e8c97a';
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          let txt = String(label);
+          const maxW = area.right - 12;
+          while (txt.length > 4 && ctx.measureText(txt).width > maxW) txt = txt.slice(0, -2);
+          if (txt !== String(label)) txt = txt.slice(0, -1) + '…';
+          ctx.fillText(txt, 8, top + gap / 2 + 2);
+          ctx.restore();
+        }
         conversionByProduct.forEach((prod, pi) => {
           const ml = ci.getDatasetMeta(pi * 2), mb = ci.getDatasetMeta(pi * 2 + 1);
           if (!ml.data[li] || !mb.data[li]) return;
           const y = (ml.data[li].y + mb.data[li].y) / 2;
-          if (selected.length > 1) {
+          if (multi) {
             ctx.save();
-            ctx.font = `500 10px 'DM Mono', monospace`; ctx.fillStyle = '#8b93b8';
+            ctx.font = `500 11px 'DM Mono', monospace`; ctx.fillStyle = '#8b93b8';
             ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-            ctx.fillText(prod.short, xScale.getPixelForValue(0) - 8, y);
+            ctx.fillText(prod.short, area.left - 10, y);
             ctx.restore();
           }
           const lp = prod.leads[li] || 0, bp = prod.buyers[li] || 0;
@@ -575,7 +605,7 @@ function renderChart() {
     plugins: [conversionPlugin],
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      layout: { padding: { right: 52, left: selected.length > 1 ? 72 : 0 } },
+      layout: { padding: { right: 52, left: multi ? 50 : 0 } },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -598,7 +628,7 @@ function renderChart() {
       },
       scales: {
         x: { max: 100, ticks: { callback: v => v + '%', font: { size: 11, family: "'DM Mono',monospace" }, color: '#3a4060' }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.06)' } },
-        y: { ticks: { font: { size: 11, family: "'DM Sans',sans-serif" }, color: '#8b93b8', autoSkip: false }, grid: { display: false }, border: { color: 'rgba(255,255,255,0.06)' } }
+        y: { ticks: { display: !multi, padding: 10, font: { size: 11, family: "'DM Sans',sans-serif" }, color: '#8b93b8', autoSkip: false }, grid: { display: false }, border: { color: 'rgba(255,255,255,0.06)' } }
       }
     }
   });
