@@ -118,6 +118,33 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 /* ADMIN BADGE */
 .admin-only { display: none; }
 .is-admin .admin-only { display: flex; }
+
+/* IMPORT v2 */
+.modal.wide { width: 860px; }
+.mode-toggle { display: flex; gap: 6px; margin-bottom: 16px; }
+.up-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.up-grid .upload-area { margin-bottom: 0; padding: 20px 12px; }
+.up-grid .upload-area.loaded { border-style: solid; border-color: rgba(95,205,138,0.5); color: var(--success); }
+.up-title { font-size: 10px; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.up-meta { font-size: 11px; color: var(--hint); font-family: var(--mono); margin-top: 4px; }
+.cfg-block { border: 1px solid var(--border); border-radius: var(--r); padding: 14px; margin-top: 14px; }
+.cfg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cfg-row3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field .hint { font-size: 11px; color: var(--hint); margin-top: 4px; }
+.q-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.q-table th { text-align: left; font-size: 10px; font-family: var(--mono); color: var(--gold); text-transform: uppercase; letter-spacing: .06em; padding: 6px 8px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card); }
+.q-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.q-table td.q-name { color: var(--text); max-width: 280px; }
+.q-table td.q-n { font-family: var(--mono); color: var(--muted); text-align: center; }
+.q-table input[type=text], .q-table select { width: 100%; padding: 5px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text); font-family: var(--font); outline: none; }
+.q-table select option { background: #0e1530; }
+.q-table tr.off td.q-name { color: var(--hint); }
+.q-wrap { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r); }
+.summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+.summary .metric { padding: 12px; }
+.summary .metric-value { font-size: 20px; }
+.warn { font-size: 12px; color: var(--gold-light); margin-top: 8px; }
+@media (max-width: 700px) { .up-grid, .cfg-row, .summary { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -128,7 +155,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     <span class="topbar-name">Cruzamento de Pesquisas</span>
   </div>
   <div class="topbar-right">
-    <button class="btn admin-only btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="openImportModal()">&#8593; Importar CSV</button>
+    <button class="btn admin-only btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="openImportModal()">&#8593; Novo cruzamento</button>
     <button class="btn-topbar gold" onclick="window.location.href='index.html'">&#8592; Voltar</button>
     <button class="btn-topbar" onclick="doLogout()">Sair</button>
   </div>
@@ -140,9 +167,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
       <div class="page-title">Cruzamento de Pesquisas</div>
       <div class="page-sub">Leads × Compradores · Pesquisa de Captação · Prof. Kaleizu</div>
     </div>
-    <div class="btn-row admin-only">
-      <button class="btn btn-danger" id="btn-delete" style="display:none" onclick="deleteSelected()">&#10005; Remover selecionado</button>
-    </div>
   </div>
 
   <div id="app-content">
@@ -150,51 +174,135 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   </div>
 </div>
 
-<!-- Modal Importar CSV -->
+<!-- Modal Novo cruzamento -->
 <div class="overlay" id="importOverlay" onclick="closeImportModal(event)">
-  <div class="modal">
-    <div class="modal-title">Importar novo lançamento</div>
-    <div class="modal-sub">Adicione os dados de cruzamento via CSV no formato padrão.</div>
+  <div class="modal wide">
+    <div class="modal-title">Novo cruzamento</div>
+    <div class="modal-sub">Suba a pesquisa de captação e a lista de compradores. O cruzamento é feito pelo e-mail.</div>
+
+    <div class="mode-toggle">
+      <button class="tab active" id="mode-auto" onclick="setImportMode('auto')">Pesquisa + Compradores</button>
+      <button class="tab" id="mode-manual" onclick="setImportMode('manual')">CSV já consolidado</button>
+    </div>
 
     <div class="field">
       <label>Nome do lançamento</label>
-      <input type="text" id="import-name" placeholder="Ex: L18 — Vet360" />
+      <input type="text" id="import-name" placeholder="Ex: L21 — Vet360" oninput="resetOverwrite()" />
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field">
-        <label>Total de leads</label>
-        <input type="number" id="import-leads" placeholder="Ex: 500" />
+
+    <!-- MODO AUTOMÁTICO -->
+    <div id="pane-auto">
+      <div class="up-grid">
+        <div>
+          <div class="up-title">1 · Pesquisa de captação</div>
+          <div class="upload-area" id="up-survey" onclick="document.getElementById('file-survey').click()"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="dropFile(event,'survey')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4 4 4M12 8v8"/></svg>
+            <span id="lbl-survey">Clique ou arraste o CSV</span>
+            <div class="up-meta" id="meta-survey"></div>
+          </div>
+          <input type="file" id="file-survey" accept=".csv,.txt" style="display:none" onchange="pickFile(this,'survey')" />
+        </div>
+        <div>
+          <div class="up-title">2 · Compradores</div>
+          <div class="upload-area" id="up-buyers" onclick="document.getElementById('file-buyers').click()"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="dropFile(event,'buyers')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4 4 4M12 8v8"/></svg>
+            <span id="lbl-buyers">Clique ou arraste o CSV</span>
+            <div class="up-meta" id="meta-buyers"></div>
+          </div>
+          <input type="file" id="file-buyers" accept=".csv,.txt" style="display:none" onchange="pickFile(this,'buyers')" />
+        </div>
+      </div>
+
+      <div id="cfg-area" style="display:none">
+        <div class="cfg-block">
+          <div class="section-label">Chave do cruzamento</div>
+          <div class="cfg-row">
+            <div class="field">
+              <label>Coluna de e-mail na pesquisa</label>
+              <select id="email-survey" onchange="recompute()"></select>
+            </div>
+            <div class="field">
+              <label>Coluna de e-mail nos compradores</label>
+              <select id="email-buyers" onchange="recompute()"></select>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:6px">Filtro de compradores <span style="color:var(--hint)">(opcional)</span></div>
+          <div class="cfg-row">
+            <div class="field">
+              <label>Coluna</label>
+              <select id="filter-col" onchange="recompute()"></select>
+            </div>
+            <div class="field">
+              <label>Contém (separe por vírgula)</label>
+              <input type="text" id="filter-val" placeholder="Ex: L21KR" oninput="recomputeDebounced()" />
+              <div class="hint">Ex.: filtrar pela oferta com o código do lançamento, ou por status pago.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cfg-block">
+          <div class="section-label">Perguntas da pesquisa</div>
+          <div class="q-wrap">
+            <table class="q-table">
+              <thead><tr><th style="width:30px"></th><th>Pergunta</th><th style="width:70px;text-align:center">Respostas</th><th style="width:170px">Categoria</th><th style="width:170px">Nome da aba</th></tr></thead>
+              <tbody id="q-body"></tbody>
+            </table>
+          </div>
+          <div class="hint" style="font-size:11px;color:var(--hint);margin-top:6px">Perguntas abertas (muitas respostas diferentes) vêm desmarcadas. Respostas além das 12 mais frequentes viram "Outros". Use "Categoria" para alinhar com lançamentos antigos (ex.: Faixa etária).</div>
+        </div>
+
+        <div class="summary" id="summary"></div>
+        <div id="summary-warn"></div>
+      </div>
+    </div>
+
+    <!-- MODO MANUAL (formato antigo) -->
+    <div id="pane-manual" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label>Total de leads</label><input type="number" id="import-leads" placeholder="Ex: 500" /></div>
+        <div class="field"><label>Total de compradores</label><input type="number" id="import-buyers" placeholder="Ex: 30" /></div>
       </div>
       <div class="field">
-        <label>Total de compradores</label>
-        <input type="number" id="import-buyers" placeholder="Ex: 30" />
+        <label>Arquivo CSV consolidado</label>
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('csvInput').click()"
+          ondragover="event.preventDefault();this.classList.add('drag')"
+          ondragleave="this.classList.remove('drag')"
+          ondrop="dropFile(event,'manual')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4 4 4M12 8v8"/></svg>
+          <span id="uploadLabel">Clique ou arraste o CSV aqui</span>
+        </div>
+        <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="pickFile(this,'manual')" />
       </div>
-    </div>
-
-    <div class="field">
-      <label>Arquivo CSV <span style="color:var(--hint)">(use o template abaixo)</span></label>
-      <div class="upload-area" id="uploadArea" onclick="document.getElementById('csvInput').click()"
-        ondragover="event.preventDefault();this.classList.add('drag')"
-        ondragleave="this.classList.remove('drag')"
-        ondrop="handleDrop(event)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M8 12l4-4 4 4M12 8v8"/></svg>
-        <span id="uploadLabel">Clique ou arraste o CSV aqui</span>
+      <div id="previewArea" style="display:none">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Preview — primeiras linhas:</div>
+        <div class="preview-wrap" id="previewTable"></div>
       </div>
-      <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="handleFileSelect(this)" />
-    </div>
-
-    <div id="previewArea" style="display:none">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Preview — primeiras linhas:</div>
-      <div class="preview-wrap" id="previewTable"></div>
-    </div>
-
-    <div style="margin-bottom:14px">
       <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;" onclick="downloadTemplate()">&#8595; Baixar template CSV</button>
     </div>
 
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeImportModal(null,true)">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmImport()">Salvar no banco</button>
+      <button class="btn btn-ghost" id="btn-export" style="display:none" onclick="exportResult()">&#8595; Baixar consolidado</button>
+      <button class="btn btn-primary" id="btn-save" onclick="confirmImport()">Salvar no banco</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Remover -->
+<div class="overlay" id="deleteOverlay" onclick="closeDeleteModal(event)">
+  <div class="modal" style="width:440px;border-color:var(--danger)">
+    <div class="modal-title" style="color:var(--danger)">Remover lançamento</div>
+    <div class="modal-sub">Esta ação não pode ser desfeita.</div>
+    <div id="delete-list" style="font-size:13px;line-height:1.8"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeDeleteModal(null,true)">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirm-delete" onclick="doDelete()">Remover</button>
     </div>
   </div>
 </div>
@@ -215,75 +323,8 @@ let selectedProducts = new Set();
 let currentCategory = 'faixa';
 let chart = null;
 let datasetsCountsRef = [];
-let parsedCSV = null;
 
-// ── SEED DATA ─────────────────────────────────────────
-const SEED = [
-  { id:'l7', name:'L7 — Vet360', total_leads:666, total_buyers:45,
-    dados:{ faixa:{labels:['35–44 anos','45–54 anos','25–34 anos','- 25 anos','55 anos +'],leads:[23.72,20.87,35.59,13.36,6.46],leads_n:[158,139,237,89,43],buyers:[33.33,22.22,24.44,13.33,6.67],buyers_n:[15,10,11,6,3]},
-    sexo:{labels:['Feminino','Masculino'],leads:[80.63,19.37],leads_n:[537,129],buyers:[80.00,20.00],buyers_n:[36,9]},
-    ocupacao:{labels:['Vet. formado','Estudante vet.','Outros'],leads:[83.48,14.86,1.65],leads_n:[556,99,11],buyers:[95.56,4.44,0.00],buyers_n:[43,2,0]},
-    tipo_ocup:{labels:['Funcionário','Proprietário','Outros','Não trabalha'],leads:[48.20,22.22,15.32,14.26],leads_n:[321,148,102,95],buyers:[51.11,33.33,6.67,8.89],buyers_n:[23,15,3,4]},
-    regiao:{labels:['Sudeste','Sul','Nordeste','Centro-Oeste','Norte','Outros'],leads:[49.85,18.17,14.26,9.46,6.01,2.25],leads_n:[332,121,95,63,40,15],buyers:[53.33,20.00,6.67,11.11,6.67,2.22],buyers_n:[24,9,3,5,3,1]},
-    nicho:{labels:['Pequenos Animais','Emerg. e UTI','Outros subnichos','Selvagens','Grandes Animais','Preventiva','Prod. Animal','C. Vet. Aplicadas'],leads:[83.93,7.96,3.45,1.80,0.60,0.75,0.75,0.45],leads_n:[559,53,25,12,4,5,5,3],buyers:[91.11,6.67,2.22,0.00,0.00,0.00,0.00,0.00],buyers_n:[41,3,1,0,0,0,0,0]},
-    tempo:{labels:['+ 6 meses','- 6 meses','Conhecendo agora','Outros'],leads:[42.34,16.67,35.29,5.71],leads_n:[282,111,235,38],buyers:[55.56,22.22,17.78,4.44],buyers_n:[25,10,8,2]}}},
-  { id:'l9', name:'L9 — Combo Vet 2025', total_leads:651, total_buyers:29,
-    dados:{ faixa:{labels:['35–44 anos','45–54 anos','25–34 anos','- 25 anos','55 anos +'],leads:[26.11,24.42,24.42,13.06,11.98],leads_n:[170,159,159,85,78],buyers:[27.59,34.48,24.14,3.45,10.34],buyers_n:[8,10,7,1,3]},
-    sexo:{labels:['Feminino','Masculino'],leads:[79.26,20.74],leads_n:[516,135],buyers:[72.41,27.59],buyers_n:[21,8]},
-    ocupacao:{labels:['Vet. formado','Estudante vet.','Outros'],leads:[70.97,26.27,2.76],leads_n:[462,171,18],buyers:[79.31,20.69,0.00],buyers_n:[23,6,0]},
-    tipo_ocup:{labels:['Funcionário','Proprietário','Outros','Não trabalha'],leads:[36.71,24.73,21.20,17.36],leads_n:[239,161,138,113],buyers:[41.38,34.48,17.24,6.90],buyers_n:[12,10,5,2]},
-    regiao:{labels:['Sudeste','Sul','Nordeste','Centro-Oeste','Norte','Outros'],leads:[52.69,17.67,15.98,7.83,4.15,1.69],leads_n:[343,115,104,51,27,11],buyers:[58.62,13.79,13.79,6.90,6.90,0.00],buyers_n:[17,4,4,2,2,0]},
-    nicho:{labels:['Pequenos Animais','Emerg. e UTI','Outros subnichos','Selvagens','Grandes Animais','Preventiva','Prod. Animal','C. Vet. Aplicadas'],leads:[80.49,7.07,5.99,2.92,1.08,0.77,0.77,0.15],leads_n:[524,46,39,19,7,5,5,1],buyers:[89.66,3.45,3.45,0.00,0.00,0.00,3.45,0.00],buyers_n:[26,1,1,0,0,0,1,0]},
-    tempo:{labels:['+ 6 meses','- 6 meses','Conhecendo agora','Outros'],leads:[54.38,19.35,18.74,7.53],leads_n:[354,126,122,49],buyers:[68.97,20.69,3.45,6.90],buyers_n:[20,6,1,2]}}},
-  { id:'l10', name:'L10 — Cardio Prime', total_leads:911, total_buyers:17,
-    dados:{ faixa:{labels:['35–44 anos','45–54 anos','25–34 anos','- 25 anos','55 anos +'],leads:[28.43,22.39,31.83,10.10,7.24],leads_n:[259,204,290,92,66],buyers:[23.53,35.29,35.29,0.00,5.88],buyers_n:[4,6,6,0,1]},
-    sexo:{labels:['Feminino','Masculino'],leads:[76.29,23.71],leads_n:[695,216],buyers:[52.94,47.06],buyers_n:[9,8]},
-    ocupacao:{labels:['Vet. formado','Estudante vet.','Outros'],leads:[77.17,19.43,3.40],leads_n:[703,177,31],buyers:[100.00,0.00,0.00],buyers_n:[17,0,0]},
-    tipo_ocup:{labels:['Funcionário','Proprietário','Outros','Não trabalha'],leads:[38.97,29.97,16.79,14.27],leads_n:[355,273,153,130],buyers:[47.06,41.18,11.76,0.00],buyers_n:[8,7,2,0]},
-    regiao:{labels:['Sudeste','Sul','Nordeste','Centro-Oeste','Norte','Outros'],leads:[46.87,17.56,17.45,10.32,5.93,1.87],leads_n:[427,160,159,94,54,17],buyers:[52.94,17.65,11.76,5.88,11.76,0.00],buyers_n:[9,3,2,1,2,0]},
-    nicho:{labels:['Pequenos Animais','Emerg. e UTI','Outros subnichos','Selvagens','Grandes Animais','Preventiva','Prod. Animal','C. Vet. Aplicadas'],leads:[86.72,4.28,4.39,0.99,1.65,0.77,0.55,0.22],leads_n:[790,39,40,9,15,7,5,2],buyers:[100.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],buyers_n:[17,0,0,0,0,0,0,0]},
-    tempo:{labels:['+ 6 meses','- 6 meses','Conhecendo agora','Outros'],leads:[35.57,18.99,39.08,6.37],leads_n:[324,173,356,58],buyers:[47.06,17.65,23.53,11.76],buyers_n:[8,3,4,2]}}},
-  { id:'l16', name:'L16 — Vet360', total_leads:421, total_buyers:30,
-    dados:{ faixa:{labels:['35–44 anos','45–54 anos','25–34 anos','- 25 anos','55 anos +'],leads:[22.80,15.91,38.24,18.05,4.99],leads_n:[96,67,161,76,21],buyers:[26.67,16.67,36.67,13.33,6.67],buyers_n:[8,5,11,4,2]},
-    sexo:{labels:['Feminino','Masculino'],leads:[82.66,17.34],leads_n:[348,73],buyers:[73.33,26.67],buyers_n:[22,8]},
-    ocupacao:{labels:['Vet. formado','Estudante vet.','Outros'],leads:[82.66,16.39,0.95],leads_n:[348,69,4],buyers:[86.67,13.33,0.00],buyers_n:[26,4,0]},
-    tipo_ocup:{labels:['Funcionário','Proprietário','Outros','Não trabalha'],leads:[42.99,15.91,15.44,25.65],leads_n:[181,67,65,108],buyers:[53.33,13.33,10.00,23.33],buyers_n:[16,4,3,7]},
-    regiao:{labels:['Sudeste','Sul','Nordeste','Centro-Oeste','Norte','Outros'],leads:[44.18,17.81,16.63,10.69,9.03,1.66],leads_n:[186,75,70,45,38,7],buyers:[56.67,23.33,0.00,13.33,6.67,0.00],buyers_n:[17,7,0,4,2,0]},
-    nicho:{labels:['Pequenos Animais','Emerg. e UTI','Outros subnichos','Selvagens','Grandes Animais','Preventiva','Prod. Animal','C. Vet. Aplicadas'],leads:[80.05,10.69,3.33,0.95,2.14,1.90,0.48,0.24],leads_n:[337,45,14,4,9,8,2,1],buyers:[86.67,10.00,0.00,0.00,0.00,3.33,0.00,0.00],buyers_n:[26,3,0,0,0,1,0,0]},
-    tempo:{labels:['+ 6 meses','- 6 meses','Conhecendo agora','Outros'],leads:[36.82,14.01,43.94,5.23],leads_n:[155,59,185,22],buyers:[63.33,13.33,16.67,6.67],buyers_n:[19,4,5,2]}}},
-  { id:'l17', name:'L17 — Cardio Prime', total_leads:358, total_buyers:18,
-    dados:{ faixa:{labels:['35–44 anos','45–54 anos','25–34 anos','- 25 anos','55 anos +'],leads:[30.45,20.11,27.65,11.17,10.61],leads_n:[109,72,99,40,38],buyers:[22.22,22.22,50.00,0.00,5.56],buyers_n:[4,4,9,0,1]},
-    sexo:{labels:['Feminino','Masculino'],leads:[74.86,25.14],leads_n:[268,90],buyers:[83.33,16.67],buyers_n:[15,3]},
-    ocupacao:{labels:['Vet. formado','Estudante vet.','Outros'],leads:[76.26,17.60,6.15],leads_n:[273,63,22],buyers:[100.00,0.00,0.00],buyers_n:[18,0,0]},
-    tipo_ocup:{labels:['Funcionário','Proprietário','Outros','Não trabalha'],leads:[38.55,24.30,21.23,15.92],leads_n:[138,87,76,57],buyers:[55.56,33.33,5.56,5.56],buyers_n:[10,6,1,1]},
-    regiao:{labels:['Sudeste','Sul','Nordeste','Centro-Oeste','Norte','Outros'],leads:[42.74,14.80,14.25,15.36,8.38,4.47],leads_n:[153,53,51,55,30,16],buyers:[55.56,11.11,5.56,16.67,11.11,0.00],buyers_n:[10,2,1,3,2,0]},
-    nicho:{labels:['Pequenos Animais','Emerg. e UTI','Outros subnichos','Selvagens','Grandes Animais','Preventiva','Prod. Animal','C. Vet. Aplicadas'],leads:[82.96,5.59,4.47,1.68,1.40,1.12,0.00,0.00],leads_n:[297,20,16,6,5,4,0,0],buyers:[83.33,5.56,11.11,0.00,0.00,0.00,0.00,0.00],buyers_n:[15,1,2,0,0,0,0,0]},
-    tempo:{labels:['+ 6 meses','- 6 meses','Conhecendo agora','Outros'],leads:[43.02,12.85,0.00,7.54],leads_n:[154,46,0,27],buyers:[83.33,0.00,0.00,0.00],buyers_n:[15,0,0,0]}}},
-  { id:'l18', name:'L18 — Vet360', total_leads:271, total_buyers:19,
-    dados:{ faixa:{labels:['35–44 anos','25–34 anos','- 25 anos','45–54 anos','55 anos +'],leads:[22.88,38.01,24.35,11.81,2.95],leads_n:[62,103,66,32,8],buyers:[26.32,42.11,10.53,15.79,5.26],buyers_n:[5,8,2,3,1]},
-    sexo:{labels:['Feminino','Masculino'],leads:[81.55,18.45],leads_n:[221,50],buyers:[63.16,36.84],buyers_n:[12,7]},
-    ocupacao:{labels:['Vet. formado','Estudante vet.','Outros'],leads:[59.41,28.41,12.18],leads_n:[161,77,33],buyers:[84.21,10.53,5.26],buyers_n:[16,2,1]},
-    tipo_ocup:{labels:['Funcionário','Proprietário','Não trabalha','Outros'],leads:[42.07,12.55,30.26,15.13],leads_n:[114,34,82,41],buyers:[57.89,15.79,15.79,10.53],buyers_n:[11,3,3,2]},
-    regiao:{labels:['Sudeste','Sul','Nordeste','Centro-Oeste','Norte','Outros'],leads:[36.53,24.35,17.71,12.92,6.64,2.58],leads_n:[99,66,48,35,18,7],buyers:[63.16,10.53,0.00,5.26,5.26,0.00],buyers_n:[12,2,0,1,1,0]},
-    nicho:{labels:['Pequenos Animais','Emerg. e UTI','Outros subnichos','Grandes Animais','Prod. Animal','Selvagens','Preventiva','Vet. Legal'],leads:[75.65,10.70,7.75,2.21,1.48,1.11,0.74,0.37],leads_n:[205,29,21,6,4,3,2,1],buyers:[94.74,5.26,0.00,0.00,0.00,0.00,0.00,0.00],buyers_n:[18,1,0,0,0,0,0,0]},
-    tempo:{labels:['+ 6 meses','- 6 meses','Conhecendo agora','Outros'],leads:[27.68,19.19,50.55,2.58],leads_n:[75,52,137,7],buyers:[63.16,15.79,10.53,10.53],buyers_n:[12,3,2,2]}}},
-  { id:'l19', name:'L19 — CardioPrime', total_leads:365, total_buyers:5,
-    dados:{ ocupacao:{labels:['Vet. formado','Estudante vet.'],leads:[78.36,21.64],leads_n:[286,79],buyers:[80.00,20.00],buyers_n:[4,1]},
-    tempo_form:{labels:['Menos de 1 ano','De 1 a 2 anos','De 3 a 5 anos','De 6 a 10 anos','Mais de 10 anos','Ainda não formado'],leads:[19.73,12.05,15.89,9.32,21.64,21.37],leads_n:[72,44,58,34,79,78],buyers:[0.00,0.00,0.00,20.00,60.00,20.00],buyers_n:[0,0,0,1,3,1]},
-    peq_animais:{labels:['Sim','Não','Em formação'],leads:[78.63,3.29,18.08],leads_n:[287,12,66],buyers:[80.00,0.00,20.00],buyers_n:[4,0,1]},
-    especializacao:{labels:['Sim','Não'],leads:[46.03,53.97],leads_n:[168,197],buyers:[80.00,20.00],buyers_n:[4,1]},
-    momento_prof:{labels:['Melhorar na emergência','Mais segurança p/ decidir','Diferenciar no mercado','Parar de travar em casos graves','Buscar clareza no caminho'],leads:[33.42,22.47,8.77,8.49,7.12],leads_n:[122,82,32,31,26],buyers:[40.00,0.00,0.00,0.00,0.00],buyers_n:[2,0,0,0,0]},
-    grupo_wpp:{labels:['Sim','Ainda não'],leads:[20.82,79.18],leads_n:[76,289],buyers:[20.00,80.00],buyers_n:[1,4]}}}
-];
-
-const PALETTES = [
-  {leads:'rgba(205,160,76,0.7)',  buyers:'rgba(124,196,168,0.7)', lb:'#CDA04C', bb:'#7cc4a8'},
-  {leads:'rgba(91,138,255,0.7)',  buyers:'rgba(240,122,176,0.7)', lb:'#5b8aff', bb:'#f07ab0'},
-  {leads:'rgba(169,139,255,0.7)', buyers:'rgba(255,185,74,0.7)',  lb:'#a98bff', bb:'#ffb94a'},
-  {leads:'rgba(95,205,138,0.7)',  buyers:'rgba(224,90,90,0.7)',   lb:'#5fcd8a', bb:'#e05a5a'},
-  {leads:'rgba(77,201,246,0.7)',  buyers:'rgba(246,112,25,0.7)',  lb:'#4dc9f6', bb:'#f67019'},
-];
-
+// Categorias conhecidas (nome das abas). Categorias novas usam o "title" salvo em dados.
 const CATEGORIES = {
   faixa:        'Faixa etária',
   sexo:         'Sexo',
@@ -299,45 +340,47 @@ const CATEGORIES = {
   grupo_wpp:    'Grupo WhatsApp'
 };
 
-// ── TOAST ─────────────────────────────────────────────
+// ── UTIL ──────────────────────────────────────────────
 function toast(msg, type='') {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.className = 'toast show' + (type ? ' ' + type : '');
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 3500);
+  el._t = setTimeout(() => el.classList.remove('show'), 4000);
+}
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function slugify(s) {
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+}
+function catTitle(key) {
+  if (CATEGORIES[key]) return CATEGORIES[key];
+  for (const p of PRODUCTS) if (p.dados?.[key]?.title) return p.dados[key].title;
+  return key;
 }
 
 // ── INIT ──────────────────────────────────────────────
+// Antes: o init regravava os lançamentos de exemplo (SEED) a cada carregamento,
+// por isso um lançamento excluído voltava no F5. Os dados já estão no banco.
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     isAdmin = session.user?.user_metadata?.role === 'admin';
     if (isAdmin) document.body.classList.add('is-admin');
   }
-
-  // Sempre faz upsert do seed para garantir dados atualizados
-  const { count } = await sb.from('cruzamentos').select('*', { count: 'exact', head: true });
-  if (count === 0) {
-    toast('Primeira execução — populando banco...');
-  }
-  for (const p of SEED) {
-    await sb.from('cruzamentos').upsert(
-      { id: p.id, name: p.name, total_leads: p.total_leads, total_buyers: p.total_buyers, dados: p.dados },
-      { onConflict: 'id' }
-    );
-  }
-
   await loadProducts();
 }
 
 async function loadProducts() {
   document.getElementById('app-content').innerHTML = '<div class="loading-state">Carregando dados...</div>';
   const { data, error } = await sb.from('cruzamentos').select('*').order('criado_em');
-  if (error) { document.getElementById('app-content').innerHTML = `<div class="loading-state" style="color:var(--danger)">Erro: ${error.message}</div>`; return; }
-  if (!data || data.length === 0) { renderEmpty(); return; }
-  PRODUCTS = data.map(r => ({ ...r, ...r.dados }));
-  selectedProducts = new Set([PRODUCTS[PRODUCTS.length - 1].id]);
+  if (error) { document.getElementById('app-content').innerHTML = `<div class="loading-state" style="color:var(--danger)">Erro: ${esc(error.message)}</div>`; return; }
+  if (!data || data.length === 0) { PRODUCTS = []; renderEmpty(); return; }
+  PRODUCTS = data.map(r => ({ ...r, dados: r.dados || {} }));
+  const keep = [...selectedProducts].filter(id => PRODUCTS.some(p => p.id === id));
+  selectedProducts = new Set(keep.length ? keep : [PRODUCTS[PRODUCTS.length - 1].id]);
   renderApp();
 }
 
@@ -346,14 +389,13 @@ function renderEmpty() {
     <div class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
       <p>Nenhum lançamento ainda</p>
-      <small>Clique em "Importar CSV" para adicionar o primeiro</small>
+      <small>Clique em "Novo cruzamento" para adicionar o primeiro</small>
     </div>`;
 }
 
 // ── RENDER APP ────────────────────────────────────────
 function renderApp() {
-  const content = document.getElementById('app-content');
-  content.innerHTML = `
+  document.getElementById('app-content').innerHTML = `
     <div class="section-label">Lançamentos</div>
     <div class="product-toggle" id="product-toggle"></div>
     <div class="section-label">Categoria</div>
@@ -361,11 +403,8 @@ function renderApp() {
     <div class="metrics" id="metrics-row"></div>
     <div class="chart-card">
       <div class="legend" id="legend-row"></div>
-      <div class="chart-wrap" id="chart-wrap">
-        <canvas id="mainChart"></canvas>
-      </div>
+      <div class="chart-wrap" id="chart-wrap"><canvas id="mainChart"></canvas></div>
     </div>`;
-
   buildProductToggle();
   buildCategoryTabs();
   render();
@@ -378,7 +417,6 @@ function buildProductToggle() {
     const btn = document.createElement('button');
     btn.className = 'ptab' + (selectedProducts.has(p.id) ? ' active' : '');
     btn.textContent = p.name;
-    btn.dataset.id = p.id;
     btn.onclick = () => {
       if (selectedProducts.has(p.id)) {
         if (selectedProducts.size === 1) return;
@@ -389,67 +427,68 @@ function buildProductToggle() {
         btn.classList.add('active');
       }
       updateDeleteBtn();
+      buildCategoryTabs();
       render();
     };
     container.appendChild(btn);
   });
 
-  // Botão remover (admin)
   if (isAdmin) {
     const del = document.createElement('button');
     del.id = 'btn-delete';
-    del.className = 'btn btn-danger admin-only';
-    del.style.cssText = 'font-size:12px;padding:6px 12px;margin-left:4px;display:none';
-    del.textContent = '✕ Remover selecionados';
-    del.onclick = deleteSelected;
+    del.className = 'btn btn-danger';
+    del.style.cssText = 'font-size:12px;padding:6px 12px;margin-left:4px';
+    del.onclick = openDeleteModal;
     container.appendChild(del);
+    updateDeleteBtn();
   }
 }
 
 function updateDeleteBtn() {
   const btn = document.getElementById('btn-delete');
-  if (btn) btn.style.display = selectedProducts.size > 0 && isAdmin ? 'flex' : 'none';
+  if (!btn) return;
+  btn.style.display = selectedProducts.size > 0 && isAdmin ? 'inline-block' : 'none';
+  btn.textContent = selectedProducts.size > 1 ? `✕ Remover ${selectedProducts.size} selecionados` : '✕ Remover selecionado';
+}
+
+function availableCategories() {
+  const keys = new Set();
+  PRODUCTS.filter(p => selectedProducts.has(p.id)).forEach(p => Object.keys(p.dados).forEach(k => keys.add(k)));
+  const known = Object.keys(CATEGORIES).filter(k => keys.has(k));
+  const extra = [...keys].filter(k => !CATEGORIES[k]);
+  return [...known, ...extra];
 }
 
 function buildCategoryTabs() {
   const tabs = document.getElementById('cat-tabs');
-  tabs.innerHTML = Object.entries(CATEGORIES).map(([k, v]) =>
-    `<button class="tab${currentCategory === k ? ' active' : ''}" onclick="setCategory('${k}')">${v}</button>`
+  if (!tabs) return;
+  const cats = availableCategories();
+  if (!cats.includes(currentCategory)) currentCategory = cats[0];
+  tabs.innerHTML = cats.map(k =>
+    `<button class="tab${currentCategory === k ? ' active' : ''}" onclick="setCategory('${esc(k)}')">${esc(catTitle(k))}</button>`
   ).join('');
 }
 
-function setCategory(c) {
-  currentCategory = c;
-  buildCategoryTabs();
-  render();
-}
-
-function render() {
-  renderMetrics();
-  renderLegend();
-  renderChart();
-}
+function setCategory(c) { currentCategory = c; buildCategoryTabs(); render(); }
+function render() { renderMetrics(); renderLegend(); renderChart(); }
 
 function renderMetrics() {
   const el = document.getElementById('metrics-row');
   if (!el) return;
   const selected = PRODUCTS.filter(p => selectedProducts.has(p.id));
+  const rate = d => d.total_leads ? ((d.total_buyers / d.total_leads) * 100).toFixed(1) : '0.0';
   if (selected.length === 1) {
     const d = selected[0];
-    const ratio = ((d.total_buyers / d.total_leads) * 100).toFixed(1);
     el.innerHTML = `
-      <div class="metric"><div class="metric-label">Total de leads</div><div class="metric-value">${d.total_leads.toLocaleString('pt-BR')}</div></div>
-      <div class="metric"><div class="metric-label">Compradores</div><div class="metric-value">${d.total_buyers}</div></div>
-      <div class="metric"><div class="metric-label">Taxa de conversão</div><div class="metric-value">${ratio}%</div></div>`;
+      <div class="metric"><div class="metric-label">Total de leads</div><div class="metric-value">${(d.total_leads||0).toLocaleString('pt-BR')}</div></div>
+      <div class="metric"><div class="metric-label">Compradores</div><div class="metric-value">${d.total_buyers||0}</div></div>
+      <div class="metric"><div class="metric-label">Taxa de conversão</div><div class="metric-value">${rate(d)}%</div></div>`;
   } else {
-    el.innerHTML = selected.map(d => {
-      const ratio = ((d.total_buyers / d.total_leads) * 100).toFixed(1);
-      return `<div class="metric">
-        <div class="metric-label">${d.name}</div>
-        <div class="metric-value" style="font-size:20px">${d.total_leads.toLocaleString('pt-BR')} <span style="font-size:13px;color:var(--hint)">leads</span></div>
-        <div class="metric-sub">${d.total_buyers} compradores · ${ratio}% conversão</div>
-      </div>`;
-    }).join('');
+    el.innerHTML = selected.map(d => `<div class="metric">
+        <div class="metric-label">${esc(d.name)}</div>
+        <div class="metric-value" style="font-size:20px">${(d.total_leads||0).toLocaleString('pt-BR')} <span style="font-size:13px;color:var(--hint)">leads</span></div>
+        <div class="metric-sub">${d.total_buyers||0} compradores · ${rate(d)}% conversão</div>
+      </div>`).join('');
   }
 }
 
@@ -461,85 +500,69 @@ function renderLegend() {
     <span><span class="legend-dot" style="background:#7cc4a8"></span>Compradores</span>`;
 }
 
+function shortName(p) {
+  const m = String(p.name).match(/L\d+/i);
+  return m ? m[0].toUpperCase() : String(p.id).toUpperCase().slice(0, 8);
+}
+
 function renderChart() {
   const wrap = document.getElementById('chart-wrap');
   if (!wrap) return;
   if (chart) { chart.destroy(); chart = null; }
   wrap.innerHTML = '<canvas id="mainChart"></canvas>';
 
-  const selected = PRODUCTS.filter(p => selectedProducts.has(p.id));
-  if (!selected.length) return;
+  const selected = PRODUCTS.filter(p => selectedProducts.has(p.id) && p.dados[currentCategory]);
+  if (!selected.length) { wrap.style.height = 'auto'; wrap.innerHTML = '<div class="loading-state">Sem dados nesta categoria para os lançamentos selecionados.</div>'; return; }
 
-  const catData = selected[0][currentCategory] || selected[0].dados?.[currentCategory];
-  if (!catData) return;
+  // União das respostas, na ordem em que aparecem — alinha lançamentos com ordens diferentes
+  const labels = [];
+  selected.forEach(p => p.dados[currentCategory].labels.forEach(l => { if (!labels.includes(l)) labels.push(l); }));
+  const align = (d, arr) => labels.map(l => { const i = d.labels.indexOf(l); return i >= 0 ? (arr[i] || 0) : 0; });
 
-  const labels = catData.labels;
   const datasets = [];
   datasetsCountsRef = [];
-
-  const LEADS_COLOR   = { bg: 'rgba(205,160,76,0.75)',  border: '#CDA04C' };
-  const BUYERS_COLOR  = { bg: 'rgba(124,196,168,0.75)', border: '#7cc4a8' };
-
   const conversionByProduct = [];
-  const barOpts = selected.length > 1
-    ? { categoryPercentage: 0.78, barPercentage: 0.9 }
-    : { categoryPercentage: 0.8, barPercentage: 0.9 };
-  selected.forEach((p, i) => {
-    const d = p[currentCategory] || p.dados?.[currentCategory];
-    if (!d) return;
-    datasets.push({ label: `${p.name} — Leads`,       data: d.leads,  backgroundColor: LEADS_COLOR.bg,  borderColor: LEADS_COLOR.border,  borderWidth: 1, borderRadius: 3, ...barOpts });
-    datasetsCountsRef.push(d.leads_n);
-    datasets.push({ label: `${p.name} — Compradores`, data: d.buyers, backgroundColor: BUYERS_COLOR.bg, borderColor: BUYERS_COLOR.border, borderWidth: 1, borderRadius: 3, ...barOpts });
-    datasetsCountsRef.push(d.buyers_n);
-    conversionByProduct.push({ name: p.name, short: p.id.toUpperCase(), leads: d.leads, buyers: d.buyers, leads_n: d.leads_n, buyers_n: d.buyers_n });
+  const LEADS_COLOR  = { bg: 'rgba(205,160,76,0.75)',  border: '#CDA04C' };
+  const BUYERS_COLOR = { bg: 'rgba(124,196,168,0.75)', border: '#7cc4a8' };
+  const barOpts = selected.length > 1 ? { categoryPercentage: 0.78, barPercentage: 0.9 } : { categoryPercentage: 0.8, barPercentage: 0.9 };
+
+  selected.forEach(p => {
+    const d = p.dados[currentCategory];
+    const leads = align(d, d.leads), buyers = align(d, d.buyers);
+    const leads_n = align(d, d.leads_n), buyers_n = align(d, d.buyers_n);
+    datasets.push({ label: `${p.name} — Leads`, data: leads, backgroundColor: LEADS_COLOR.bg, borderColor: LEADS_COLOR.border, borderWidth: 1, borderRadius: 3, ...barOpts });
+    datasetsCountsRef.push(leads_n);
+    datasets.push({ label: `${p.name} — Compradores`, data: buyers, backgroundColor: BUYERS_COLOR.bg, borderColor: BUYERS_COLOR.border, borderWidth: 1, borderRadius: 3, ...barOpts });
+    datasetsCountsRef.push(buyers_n);
+    conversionByProduct.push({ short: shortName(p), leads, buyers });
   });
 
-  const barH = Math.max(labels.length * (selected.length > 1 ? selected.length * 58 : 52) + 80, 220);
-  wrap.style.height = barH + 'px';
+  wrap.style.height = Math.max(labels.length * (selected.length > 1 ? selected.length * 58 : 52) + 80, 220) + 'px';
 
-  // Plugin que desenha label do lançamento à esquerda e índice à direita
   const conversionPlugin = {
     id: 'conversionIndex',
-    afterDatasetsDraw(chartInstance) {
-      const ctx = chartInstance.ctx;
-      const xScale = chartInstance.scales.x;
-
-      labels.forEach((label, labelIdx) => {
-        conversionByProduct.forEach((prod, prodIdx) => {
-          const lp = prod.leads[labelIdx] || 0;
-          const bp = prod.buyers[labelIdx] || 0;
-
-          // Centro real do par de barras (leads + compradores) deste lançamento
-          const metaLeads  = chartInstance.getDatasetMeta(prodIdx * 2);
-          const metaBuyers = chartInstance.getDatasetMeta(prodIdx * 2 + 1);
-          if (!metaLeads.data[labelIdx] || !metaBuyers.data[labelIdx]) return;
-          const yPos = (metaLeads.data[labelIdx].y + metaBuyers.data[labelIdx].y) / 2;
-
-          // Label do lançamento à esquerda (só quando múltiplos selecionados)
+    afterDatasetsDraw(ci) {
+      const ctx = ci.ctx, xScale = ci.scales.x;
+      labels.forEach((_, li) => {
+        conversionByProduct.forEach((prod, pi) => {
+          const ml = ci.getDatasetMeta(pi * 2), mb = ci.getDatasetMeta(pi * 2 + 1);
+          if (!ml.data[li] || !mb.data[li]) return;
+          const y = (ml.data[li].y + mb.data[li].y) / 2;
           if (selected.length > 1) {
-            const xLeft = xScale.getPixelForValue(0) - 8;
             ctx.save();
-            ctx.font = `500 10px 'DM Mono', monospace`;
-            ctx.fillStyle = '#8b93b8';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(prod.short, xLeft, yPos);
+            ctx.font = `500 10px 'DM Mono', monospace`; ctx.fillStyle = '#8b93b8';
+            ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            ctx.fillText(prod.short, xScale.getPixelForValue(0) - 8, y);
             ctx.restore();
           }
-
-          // Índice de conversão à direita
+          const lp = prod.leads[li] || 0, bp = prod.buyers[li] || 0;
           if (lp === 0) return;
-          const index = bp / lp;
-          const text  = index.toFixed(2) + 'x';
-          const color = index > 1.05 ? '#5fcd8a' : index >= 0.95 ? '#e8c97a' : '#e05a5a';
-          const xPos  = xScale.getPixelForValue(xScale.max) + 6;
-
+          const idx = bp / lp;
           ctx.save();
           ctx.font = `500 11px 'DM Mono', monospace`;
-          ctx.fillStyle = color;
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(text, xPos, yPos);
+          ctx.fillStyle = idx > 1.05 ? '#5fcd8a' : idx >= 0.95 ? '#e8c97a' : '#e05a5a';
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.fillText(idx.toFixed(2) + 'x', xScale.getPixelForValue(xScale.max) + 6, y);
           ctx.restore();
         });
       });
@@ -561,23 +584,14 @@ function renderChart() {
           callbacks: {
             label: ctx => {
               const pct = ctx.parsed.x.toFixed(1);
-              const n   = datasetsCountsRef[ctx.datasetIndex]?.[ctx.dataIndex] ?? '—';
-              // Calcula índice para o tooltip também
-              const isLeads   = ctx.datasetIndex % 2 === 0;
-              const prodIdx   = Math.floor(ctx.datasetIndex / 2);
-              const prod      = conversionByProduct[prodIdx];
-              if (prod && !isLeads) {
-                const lp = prod.leads[ctx.dataIndex] || 0;
-                const bp = prod.buyers[ctx.dataIndex] || 0;
-                if (lp > 0) {
-                  const idx = bp / lp;
-                  return [
-                    ` ${ctx.dataset.label}: ${pct}%  (n = ${n})`,
-                    ` Índice de conversão: ${idx.toFixed(2)}x`
-                  ];
-                }
+              const n = datasetsCountsRef[ctx.datasetIndex]?.[ctx.dataIndex] ?? '—';
+              const line = ` ${ctx.dataset.label}: ${pct}%  (n = ${n})`;
+              const prod = conversionByProduct[Math.floor(ctx.datasetIndex / 2)];
+              if (prod && ctx.datasetIndex % 2 === 1) {
+                const lp = prod.leads[ctx.dataIndex] || 0, bp = prod.buyers[ctx.dataIndex] || 0;
+                if (lp > 0) return [line, ` Índice de conversão: ${(bp / lp).toFixed(2)}x`];
               }
-              return ` ${ctx.dataset.label}: ${pct}%  (n = ${n})`;
+              return line;
             }
           }
         }
@@ -591,150 +605,400 @@ function renderChart() {
 }
 
 // ── DELETE ────────────────────────────────────────────
-async function deleteSelected() {
+function openDeleteModal() {
   if (!selectedProducts.size) return;
-  const names = PRODUCTS.filter(p => selectedProducts.has(p.id)).map(p => p.name).join(', ');
-  if (!confirm(`Remover: ${names}?\n\nEsta ação não pode ser desfeita.`)) return;
-  for (const id of selectedProducts) {
-    await sb.from('cruzamentos').delete().eq('id', id);
-  }
-  toast('Lançamento(s) removido(s)!', 'success');
+  const names = PRODUCTS.filter(p => selectedProducts.has(p.id)).map(p => `• ${esc(p.name)}`).join('<br>');
+  document.getElementById('delete-list').innerHTML = names;
+  document.getElementById('btn-confirm-delete').disabled = false;
+  document.getElementById('deleteOverlay').classList.add('open');
+}
+function closeDeleteModal(e, force) {
+  if (force || (e && e.target === document.getElementById('deleteOverlay')))
+    document.getElementById('deleteOverlay').classList.remove('open');
+}
+async function doDelete() {
+  const btn = document.getElementById('btn-confirm-delete');
+  btn.disabled = true;
+  const ids = [...selectedProducts];
+  // .select() devolve as linhas apagadas: se vier vazio, o RLS bloqueou sem dar erro
+  const { data, error } = await sb.from('cruzamentos').delete().in('id', ids).select('id');
+  btn.disabled = false;
+  if (error) { toast('Erro ao remover: ' + error.message, 'error'); return; }
+  if (!data || data.length === 0) { toast('Nada foi removido — verifique a política de DELETE (RLS) da tabela cruzamentos.', 'error'); return; }
+  closeDeleteModal(null, true);
+  selectedProducts = new Set();
+  toast(data.length < ids.length ? `Removidos ${data.length} de ${ids.length}.` : 'Lançamento(s) removido(s)!', data.length < ids.length ? 'error' : 'success');
   await loadProducts();
 }
 
-// ── CSV IMPORT ────────────────────────────────────────
-function openImportModal() {
-  parsedCSV = null;
-  document.getElementById('import-name').value = '';
-  document.getElementById('import-leads').value = '';
-  document.getElementById('import-buyers').value = '';
-  document.getElementById('uploadLabel').textContent = 'Clique ou arraste o CSV aqui';
-  document.getElementById('previewArea').style.display = 'none';
-  document.getElementById('importOverlay').classList.add('open');
+// ── CSV PARSER ────────────────────────────────────────
+function detectDelimiter(text) {
+  const firstLine = text.slice(0, text.indexOf('\n') > -1 ? text.indexOf('\n') : text.length);
+  const counts = { ';': 0, ',': 0, '\t': 0 };
+  let q = false;
+  for (const ch of firstLine) { if (ch === '"') q = !q; else if (!q && ch in counts) counts[ch]++; }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+function parseDelimited(text) {
+  text = text.replace(/^\uFEFF/, '');
+  const d = detectDelimiter(text);
+  const rows = []; let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else if (c === '"') q = true;
+    else if (c === d) { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.some(v => v.trim() !== '')) rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.some(v => v.trim() !== '')) rows.push(row);
+  if (!rows.length) return null;
+  const headers = rows[0].map((h, i) => h.trim() || `Coluna ${i + 1}`);
+  return { headers, rows: rows.slice(1).map(r => headers.map((_, i) => (r[i] ?? '').trim())) };
+}
+// Lê em UTF-8; se aparecer caractere inválido, relê como Windows-1252 (CSV exportado do Excel)
+function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject(r.error);
+    r.onload = () => {
+      const buf = r.result;
+      let txt = new TextDecoder('utf-8').decode(buf);
+      if (txt.includes('\uFFFD')) txt = new TextDecoder('windows-1252').decode(buf);
+      resolve(txt);
+    };
+    r.readAsArrayBuffer(file);
+  });
+}
+const normEmail = v => String(v || '').trim().toLowerCase().replace(/\s+/g, '');
+
+function guessEmailCol(t) {
+  const byName = t.headers.findIndex(h => /e-?mail/i.test(h));
+  if (byName >= 0) return byName;
+  let best = 0, bestScore = -1;
+  t.headers.forEach((_, i) => {
+    const sample = t.rows.slice(0, 200);
+    const score = sample.filter(r => /@/.test(r[i])).length / (sample.length || 1);
+    if (score > bestScore) { bestScore = score; best = i; }
+  });
+  return best;
 }
 
+// ── IMPORT: ESTADO ────────────────────────────────────
+let importMode = 'auto';
+let SURVEY = null, BUYERS = null;
+let QUESTIONS = [];   // [{col, header, uniq, on, cat, title}]
+let RESULT = null;    // { total_leads, total_buyers, dados, stats }
+let parsedCSV = null; // modo manual
+let overwriteArmed = false;
+const SKIP_COL = /\b(nome|name|telefone|phone|celular|whatsapp|data|date|hora|timestamp|carimbo|utm|utm_\w+|id|ip|cpf|url|link|origem|source|token)\b/i;
+const MAX_LABELS = 12;
+
+function setImportMode(m) {
+  importMode = m;
+  document.getElementById('mode-auto').classList.toggle('active', m === 'auto');
+  document.getElementById('mode-manual').classList.toggle('active', m === 'manual');
+  document.getElementById('pane-auto').style.display = m === 'auto' ? 'block' : 'none';
+  document.getElementById('pane-manual').style.display = m === 'manual' ? 'block' : 'none';
+  document.getElementById('btn-export').style.display = m === 'auto' && RESULT ? 'inline-block' : 'none';
+  resetOverwrite();
+}
+
+function openImportModal() {
+  SURVEY = BUYERS = RESULT = parsedCSV = null; QUESTIONS = [];
+  ['import-name', 'import-leads', 'import-buyers', 'filter-val'].forEach(id => document.getElementById(id).value = '');
+  ['file-survey', 'file-buyers', 'csvInput'].forEach(id => document.getElementById(id).value = '');
+  for (const k of ['survey', 'buyers']) {
+    document.getElementById('lbl-' + k).textContent = 'Clique ou arraste o CSV';
+    document.getElementById('meta-' + k).textContent = '';
+    document.getElementById('up-' + k).classList.remove('loaded');
+  }
+  document.getElementById('uploadLabel').textContent = 'Clique ou arraste o CSV aqui';
+  document.getElementById('previewArea').style.display = 'none';
+  document.getElementById('cfg-area').style.display = 'none';
+  setImportMode('auto');
+  document.getElementById('importOverlay').classList.add('open');
+}
 function closeImportModal(e, force) {
   if (force || (e && e.target === document.getElementById('importOverlay')))
     document.getElementById('importOverlay').classList.remove('open');
 }
+function resetOverwrite() {
+  overwriteArmed = false;
+  const b = document.getElementById('btn-save');
+  b.textContent = 'Salvar no banco';
+  b.classList.remove('btn-danger'); b.classList.add('btn-primary');
+}
 
-function handleDrop(e) {
+function dropFile(e, kind) {
   e.preventDefault();
-  document.getElementById('uploadArea').classList.remove('drag');
-  const file = e.dataTransfer.files[0];
-  if (file) processCSVFile(file);
+  e.currentTarget.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f, kind);
 }
+function pickFile(input, kind) { if (input.files[0]) loadFile(input.files[0], kind); }
 
-function handleFileSelect(input) {
-  if (input.files[0]) processCSVFile(input.files[0]);
-}
+async function loadFile(file, kind) {
+  let text;
+  try { text = await readFileText(file); } catch { toast('Não consegui ler o arquivo', 'error'); return; }
 
-function processCSVFile(file) {
-  document.getElementById('uploadLabel').textContent = file.name;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const text = e.target.result;
-    parsedCSV = parseCSV(text);
+  if (kind === 'manual') {
+    document.getElementById('uploadLabel').textContent = file.name;
+    parsedCSV = parseConsolidated(text);
     showPreview(parsedCSV);
-  };
-  reader.readAsText(file, 'UTF-8');
+    return;
+  }
+
+  const t = parseDelimited(text);
+  if (!t || !t.rows.length) { toast('CSV vazio ou inválido', 'error'); return; }
+  t.fileName = file.name;
+  if (kind === 'survey') SURVEY = t; else BUYERS = t;
+  document.getElementById('lbl-' + kind).textContent = file.name;
+  document.getElementById('meta-' + kind).textContent = `${t.rows.length.toLocaleString('pt-BR')} linhas · ${t.headers.length} colunas`;
+  document.getElementById('up-' + kind).classList.add('loaded');
+
+  if (kind === 'survey') {
+    fillSelect('email-survey', t.headers, guessEmailCol(t));
+    buildQuestions();
+  } else {
+    fillSelect('email-buyers', t.headers, guessEmailCol(t));
+    fillSelect('filter-col', t.headers, -1, '— sem filtro —');
+  }
+  if (SURVEY && BUYERS) {
+    document.getElementById('cfg-area').style.display = 'block';
+    recompute();
+  }
 }
 
-function parseCSV(text) {
-  const lines = text.trim().split('\n').map(l => l.split(';').map(c => c.trim().replace(/^"|"$/g, '')));
-  if (lines.length < 2) return null;
-  // Formato: categoria;label;leads_pct;leads_n;buyers_pct;buyers_n
-  const rows = lines.slice(1).filter(r => r.length >= 6 && r[0]);
+function fillSelect(id, headers, selected, emptyLabel) {
+  const opts = headers.map((h, i) => `<option value="${i}"${i === selected ? ' selected' : ''}>${esc(h)}</option>`).join('');
+  document.getElementById(id).innerHTML = (emptyLabel ? `<option value="-1">${emptyLabel}</option>` : '') + opts;
+}
+
+function buildQuestions() {
+  const emailCol = +document.getElementById('email-survey').value;
+  QUESTIONS = SURVEY.headers.map((h, i) => {
+    const vals = new Set(SURVEY.rows.map(r => r[i]).filter(Boolean));
+    const skip = i === emailCol || SKIP_COL.test(h);
+    return { col: i, header: h, uniq: vals.size, on: !skip && vals.size >= 2 && vals.size <= 20, skip, cat: '__new', title: h.length > 32 ? h.slice(0, 30) + '…' : h };
+  }).filter(q => q.uniq > 0 && q.col !== emailCol);
+  renderQuestions();
+}
+
+function renderQuestions() {
+  const existing = new Set(Object.keys(CATEGORIES));
+  PRODUCTS.forEach(p => Object.keys(p.dados).forEach(k => existing.add(k)));
+  const catOpts = [...existing].map(k => ({ k, t: catTitle(k) }));
+  document.getElementById('q-body').innerHTML = QUESTIONS.map((q, i) => `
+    <tr class="${q.on ? '' : 'off'}">
+      <td><input type="checkbox" ${q.on ? 'checked' : ''} onchange="toggleQ(${i}, this.checked)"></td>
+      <td class="q-name" title="${esc(q.header)}">${esc(q.header)}</td>
+      <td class="q-n">${q.uniq}</td>
+      <td><select onchange="setQCat(${i}, this.value)" ${q.on ? '' : 'disabled'}>
+        <option value="__new"${q.cat === '__new' ? ' selected' : ''}>+ Nova categoria</option>
+        ${catOpts.map(o => `<option value="${esc(o.k)}"${q.cat === o.k ? ' selected' : ''}>${esc(o.t)}</option>`).join('')}
+      </select></td>
+      <td><input type="text" value="${esc(q.title)}" ${q.on && q.cat === '__new' ? '' : 'disabled'} oninput="QUESTIONS[${i}].title=this.value;recomputeDebounced()"></td>
+    </tr>`).join('');
+}
+function toggleQ(i, on) { QUESTIONS[i].on = on; renderQuestions(); recompute(); }
+function setQCat(i, v) { QUESTIONS[i].cat = v; renderQuestions(); recompute(); }
+
+let _rt;
+function recomputeDebounced() { clearTimeout(_rt); _rt = setTimeout(recompute, 300); }
+
+// ── IMPORT: CRUZAMENTO ────────────────────────────────
+function computeCross() {
+  const eS = +document.getElementById('email-survey').value;
+  const eB = +document.getElementById('email-buyers').value;
+  const fCol = +document.getElementById('filter-col').value;
+  const fTerms = document.getElementById('filter-val').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+  // Compradores únicos (após filtro)
+  const buyerSet = new Set();
+  BUYERS.rows.forEach(r => {
+    if (fCol >= 0 && fTerms.length && !fTerms.some(t => (r[fCol] || '').toLowerCase().includes(t))) return;
+    const e = normEmail(r[eB]);
+    if (e.includes('@')) buyerSet.add(e);
+  });
+
+  // Leads únicos — se o e-mail respondeu mais de uma vez, vale a última resposta
+  const leadMap = new Map();
+  let noEmail = 0;
+  SURVEY.rows.forEach(r => {
+    const e = normEmail(r[eS]);
+    if (!e.includes('@')) { noEmail++; return; }
+    leadMap.set(e, r);
+  });
+  const dupes = SURVEY.rows.length - noEmail - leadMap.size;
+
+  const leads = [...leadMap.entries()];
+  const matched = leads.filter(([e]) => buyerSet.has(e));
+
+  const dados = {};
+  const usedKeys = new Set();
+  QUESTIONS.filter(q => q.on).forEach(q => {
+    let key = q.cat !== '__new' ? q.cat : 'q_' + (slugify(q.title) || q.col);
+    while (usedKeys.has(key)) key += '_2';
+    usedKeys.add(key);
+
+    const countL = new Map(), countB = new Map();
+    let totL = 0, totB = 0;
+    leads.forEach(([e, r]) => {
+      const v = r[q.col]; if (!v) return;
+      countL.set(v, (countL.get(v) || 0) + 1); totL++;
+      if (buyerSet.has(e)) { countB.set(v, (countB.get(v) || 0) + 1); totB++; }
+    });
+    let ordered = [...countL.keys()].sort((a, b) => countL.get(b) - countL.get(a));
+    if (ordered.length > MAX_LABELS + 1) {
+      const top = ordered.filter(v => v !== 'Outros').slice(0, MAX_LABELS);
+      const rest = ordered.filter(v => !top.includes(v));
+      countL.set('Outros', rest.reduce((s, v) => s + countL.get(v), 0));
+      countB.set('Outros', rest.reduce((s, v) => s + (countB.get(v) || 0), 0));
+      ordered = [...top, 'Outros'];
+    }
+    const pct = (n, t) => t ? Math.round(n / t * 10000) / 100 : 0;
+    const entry = {
+      labels: ordered,
+      leads: ordered.map(v => pct(countL.get(v), totL)),
+      leads_n: ordered.map(v => countL.get(v)),
+      buyers: ordered.map(v => pct(countB.get(v) || 0, totB)),
+      buyers_n: ordered.map(v => countB.get(v) || 0),
+    };
+    if (q.cat === '__new') entry.title = q.title.trim() || q.header;
+    entry.pergunta = q.header;
+    dados[key] = entry;
+  });
+
+  return {
+    total_leads: leadMap.size,
+    total_buyers: matched.length,
+    dados,
+    stats: { buyersFile: buyerSet.size, noEmail, dupes }
+  };
+}
+
+function recompute() {
+  if (!SURVEY || !BUYERS) return;
+  RESULT = computeCross();
+  const s = RESULT.stats;
+  const resp = s.buyersFile ? (RESULT.total_buyers / s.buyersFile * 100).toFixed(1) : '0.0';
+  const conv = RESULT.total_leads ? (RESULT.total_buyers / RESULT.total_leads * 100).toFixed(2) : '0.00';
+  document.getElementById('summary').innerHTML = `
+    <div class="metric"><div class="metric-label">Leads únicos</div><div class="metric-value">${RESULT.total_leads.toLocaleString('pt-BR')}</div></div>
+    <div class="metric"><div class="metric-label">Compradores no arquivo</div><div class="metric-value">${s.buyersFile.toLocaleString('pt-BR')}</div></div>
+    <div class="metric"><div class="metric-label">Compradores que responderam</div><div class="metric-value">${RESULT.total_buyers}</div><div class="metric-sub">${resp}% dos compradores</div></div>
+    <div class="metric"><div class="metric-label">Conversão</div><div class="metric-value">${conv}%</div><div class="metric-sub">${Object.keys(RESULT.dados).length} categorias</div></div>`;
+  const warns = [];
+  if (s.dupes) warns.push(`${s.dupes} resposta(s) repetida(s) do mesmo e-mail — mantida a última.`);
+  if (s.noEmail) warns.push(`${s.noEmail} resposta(s) sem e-mail válido foram ignoradas.`);
+  if (!RESULT.total_buyers) warns.push('Nenhum comprador encontrado na pesquisa — confira as colunas de e-mail e o filtro.');
+  document.getElementById('summary-warn').innerHTML = warns.map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join('');
+  document.getElementById('btn-export').style.display = 'inline-block';
+  resetOverwrite();
+}
+
+// ── IMPORT: SALVAR ────────────────────────────────────
+async function confirmImport() {
+  const name = document.getElementById('import-name').value.trim();
+  if (!name) { toast('Informe o nome do lançamento', 'error'); return; }
+
+  let payload;
+  if (importMode === 'auto') {
+    if (!SURVEY || !BUYERS) { toast('Suba os dois arquivos', 'error'); return; }
+    recompute();
+    if (!Object.keys(RESULT.dados).length) { toast('Marque ao menos uma pergunta', 'error'); return; }
+    payload = { total_leads: RESULT.total_leads, total_buyers: RESULT.total_buyers, dados: RESULT.dados };
+  } else {
+    if (!parsedCSV) { toast('Selecione um arquivo CSV', 'error'); return; }
+    payload = {
+      total_leads: parseInt(document.getElementById('import-leads').value) || 0,
+      total_buyers: parseInt(document.getElementById('import-buyers').value) || 0,
+      dados: parsedCSV.dados
+    };
+  }
+
+  const id = slugify(name) || 'lancamento_' + Date.now();
+  const exists = PRODUCTS.find(p => p.id === id);
+  if (exists && !overwriteArmed) {
+    overwriteArmed = true;
+    const b = document.getElementById('btn-save');
+    b.textContent = `Substituir "${exists.name}"`;
+    b.classList.remove('btn-primary'); b.classList.add('btn-danger');
+    toast('Já existe um lançamento com esse nome. Clique de novo para substituir.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  const { error } = await sb.from('cruzamentos').upsert({ id, name, ...payload }, { onConflict: 'id' });
+  btn.disabled = false;
+  if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
+  toast(exists ? 'Lançamento substituído!' : 'Cruzamento salvo!', 'success');
+  closeImportModal(null, true);
+  selectedProducts = new Set([id]);
+  await loadProducts();
+}
+
+// Exporta o resultado no mesmo formato do CSV consolidado (dá pra reimportar)
+function exportResult() {
+  if (!RESULT) return;
+  const q = v => /[;"\n]/.test(v) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const lines = ['categoria;label;leads_pct;leads_n;buyers_pct;buyers_n'];
+  Object.entries(RESULT.dados).forEach(([k, d]) => d.labels.forEach((l, i) =>
+    lines.push([k, q(l), d.leads[i].toFixed(2), d.leads_n[i], d.buyers[i].toFixed(2), d.buyers_n[i]].join(';'))));
+  const name = slugify(document.getElementById('import-name').value) || 'cruzamento';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = `${name}_consolidado.csv`;
+  a.click();
+}
+
+// ── MODO MANUAL (formato antigo) ──────────────────────
+function parseConsolidated(text) {
+  const t = parseDelimited(text);
+  if (!t) return null;
+  const rows = t.rows.filter(r => r.length >= 6 && r[0]);
   const dados = {};
   rows.forEach(([cat, label, lp, ln, bp, bn]) => {
     if (!dados[cat]) dados[cat] = { labels: [], leads: [], leads_n: [], buyers: [], buyers_n: [] };
     dados[cat].labels.push(label);
-    dados[cat].leads.push(parseFloat(lp) || 0);
+    dados[cat].leads.push(parseFloat(String(lp).replace(',', '.')) || 0);
     dados[cat].leads_n.push(parseInt(ln) || 0);
-    dados[cat].buyers.push(parseFloat(bp) || 0);
+    dados[cat].buyers.push(parseFloat(String(bp).replace(',', '.')) || 0);
     dados[cat].buyers_n.push(parseInt(bn) || 0);
   });
   return { rows, dados };
 }
-
 function showPreview(parsed) {
-  if (!parsed) return;
-  const area = document.getElementById('previewArea');
-  const table = document.getElementById('previewTable');
-  const preview = parsed.rows.slice(0, 8);
-  table.innerHTML = `<table><thead><tr><th>Categoria</th><th>Label</th><th>Leads %</th><th>Leads n</th><th>Compradores %</th><th>Compradores n</th></tr></thead>
-    <tbody>${preview.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-  area.style.display = 'block';
+  if (!parsed) { toast('CSV inválido', 'error'); return; }
+  document.getElementById('previewTable').innerHTML = `<table><thead><tr><th>Categoria</th><th>Label</th><th>Leads %</th><th>Leads n</th><th>Compradores %</th><th>Compradores n</th></tr></thead>
+    <tbody>${parsed.rows.slice(0, 8).map(r => `<tr>${r.slice(0, 6).map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  document.getElementById('previewArea').style.display = 'block';
 }
-
-async function confirmImport() {
-  const name = document.getElementById('import-name').value.trim();
-  const total_leads = parseInt(document.getElementById('import-leads').value) || 0;
-  const total_buyers = parseInt(document.getElementById('import-buyers').value) || 0;
-
-  if (!name) { toast('Informe o nome do lançamento', 'error'); return; }
-  if (!parsedCSV) { toast('Selecione um arquivo CSV', 'error'); return; }
-
-  const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
-  const { error } = await sb.from('cruzamentos').upsert({
-    id, name, total_leads, total_buyers, dados: parsedCSV.dados
-  });
-
-  if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
-  toast('Lançamento importado com sucesso!', 'success');
-  closeImportModal(null, true);
-  await loadProducts();
-}
-
-// ── TEMPLATE CSV ──────────────────────────────────────
 function downloadTemplate() {
-  const header = 'categoria;label;leads_pct;leads_n;buyers_pct;buyers_n';
-  const rows = [
-    'faixa;25–34 anos;35.00;350;30.00;9',
-    'faixa;35–44 anos;25.00;250;40.00;12',
-    'faixa;- 25 anos;15.00;150;10.00;3',
-    'faixa;45–54 anos;20.00;200;15.00;5',
-    'faixa;55 anos +;5.00;50;5.00;1',
-    'sexo;Feminino;80.00;800;75.00;22',
-    'sexo;Masculino;20.00;200;25.00;8',
-    'ocupacao;Vet. formado;75.00;750;95.00;28',
-    'ocupacao;Estudante vet.;20.00;200;5.00;2',
-    'ocupacao;Outros;5.00;50;0.00;0',
-    'tipo_ocup;Funcionário;40.00;400;50.00;15',
-    'tipo_ocup;Proprietário;25.00;250;30.00;9',
-    'tipo_ocup;Outros;20.00;200;15.00;4',
-    'tipo_ocup;Não trabalha;15.00;150;5.00;2',
-    'regiao;Sudeste;45.00;450;55.00;16',
-    'regiao;Sul;20.00;200;20.00;6',
-    'regiao;Nordeste;15.00;150;10.00;3',
-    'regiao;Centro-Oeste;12.00;120;10.00;3',
-    'regiao;Norte;6.00;60;5.00;1',
-    'regiao;Outros;2.00;20;0.00;0',
-    'nicho;Pequenos Animais;82.00;820;90.00;27',
-    'nicho;Emerg. e UTI;8.00;80;5.00;1',
-    'nicho;Outros subnichos;5.00;50;3.00;1',
-    'nicho;Grandes Animais;3.00;30;2.00;1',
-    'nicho;Selvagens;2.00;20;0.00;0',
-    'tempo;+ 6 meses;40.00;400;60.00;18',
-    'tempo;- 6 meses;18.00;180;20.00;6',
-    'tempo;Conhecendo agora;35.00;350;15.00;5',
-    'tempo;Outros;7.00;70;5.00;1',
-  ];
-  const csv = [header, ...rows].join('\n');
+  const csv = ['categoria;label;leads_pct;leads_n;buyers_pct;buyers_n',
+    'faixa;25–34 anos;35.00;350;30.00;9', 'faixa;35–44 anos;25.00;250;40.00;12',
+    'sexo;Feminino;80.00;800;75.00;22', 'sexo;Masculino;20.00;200;25.00;8'].join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
   a.download = 'template_cruzamento.csv';
   a.click();
-  toast('Template baixado!');
 }
 
-// ── AUTH LOGOUT ───────────────────────────────────────
+// ── LOGOUT ────────────────────────────────────────────
 async function doLogout() {
   await sb.auth.signOut();
   window.location.href = "index.html";
 }
 
-// ── START ─────────────────────────────────────────────
 init();
 </script>
 </body>
