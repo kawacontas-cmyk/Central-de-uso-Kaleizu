@@ -1,756 +1,710 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Central de Leads · Instituto Kaleizu</title>
-<link rel="icon" href="favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central de Leads — Prof. Kaleizu</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060B1F;--surface:#0a0f20;--card:#0f1428;--border:#1a2035;
+  --text:#dde3f5;--muted:#6b7494;--hint:#3a4060;
+  --gold:#c9a84c;--gold-light:#e8c97a;--gold-dim:rgba(201,168,76,.15);
+  --accent2:#7cc4a8;--danger:#e05a5a;--success:#5ac48a;--amber:#e8c97a;--blue:#5b8aff;
+  --topbar:#0a0e1f;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --r:6px;--r2:10px;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh}
+button{font-family:inherit;color:inherit}
+
+.topbar{height:56px;background:var(--topbar);border-bottom:2px solid #1A1E31;display:flex;align-items:center;padding:0 20px;gap:14px;position:sticky;top:0;z-index:50}
+.topbar-logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.topbar-logo img{width:32px;height:32px;object-fit:contain;mix-blend-mode:lighten}
+.topbar-name{font-size:14px;font-weight:500;color:var(--gold);padding-left:10px;border-left:1px solid var(--border);white-space:nowrap}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.topbar-count{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.btn-topbar{background:none;border:1px solid var(--border);border-radius:var(--r);padding:6px 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--font);transition:all .15s}
+.btn-topbar:hover{color:var(--text);border-color:var(--gold)}
+
+.main-full{max-width:1100px;margin:0 auto;padding:28px 24px 60px}
+.main-wide{max-width:1500px;margin:0 auto;padding:28px 24px 60px}
+
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+.page-title{font-size:20px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:10px}
+.page-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:7px 14px;border-radius:var(--r);font-size:12px;cursor:pointer;font-family:var(--font);transition:all .15s;border:1px solid var(--border);background:transparent;color:var(--muted)}
+.btn-primary{background:var(--gold);color:#060B1F;border-color:var(--gold);font-weight:500}
+.btn-primary:hover{background:var(--gold-light)}
+.btn-ghost:hover{background:var(--card);color:var(--text);border-color:var(--gold)}
+.btn-danger:hover{border-color:var(--danger);color:var(--danger)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+
+/* ── cards de lançamento ── */
+.lanc-sec{margin-bottom:30px}
+.lanc-sec-t{font-size:10px;font-family:var(--mono);color:var(--gold);letter-spacing:.12em;
+  text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.lanc-sec-t span{background:var(--surface);color:var(--muted);border-radius:99px;padding:1px 8px;letter-spacing:0}
+.lanc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.lanc-card{position:relative;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r2);padding:16px 18px;overflow:hidden;transition:border-color .15s,transform .15s}
+.lanc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--c)}
+.lanc-card::after{content:'';position:absolute;top:-40px;right:-40px;width:110px;height:110px;
+  border-radius:50%;background:var(--c);opacity:.07;pointer-events:none}
+.lanc-card:hover{border-color:var(--c);transform:translateY(-2px)}
+.lanc-top{margin-bottom:12px}
+.lanc-nome{font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lanc-num{font-size:27px;font-weight:500;color:var(--c);line-height:1;letter-spacing:-.5px}
+.lanc-lbl{font-size:11px;color:var(--hint);font-family:var(--mono);margin-top:3px;margin-bottom:14px}
+.lanc-acoes{display:flex;gap:6px;flex-wrap:wrap}
+.btn-lanc{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;
+  padding:7px 8px;border-radius:var(--r);font-size:11px;font-family:var(--font);
+  cursor:pointer;transition:all .15s;background:transparent;
+  border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+.btn-lanc:hover{border-color:var(--c);color:var(--text)}
+.btn-lanc.primario{border-color:rgba(var(--crgb),.45);color:var(--c)}
+.btn-lanc.primario:hover{background:rgba(var(--crgb),.13);border-color:var(--c)}
+.btn-lanc.largo{flex-basis:100%}
+
+/* ── detalhe ── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.kpi{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--gold))}
+.kpi-lbl{font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.kpi-num{font-size:24px;font-weight:500;color:var(--kc,var(--text));margin-top:6px;letter-spacing:-.5px}
+
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar input,.toolbar select{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:7px 10px;font-size:12px;color:var(--text);font-family:var(--font);outline:none}
+.toolbar input[type=search]{width:230px}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--gold)}
+.toolbar .sep{flex:1}
+.chip{border:1px solid var(--border);background:var(--surface);border-radius:99px;padding:6px 12px;
+  font-size:11px;color:var(--muted);cursor:pointer;font-family:var(--font);transition:all .15s}
+.chip:hover{color:var(--text)}
+.chip[aria-pressed="true"]{border-color:var(--gold);color:var(--gold-light);background:var(--gold-dim)}
+
+.table-wrap{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;background:var(--card)}
+.table-scroll{overflow:auto;max-height:62vh}
+table{border-collapse:collapse;width:100%;font-size:13px}
+thead{position:sticky;top:0;z-index:2}
+th{background:var(--surface);padding:8px 12px;text-align:left;color:var(--gold);font-weight:400;
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;
+  max-width:260px;overflow:hidden;text-overflow:ellipsis}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(201,168,76,.04)}
+td.nulo{color:var(--hint)}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;font-family:var(--mono);margin-right:4px}
+.badge-rep{background:rgba(232,201,122,.16);color:var(--amber)}
+.badge-rec{background:rgba(91,138,255,.16);color:var(--blue)}
+
+.pagination{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--border);flex-wrap:wrap}
+.pagination button{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:4px 9px;
+  font-size:11px;cursor:pointer;color:var(--muted);font-family:var(--mono);transition:all .15s}
+.pagination button:hover:not([disabled]){color:var(--text);border-color:var(--gold)}
+.pagination button[disabled]{opacity:.35;cursor:not-allowed}
+.pag-info{font-size:11px;color:var(--hint);font-family:var(--mono);margin-left:auto}
+
+/* ── modal ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--gold);border-radius:var(--r2);padding:22px;width:520px;max-width:95vw;max-height:88vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:500;margin-bottom:16px;color:var(--gold-light)}
+.field{margin-bottom:10px}
+.field label{font-size:10px;color:var(--muted);display:block;margin-bottom:3px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.field input,.field select{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:13px;color:var(--text);font-family:var(--font);outline:none}
+.field input:focus,.field select:focus{border-color:var(--gold)}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.check-line{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text);cursor:pointer;margin-bottom:4px}
+.check-line input{margin-top:2px;accent-color:var(--gold);cursor:pointer;flex-shrink:0}
+.check-hint{font-size:11px;color:var(--hint);margin:0 0 12px 22px}
+.upload-area{border:1.5px dashed var(--border);border-radius:var(--r2);padding:24px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:10px}
+.upload-area:hover,.upload-area.drag{border-color:var(--gold);background:var(--gold-dim)}
+.upload-area input{display:none}
+.upload-label{font-size:13px;color:var(--muted)}
+.upload-label span{color:var(--gold)}
+.upload-preview{font-size:11px;color:var(--accent2);margin-top:6px;font-family:var(--mono)}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--gold);border-radius:var(--r2);padding:12px 18px;font-size:13px;color:var(--text);z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:340px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted);font-size:13px;gap:10px}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--hint)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<!-- Trava de acesso por ferramenta -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="acesso.js" data-tool="leads"></script>
-<style>
-:root{
-  --bg:#060B1F; --surface:#0e1530; --card:#0f1428;
-  --border:rgba(255,255,255,0.08);
-  --text:#e8eaf6; --muted:#8b93b8; --hint:#3a4060;
-  --gold:#CDA04C; --gold-light:#e8c97a;
-  --verde:#5fcd8a; --vermelho:#e05a5a; --ambar:#e8c97a;
-  --azul:#5b8aff; --roxo:#a98bff; --rosa:#f07ab0; --agua:#7cc4a8;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;background:var(--bg);color:var(--text);
-  font-family:'DM Sans',system-ui,sans-serif;font-size:14px;
-}
-button{font-family:inherit;color:inherit;cursor:pointer}
-input,select{font-family:inherit;color:inherit}
-.rotulo{
-  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--muted);
-}
-.mono{font-family:'DM Mono',monospace}
-
-/* topo */
-.topo{
-  display:flex;align-items:center;gap:16px;
-  padding:14px 22px;border-bottom:1px solid var(--border);background:var(--surface);
-  position:sticky;top:0;z-index:20;
-}
-.topo h1{font-size:16px;font-weight:700;margin:0;letter-spacing:.01em}
-.topo .marca{width:26px;height:26px;border-radius:7px;background:linear-gradient(140deg,var(--gold),#8a6420);flex:none}
-.topo .direita{margin-left:auto;display:flex;align-items:center;gap:10px}
-
-.btn{
-  border:1px solid var(--border);background:var(--card);color:var(--text);
-  padding:8px 14px;border-radius:9px;font-size:13px;font-weight:500;
-  transition:border-color .15s,background .15s;
-}
-.btn:hover{border-color:rgba(205,160,76,.5)}
-.btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.btn.ouro{background:linear-gradient(140deg,var(--gold),#a97f34);border-color:transparent;color:#1a1204;font-weight:700}
-.btn.risco:hover{border-color:rgba(224,90,90,.6);color:var(--vermelho)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.btn.pequeno{padding:6px 10px;font-size:12px}
-
-/* estrutura */
-.corpo{display:grid;grid-template-columns:262px 1fr;min-height:calc(100vh - 57px)}
-.lateral{border-right:1px solid var(--border);background:var(--surface);padding:16px 12px;display:flex;flex-direction:column;gap:12px}
-.lista{display:flex;flex-direction:column;gap:6px;overflow:auto}
-.item{
-  text-align:left;width:100%;border:1px solid var(--border);background:var(--card);
-  border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;
-}
-.item:hover{border-color:rgba(205,160,76,.4)}
-.item[aria-current="true"]{border-color:var(--gold);background:#141c3a}
-.item strong{font-size:13px;font-weight:700}
-.item span{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
-.principal{padding:20px 22px 40px;min-width:0}
-
-/* cards de número */
-.numeros{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
-.num{position:relative;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 14px 14px;overflow:hidden}
-.num::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--gold),var(--gold-light))}
-.num b{display:block;font-family:'DM Mono',monospace;font-size:24px;font-weight:500;margin-top:6px}
-.num.alerta b{color:var(--ambar)}
-.num.info b{color:var(--azul)}
-
-/* filtros */
-.filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
-.campo{
-  background:var(--surface);border:1px solid var(--border);border-radius:9px;
-  padding:9px 12px;font-size:13px;min-width:180px;
-}
-.campo:focus{outline:none;border-color:var(--gold)}
-select.campo{min-width:170px}
-.chip{
-  border:1px solid var(--border);background:var(--surface);border-radius:999px;
-  padding:7px 13px;font-size:12px;color:var(--muted);
-}
-.chip[aria-pressed="true"]{border-color:var(--gold);color:var(--gold-light);background:#141c3a}
-
-/* tabela */
-.quadro{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
-.rolagem{overflow-x:auto;max-height:64vh;overflow-y:auto}
-table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
-th{
-  position:sticky;top:0;background:#111832;z-index:2;text-align:left;
-  padding:10px 12px;border-bottom:1px solid var(--border);
-  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--muted);
-}
-td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04);max-width:340px;overflow:hidden;text-overflow:ellipsis}
-tbody tr:hover td{background:rgba(255,255,255,.02)}
-td.vazio{color:var(--hint)}
-.selo{
-  display:inline-block;font-family:'DM Mono',monospace;font-size:10px;
-  padding:2px 7px;border-radius:999px;margin-right:5px;letter-spacing:.06em;
-}
-.selo.rep{background:rgba(232,201,122,.14);color:var(--ambar);border:1px solid rgba(232,201,122,.35)}
-.selo.rec{background:rgba(91,138,255,.14);color:var(--azul);border:1px solid rgba(91,138,255,.35)}
-.rodape-tabela{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--border);flex-wrap:wrap}
-.rodape-tabela .conta{margin-left:auto;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px}
-
-.vazia{padding:60px 20px;text-align:center;color:var(--muted)}
-.vazia p{margin:8px 0 18px}
-
-/* modal */
-.fundo{position:fixed;inset:0;background:rgba(3,6,18,.78);display:none;align-items:center;justify-content:center;z-index:60;padding:18px}
-.fundo.aberto{display:flex}
-.modal{
-  background:var(--card);border:1px solid var(--gold);border-radius:14px;
-  width:min(560px,100%);max-height:88vh;overflow:auto;padding:22px;
-}
-.modal h2{margin:0 0 4px;font-size:17px}
-.modal p.sub{margin:0 0 18px;color:var(--muted);font-size:13px}
-.linha{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
-.linha input[type=text],.linha input[type=file]{width:100%}
-.previa{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--surface);font-size:12px;margin-bottom:14px}
-.previa ul{margin:6px 0 0;padding-left:18px;color:var(--muted)}
-.opcao{display:flex;gap:9px;align-items:flex-start;margin-bottom:14px;font-size:13px;color:var(--muted)}
-.opcao input{margin-top:2px}
-.acoes{display:flex;gap:10px;justify-content:flex-end}
-.barra{height:6px;border-radius:999px;background:var(--surface);overflow:hidden;margin-bottom:14px;display:none}
-.barra.ativa{display:block}
-.barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-light));transition:width .2s}
-
-/* aviso */
-.aviso{
-  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(14px);
-  background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);
-  padding:12px 18px;border-radius:10px;font-size:13px;z-index:80;
-  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;
-}
-.aviso.aberto{opacity:1;transform:translateX(-50%) translateY(0)}
-.aviso.erro{border-left-color:var(--vermelho)}
-.aviso.ok{border-left-color:var(--verde)}
-
-@media (max-width:860px){
-  .corpo{grid-template-columns:1fr}
-  .lateral{border-right:none;border-bottom:1px solid var(--border)}
-  .lista{flex-direction:row;overflow-x:auto}
-  .item{min-width:170px}
-}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
-</style>
 </head>
 <body>
-
-<header class="topo">
-  <div class="marca"></div>
-  <h1>Central de Leads</h1>
-  <div class="direita">
-    <button class="btn pequeno" id="btnPainel">Voltar ao painel</button>
-    <button class="btn ouro pequeno" id="btnImportar" hidden>Importar lançamento</button>
+<header class="topbar">
+  <div class="topbar-logo">
+    <img src="favicon.png" alt="">
+    <span class="topbar-name">Central de Leads</span>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-count" id="topbarCount"></span>
+    <button class="btn-topbar" onclick="window.location.href='index.html'" style="border-color:rgba(205,160,76,0.4);color:#CDA04C;">&#8592; Voltar</button>
+    <button class="btn-topbar" onclick="doLogout()">Sair</button>
   </div>
 </header>
 
-<div class="corpo">
-  <aside class="lateral">
-    <div class="rotulo">Lançamentos</div>
-    <div class="lista" id="listaLancamentos"></div>
-  </aside>
+<main class="main-full" id="main">
+  <div class="loading"><div class="spinner"></div> conectando ao banco de dados...</div>
+</main>
 
-  <main class="principal" id="principal">
-    <div class="vazia" id="telaVazia">
-      <div class="rotulo">Nenhum lançamento aberto</div>
-      <p>Escolha um lançamento na lateral para ver os leads.</p>
-    </div>
-
-    <section id="conteudo" hidden>
-      <div class="numeros">
-        <div class="num"><div class="rotulo">Leads</div><b id="nTotal">0</b></div>
-        <div class="num"><div class="rotulo">E-mails únicos</div><b id="nUnicos">0</b></div>
-        <div class="num alerta"><div class="rotulo">Repetidos aqui</div><b id="nRepetidos">0</b></div>
-        <div class="num info"><div class="rotulo">Já vieram antes</div><b id="nRecorrentes">0</b></div>
-      </div>
-
-      <div class="filtros">
-        <input type="search" class="campo" id="busca" placeholder="Buscar nome, e-mail, telefone…">
-        <select class="campo" id="filtroSource"><option value="">Todas as origens</option></select>
-        <select class="campo" id="filtroData"><option value="">Todas as datas</option></select>
-        <button class="chip" id="chipRepetidos" aria-pressed="false">Só repetidos</button>
-        <button class="chip" id="chipRecorrentes" aria-pressed="false">Só recorrentes</button>
-        <button class="btn pequeno" id="btnExportar">Exportar CSV</button>
-        <button class="btn pequeno risco" id="btnExcluir" hidden>Excluir lançamento</button>
-      </div>
-
-      <div class="quadro">
-        <div class="rolagem">
-          <table>
-            <thead><tr id="cabecalho"></tr></thead>
-            <tbody id="linhas"></tbody>
-          </table>
-        </div>
-        <div class="rodape-tabela">
-          <button class="btn pequeno" id="btnAnterior">Anterior</button>
-          <button class="btn pequeno" id="btnProxima">Próxima</button>
-          <span class="conta" id="contaPagina"></span>
-        </div>
-      </div>
-    </section>
-  </main>
-</div>
-
-<!-- modal importar -->
-<div class="fundo" id="modalImportar">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloImportar">
-    <h2 id="tituloImportar">Importar lançamento</h2>
-    <p class="sub">O arquivo precisa ter o cabeçalho na primeira linha, como sai do Sheets.</p>
-
-    <div class="linha">
-      <label class="rotulo" for="campoId">Código do lançamento</label>
-      <input type="text" class="campo" id="campoId" placeholder="L5KR" autocomplete="off">
-    </div>
-    <div class="linha">
-      <label class="rotulo" for="campoRotulo">Nome (opcional)</label>
-      <input type="text" class="campo" id="campoRotulo" placeholder="L5 KR — Pós Cardio" autocomplete="off">
-    </div>
-    <div class="linha">
-      <label class="rotulo" for="campoArquivo">Arquivo CSV</label>
-      <input type="file" class="campo" id="campoArquivo" accept=".csv,text/csv">
-    </div>
-
-    <div class="previa" id="previa" hidden></div>
-
-    <div class="opcao" id="opcaoSubstituir" hidden>
-      <input type="checkbox" id="campoSubstituir">
-      <label for="campoSubstituir">Este código já existe. Marque para apagar os leads que estão lá e importar de novo; deixe desmarcado para somar ao que já existe.</label>
-    </div>
-
-    <div class="barra" id="barra"><i id="barraCheia"></i></div>
-
-    <div class="acoes">
-      <button class="btn" id="btnCancelarImport">Cancelar</button>
-      <button class="btn ouro" id="btnConfirmarImport" disabled>Importar leads</button>
-    </div>
+<div class="overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle"></div>
+    <div id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
   </div>
 </div>
-
-<!-- modal excluir -->
-<div class="fundo" id="modalExcluir">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloExcluir">
-    <h2 id="tituloExcluir">Excluir lançamento</h2>
-    <p class="sub" id="textoExcluir"></p>
-    <div class="linha">
-      <label class="rotulo" for="campoConfirma">Digite o código para confirmar</label>
-      <input type="text" class="campo" id="campoConfirma" autocomplete="off">
-    </div>
-    <div class="acoes">
-      <button class="btn" id="btnCancelarExcluir">Cancelar</button>
-      <button class="btn risco" id="btnConfirmarExcluir">Excluir</button>
-    </div>
-  </div>
-</div>
-
-<div class="aviso" id="aviso"></div>
+<div class="toast" id="toast"></div>
 
 <script>
-const SUPABASE_URL = "https://iabugpuqlcfftwabuxsj.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYnVncHVxbGNmZnR3YWJ1eHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTA5MTIsImV4cCI6MjA5MTY2NjkxMn0.Rs2OJlbd8_2TMroE9iehTtZLFdBImVfBpKEH-RT_3UY";
-
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://iabugpuqlcfftwabuxsj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYnVncHVxbGNmZnR3YWJ1eHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTA5MTIsImV4cCI6MjA5MTY2NjkxMn0.Rs2OJlbd8_2TMroE9iehTtZLFdBImVfBpKEH-RT_3UY';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const POR_PAGINA = 100;
 const LOTE = 500;
 
-const estado = {
-  admin: false,
-  lancamentos: [],
-  atual: null,      // { id, rotulo, cols }
-  leads: [],        // { dados, _rep, _rec }
-  filtrados: [],
-  pagina: 1,
-  soRepetidos: false,
-  soRecorrentes: false,
-  arquivo: null     // { cabecalho, linhas }
+let isAdmin = false;
+let lancs = [];                 // [{id, rotulo, cols, total, unicos}]
+let csvParsed = [];             // [{COL: valor}]
+let csvCols = [];
+let csvNomeArquivo = '';
+
+const det = {                   // estado da tela de detalhe
+  lanc: null, leads: [], filtrados: [], pagina: 1,
+  soRepetidos: false, soRecorrentes: false
 };
 
-const $ = id => document.getElementById(id);
+/* ── utilidades ── */
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show' + (type ? ' '+type : '');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 3500);
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+function openModal(title, body, footer) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('modalFooter').innerHTML = footer;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf = n => Number(n||0).toLocaleString('pt-BR');
 
-/* ---------- avisos ---------- */
-let avisoTimer;
-function avisar(texto, tipo){
-  const el = $("aviso");
-  el.textContent = texto;
-  el.className = "aviso aberto" + (tipo ? " " + tipo : "");
-  clearTimeout(avisoTimer);
-  avisoTimer = setTimeout(() => { el.className = "aviso"; }, 4200);
+const CORES_LANC = [
+  {hex:'#CDA04C', rgb:'205,160,76'},  {hex:'#7cc4a8', rgb:'124,196,168'},
+  {hex:'#5b8aff', rgb:'91,138,255'},  {hex:'#a98bff', rgb:'169,139,255'},
+  {hex:'#f07ab0', rgb:'240,122,176'}, {hex:'#4dc9f6', rgb:'77,201,246'},
+  {hex:'#5fcd8a', rgb:'95,205,138'},  {hex:'#ffb94a', rgb:'255,185,74'}
+];
+function corDoLancamento(id) {
+  let n = 0;
+  for (let i=0;i<id.length;i++) n = (n*31 + id.charCodeAt(i)) >>> 0;
+  return CORES_LANC[n % CORES_LANC.length];
 }
 
-/* ---------- início ---------- */
-async function iniciar(){
-  const { data: { session } } = await db.auth.getSession();
-  if (!session) { location.href = "index.html"; return; }
-  estado.admin = session.user?.user_metadata?.role === "admin";
-  if (estado.admin) {
-    $("btnImportar").hidden = false;
-    $("btnExcluir").hidden = false;
-  }
-  await carregarLancamentos();
+/* ── banco ── */
+async function fetchLancs() {
+  const { data, error } = await sb
+    .from('lead_lancamentos_resumo')
+    .select('id, rotulo, cols, total, unicos')
+    .order('id');
+  if (error) throw error;
+  return data || [];
 }
-
-async function carregarLancamentos(){
-  const { data, error } = await db
-    .from("lead_lancamentos_resumo")
-    .select("id, rotulo, cols, total, unicos")
-    .order("id");
-  if (error) { avisar("Não foi possível carregar os lançamentos: " + error.message, "erro"); return; }
-  estado.lancamentos = data || [];
-  desenharLateral();
-}
-
-function desenharLateral(){
-  const lista = $("listaLancamentos");
-  lista.innerHTML = "";
-  if (!estado.lancamentos.length){
-    const p = document.createElement("p");
-    p.className = "rotulo";
-    p.style.color = "var(--hint)";
-    p.textContent = "Nada importado ainda";
-    lista.appendChild(p);
-    return;
-  }
-  estado.lancamentos.forEach(l => {
-    const b = document.createElement("button");
-    b.className = "item";
-    b.setAttribute("aria-current", estado.atual && estado.atual.id === l.id ? "true" : "false");
-    const nome = document.createElement("strong");
-    nome.textContent = l.rotulo || l.id;
-    const conta = document.createElement("span");
-    conta.textContent = Number(l.total).toLocaleString("pt-BR") + " leads";
-    b.append(nome, conta);
-    b.addEventListener("click", () => abrirLancamento(l));
-    lista.appendChild(b);
-  });
-}
-
-/* ---------- abrir um lançamento ---------- */
-async function abrirLancamento(lanc){
-  estado.atual = lanc;
-  estado.pagina = 1;
-  estado.soRepetidos = false;
-  estado.soRecorrentes = false;
-  $("chipRepetidos").setAttribute("aria-pressed", "false");
-  $("chipRecorrentes").setAttribute("aria-pressed", "false");
-  $("busca").value = "";
-  desenharLateral();
-  $("telaVazia").hidden = true;
-  $("conteudo").hidden = false;
-  $("linhas").innerHTML = "<tr><td class='vazio'>Carregando…</td></tr>";
-
-  const leads = [];
+async function fetchLeads(id) {
+  const out = [];
   let de = 0;
-  while (true){
-    const { data, error } = await db
-      .from("leads")
-      .select("dados, email")
-      .eq("lancamento_id", lanc.id)
-      .order("id")
-      .range(de, de + 999);
-    if (error) { avisar("Erro ao ler os leads: " + error.message, "erro"); return; }
-    leads.push(...data);
+  while (true) {
+    const { data, error } = await sb.from('leads')
+      .select('dados, email').eq('lancamento_id', id).order('id').range(de, de+999);
+    if (error) throw error;
+    out.push(...data);
     if (data.length < 1000) break;
     de += 1000;
   }
+  return out;
+}
 
-  // repetidos dentro do próprio lançamento
-  const contagem = {};
-  leads.forEach(l => { if (l.email) contagem[l.email] = (contagem[l.email] || 0) + 1; });
+/* ── início ── */
+async function init() {
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'index.html'; return; }
+    isAdmin = session.user?.user_metadata?.role === 'admin';
+    lancs = await fetchLancs();
+    renderLancamentos();
+  } catch(e) {
+    document.getElementById('main').innerHTML =
+      `<div class="loading" style="color:var(--danger)">Erro: ${esc(e.message)}</div>`;
+  }
+}
 
-  // recorrentes: e-mail que já apareceu em outro lançamento
-  let recorrentes = {};
-  const { data: rec, error: erroRec } = await db.rpc("leads_recorrentes", { p_lanc: lanc.id });
-  if (erroRec) avisar("Os leads carregaram, mas a marcação de recorrência falhou.", "erro");
-  else (rec || []).forEach(r => { recorrentes[r.email] = r.lancamentos; });
+/* ── tela 1: grade de lançamentos ── */
+function renderLancamentos() {
+  document.querySelector('main').className = 'main-full';
+  const total = lancs.reduce((s,x)=>s+Number(x.total||0), 0);
+  document.getElementById('topbarCount').textContent = nf(total) + ' leads';
 
-  estado.leads = leads.map(l => ({
-    dados: l.dados,
-    email: l.email,
-    _rep: !!(l.email && contagem[l.email] > 1),
-    _rec: recorrentes[l.email] || null
+  const card = l => {
+    const cor = corDoLancamento(l.id);
+    const id = esc(l.id).replace(/'/g,"\\'");
+    return `
+    <div class="lanc-card" style="--c:${cor.hex};--crgb:${cor.rgb}">
+      <div class="lanc-top">
+        <div class="lanc-nome" title="${esc(l.rotulo || l.id)}">${esc(l.rotulo || l.id)}</div>
+      </div>
+      <div class="lanc-num">${nf(l.total)}</div>
+      <div class="lanc-lbl">leads · ${nf(l.unicos)} e-mails únicos</div>
+      <div class="lanc-acoes">
+        <button class="btn-lanc primario largo" onclick="abrirDetalhe('${id}')">Ver leads</button>
+        <button class="btn-lanc" onclick="exportCSV('${id}')">&#8595; Exportar</button>
+        ${isAdmin ? `<button class="btn-lanc" onclick="openImportCSV('${id}')">&#8593; Importar</button>` : ''}
+      </div>
+    </div>`;
+  };
+
+  document.getElementById('main').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Leads</div>
+        <div class="page-sub">${lancs.length} lançamentos · ${nf(total)} leads no total</div>
+      </div>
+      <div class="btn-row">
+        ${isAdmin ? '<button class="btn btn-primary" onclick="openImportCSV()">+ Novo lançamento</button>' : ''}
+      </div>
+    </div>
+    ${lancs.length ? `
+      <div class="lanc-sec">
+        <div class="lanc-sec-t">Lançamentos <span>${lancs.length}</span></div>
+        <div class="lanc-grid">${lancs.map(card).join('')}</div>
+      </div>`
+    : '<div class="loading">Nenhum lançamento importado ainda. Comece pelo botão acima.</div>'}`;
+}
+
+/* ── tela 2: detalhe de um lançamento ── */
+async function abrirDetalhe(id) {
+  const lanc = lancs.find(l => l.id === id);
+  if (!lanc) return;
+  document.querySelector('main').className = 'main-wide';
+  document.getElementById('main').innerHTML =
+    '<div class="loading"><div class="spinner"></div> carregando leads...</div>';
+
+  let leads, recorrentes = {};
+  try {
+    leads = await fetchLeads(id);
+    const { data, error } = await sb.rpc('leads_recorrentes', { p_lanc: id });
+    if (error) toast('Os leads carregaram, mas a marcação de recorrência falhou.', 'error');
+    else (data || []).forEach(r => { recorrentes[r.email] = r.lancamentos; });
+  } catch(e) {
+    document.getElementById('main').innerHTML =
+      `<div class="loading" style="color:var(--danger)">Erro ao carregar: ${esc(e.message)}</div>`;
+    return;
+  }
+
+  const conta = {};
+  leads.forEach(l => { if (l.email) conta[l.email] = (conta[l.email]||0)+1; });
+
+  det.lanc = lanc;
+  det.leads = leads.map(l => ({
+    dados: l.dados, email: l.email,
+    rep: !!(l.email && conta[l.email] > 1),
+    rec: recorrentes[l.email] || null
   }));
+  det.pagina = 1; det.soRepetidos = false; det.soRecorrentes = false;
 
-  montarFiltros();
+  renderDetalhe();
   aplicarFiltros();
 }
 
-function montarFiltros(){
-  const cols = estado.atual.cols || [];
-  const preencher = (sel, campo, primeiro) => {
-    const valores = [...new Set(estado.leads.map(l => (l.dados[campo] || "").trim()).filter(Boolean))].sort();
-    sel.innerHTML = "";
-    const op = document.createElement("option");
-    op.value = ""; op.textContent = primeiro;
-    sel.appendChild(op);
-    valores.forEach(v => {
-      const o = document.createElement("option");
-      o.value = v; o.textContent = v;
-      sel.appendChild(o);
-    });
-    sel.parentElement && (sel.hidden = !cols.includes(campo));
+function renderDetalhe() {
+  const l = det.lanc;
+  const cor = corDoLancamento(l.id);
+  const cols = l.cols || [];
+  const opcoes = (campo) => {
+    const vals = [...new Set(det.leads.map(x => (x.dados[campo]||'').trim()).filter(Boolean))].sort();
+    return vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
   };
-  preencher($("filtroSource"), "UTM_SOURCE", "Todas as origens");
-  preencher($("filtroData"), "DATA", "Todas as datas");
+
+  document.getElementById('main').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title" style="color:${cor.hex}">${esc(l.rotulo || l.id)}</div>
+        <div class="page-sub">Leads importados deste lançamento</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="voltarParaLista()">&#8592; Todos os lançamentos</button>
+        <button class="btn btn-ghost" onclick="exportCSV('${esc(l.id).replace(/'/g,"\\'")}', true)">&#8595; Exportar filtrados</button>
+        ${isAdmin ? `<button class="btn btn-ghost btn-danger" onclick="openExcluir()">Excluir lançamento</button>` : ''}
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi" style="--kc:${cor.hex}"><div class="kpi-lbl">Leads</div><div class="kpi-num" id="kTotal">0</div></div>
+      <div class="kpi"><div class="kpi-lbl">E-mails únicos</div><div class="kpi-num" id="kUnicos">0</div></div>
+      <div class="kpi" style="--kc:var(--amber)"><div class="kpi-lbl">Repetidos aqui</div><div class="kpi-num" id="kRep">0</div></div>
+      <div class="kpi" style="--kc:var(--blue)"><div class="kpi-lbl">Já vieram antes</div><div class="kpi-num" id="kRec">0</div></div>
+    </div>
+
+    <div class="toolbar">
+      <input type="search" id="fBusca" placeholder="Buscar nome, e-mail, telefone..." oninput="aplicarFiltros()">
+      ${cols.includes('UTM_SOURCE') ? `<select id="fSource" onchange="aplicarFiltros()"><option value="">Todas as origens</option>${opcoes('UTM_SOURCE')}</select>` : ''}
+      ${cols.includes('DATA') ? `<select id="fData" onchange="aplicarFiltros()"><option value="">Todas as datas</option>${opcoes('DATA')}</select>` : ''}
+      <button class="chip" id="cRep" aria-pressed="false" onclick="toggleChip('rep')">Só repetidos</button>
+      <button class="chip" id="cRec" aria-pressed="false" onclick="toggleChip('rec')">Só recorrentes</button>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Situação</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button id="pPrev" onclick="mudarPagina(-1)">Anterior</button>
+        <button id="pNext" onclick="mudarPagina(1)">Próxima</button>
+        <span class="pag-info" id="pInfo"></span>
+      </div>
+    </div>`;
 }
 
-function aplicarFiltros(){
-  const termo = $("busca").value.trim().toLowerCase();
-  const origem = $("filtroSource").value;
-  const data = $("filtroData").value;
+function voltarParaLista() {
+  det.lanc = null; det.leads = []; det.filtrados = [];
+  renderLancamentos();
+}
 
-  estado.filtrados = estado.leads.filter(l => {
-    if (estado.soRepetidos && !l._rep) return false;
-    if (estado.soRecorrentes && !l._rec) return false;
-    if (origem && (l.dados.UTM_SOURCE || "").trim() !== origem) return false;
-    if (data && (l.dados.DATA || "").trim() !== data) return false;
-    if (termo){
-      const alvo = Object.values(l.dados).join(" ").toLowerCase();
-      if (!alvo.includes(termo)) return false;
-    }
+function toggleChip(qual) {
+  if (qual === 'rep') {
+    det.soRepetidos = !det.soRepetidos;
+    document.getElementById('cRep').setAttribute('aria-pressed', String(det.soRepetidos));
+  } else {
+    det.soRecorrentes = !det.soRecorrentes;
+    document.getElementById('cRec').setAttribute('aria-pressed', String(det.soRecorrentes));
+  }
+  aplicarFiltros();
+}
+
+function aplicarFiltros() {
+  const termo = (document.getElementById('fBusca')?.value || '').trim().toLowerCase();
+  const origem = document.getElementById('fSource')?.value || '';
+  const data = document.getElementById('fData')?.value || '';
+
+  det.filtrados = det.leads.filter(l => {
+    if (det.soRepetidos && !l.rep) return false;
+    if (det.soRecorrentes && !l.rec) return false;
+    if (origem && (l.dados.UTM_SOURCE||'').trim() !== origem) return false;
+    if (data && (l.dados.DATA||'').trim() !== data) return false;
+    if (termo && !Object.values(l.dados).join(' ').toLowerCase().includes(termo)) return false;
     return true;
   });
-
-  estado.pagina = 1;
-  atualizarNumeros();
-  desenharTabela();
+  det.pagina = 1;
+  renderKPIs();
+  renderTabela();
 }
 
-function atualizarNumeros(){
-  const total = estado.leads.length;
-  const unicos = new Set(estado.leads.map(l => l.email).filter(Boolean)).size;
-  const repetidos = estado.leads.filter(l => l._rep).length;
-  const recorrentes = estado.leads.filter(l => l._rec).length;
-  $("nTotal").textContent = total.toLocaleString("pt-BR");
-  $("nUnicos").textContent = unicos.toLocaleString("pt-BR");
-  $("nRepetidos").textContent = repetidos.toLocaleString("pt-BR");
-  $("nRecorrentes").textContent = recorrentes.toLocaleString("pt-BR");
+function renderKPIs() {
+  document.getElementById('kTotal').textContent  = nf(det.leads.length);
+  document.getElementById('kUnicos').textContent = nf(new Set(det.leads.map(l=>l.email).filter(Boolean)).size);
+  document.getElementById('kRep').textContent    = nf(det.leads.filter(l=>l.rep).length);
+  document.getElementById('kRec').textContent    = nf(det.leads.filter(l=>l.rec).length);
 }
 
-function desenharTabela(){
-  const cols = estado.atual.cols || [];
-  const cab = $("cabecalho");
-  cab.innerHTML = "";
-  const thSelo = document.createElement("th");
-  thSelo.textContent = "Situação";
-  cab.appendChild(thSelo);
-  cols.forEach(c => {
-    const th = document.createElement("th");
-    th.textContent = c;
-    cab.appendChild(th);
-  });
+function renderTabela() {
+  const cols = det.lanc.cols || [];
+  const totalPag = Math.max(1, Math.ceil(det.filtrados.length / POR_PAGINA));
+  if (det.pagina > totalPag) det.pagina = totalPag;
+  const inicio = (det.pagina-1) * POR_PAGINA;
+  const pagina = det.filtrados.slice(inicio, inicio + POR_PAGINA);
 
-  const corpo = $("linhas");
-  corpo.innerHTML = "";
+  const cel = v => {
+    const s = (v||'').trim();
+    return s ? `<td title="${esc(s)}">${esc(s)}</td>` : '<td class="nulo">—</td>';
+  };
 
-  const totalPaginas = Math.max(1, Math.ceil(estado.filtrados.length / POR_PAGINA));
-  if (estado.pagina > totalPaginas) estado.pagina = totalPaginas;
-  const inicio = (estado.pagina - 1) * POR_PAGINA;
-  const pagina = estado.filtrados.slice(inicio, inicio + POR_PAGINA);
+  document.getElementById('tbody').innerHTML = pagina.length
+    ? pagina.map(l => {
+        const selos =
+          (l.rep ? '<span class="badge badge-rep">repetido</span>' : '') +
+          (l.rec ? `<span class="badge badge-rec" title="Mesmo e-mail em: ${esc(l.rec.join(', '))}">veio em ${esc(l.rec.join(', '))}</span>` : '');
+        return `<tr>${selos ? `<td>${selos}</td>` : '<td class="nulo">—</td>'}${cols.map(c=>cel(l.dados[c])).join('')}</tr>`;
+      }).join('')
+    : `<tr><td class="nulo" colspan="${cols.length+1}" style="text-align:center;padding:30px">Nenhum lead com esses filtros.</td></tr>`;
 
-  if (!pagina.length){
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.className = "vazio";
-    td.colSpan = cols.length + 1;
-    td.textContent = "Nenhum lead com esses filtros.";
-    tr.appendChild(td);
-    corpo.appendChild(tr);
+  document.getElementById('pInfo').textContent =
+    `${nf(det.filtrados.length)} de ${nf(det.leads.length)} · página ${det.pagina}/${totalPag}`;
+  document.getElementById('pPrev').disabled = det.pagina <= 1;
+  document.getElementById('pNext').disabled = det.pagina >= totalPag;
+}
+
+function mudarPagina(d) {
+  det.pagina += d;
+  renderTabela();
+  document.querySelector('.table-scroll').scrollTop = 0;
+}
+
+/* ── exportar ── */
+async function exportCSV(id, apenasFiltrados) {
+  let lanc, linhas;
+  if (apenasFiltrados && det.lanc && det.lanc.id === id) {
+    lanc = det.lanc;
+    linhas = det.filtrados;
+  } else {
+    lanc = lancs.find(l => l.id === id);
+    toast('Preparando ' + id + '...');
+    try {
+      const brutos = await fetchLeads(id);
+      linhas = brutos.map(l => ({ dados: l.dados, rep:false, rec:null }));
+    } catch(e) { toast('Erro ao exportar: ' + e.message, 'error'); return; }
+  }
+  if (!linhas.length) { toast('Não há leads para exportar.', 'error'); return; }
+
+  let cols = (lanc && lanc.cols && lanc.cols.length) ? lanc.cols.slice() : [];
+  if (!cols.length) {
+    const vistas = new Set();
+    linhas.forEach(l => Object.keys(l.dados).forEach(k => vistas.add(k)));
+    cols = [...vistas];
   }
 
-  pagina.forEach(l => {
-    const tr = document.createElement("tr");
-    const tdSelo = document.createElement("td");
-    if (l._rep){
-      const s = document.createElement("span");
-      s.className = "selo rep"; s.textContent = "repetido";
-      tdSelo.appendChild(s);
-    }
-    if (l._rec){
-      const s = document.createElement("span");
-      s.className = "selo rec"; s.textContent = "veio em " + l._rec.join(", ");
-      s.title = "Mesmo e-mail em: " + l._rec.join(", ");
-      tdSelo.appendChild(s);
-    }
-    if (!tdSelo.childNodes.length){ tdSelo.className = "vazio"; tdSelo.textContent = "—"; }
-    tr.appendChild(tdSelo);
-
-    cols.forEach(c => {
-      const td = document.createElement("td");
-      const v = (l.dados[c] || "").trim();
-      if (v){ td.textContent = v; td.title = v; }
-      else { td.className = "vazio"; td.textContent = "—"; }
-      tr.appendChild(td);
-    });
-    corpo.appendChild(tr);
-  });
-
-  $("contaPagina").textContent =
-    estado.filtrados.length.toLocaleString("pt-BR") + " de " +
-    estado.leads.length.toLocaleString("pt-BR") + " · página " + estado.pagina + "/" + totalPaginas;
-  $("btnAnterior").disabled = estado.pagina <= 1;
-  $("btnProxima").disabled = estado.pagina >= totalPaginas;
-}
-
-/* ---------- exportar ---------- */
-function exportarCSV(){
-  if (!estado.filtrados.length){ avisar("Não há nada para exportar com esses filtros."); return; }
-  const cols = estado.atual.cols || [];
-  const escapar = v => {
-    const s = (v ?? "").toString();
-    return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  };
-  const linhas = [
-    [...cols, "SITUACAO"].join(","),
-    ...estado.filtrados.map(l => {
-      const marcas = [l._rep ? "repetido" : "", l._rec ? "recorrente(" + l._rec.join(" ") + ")" : ""].filter(Boolean).join(" ");
-      return [...cols.map(c => escapar(l.dados[c])), escapar(marcas)].join(",");
+  const q = v => '"' + (v==null?'':String(v)).replace(/"/g,'""') + '"';
+  const csv = [
+    [...cols, 'SITUACAO'].join(';'),
+    ...linhas.map(l => {
+      const marcas = [l.rep?'repetido':'', l.rec?('recorrente: '+l.rec.join(' ')):''].filter(Boolean).join(' ');
+      return [...cols.map(c=>q(l.dados[c])), q(marcas)].join(';');
     })
-  ].join("\r\n");
+  ].join('\n');
 
-  const blob = new Blob(["\ufeff" + linhas], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "leads_" + estado.atual.id + ".csv";
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'}));
+  a.download = id.replace(/[^\w\-]+/g,'_') + '.csv';
   a.click();
-  URL.revokeObjectURL(url);
-  avisar("CSV gerado.", "ok");
+  toast(nf(linhas.length) + ' leads exportados!');
 }
 
-/* ---------- leitura de CSV ---------- */
-function lerCSV(texto){
+/* ── importar ── */
+function openImportCSV(lancId) {
+  csvParsed = []; csvCols = []; csvNomeArquivo = '';
+  openModal('Importar leads',
+    `<p style="font-size:12px;color:var(--muted);margin-bottom:12px">O CSV precisa ter o cabeçalho na primeira linha, como sai do Sheets. As colunas são lidas automaticamente.</p>
+     <div class="field"><label>Lançamento de destino</label>
+       <select id="imp-destino" onchange="onDestinoChange()">
+         <option value="__novo__">— criar novo lançamento —</option>
+         ${lancs.map(l=>`<option value="${esc(l.id)}"${l.id===lancId?' selected':''}>${esc(l.id)} — ${nf(l.total)} leads</option>`).join('')}
+       </select>
+     </div>
+
+     <div id="blocoNovo" style="display:none">
+       <div class="field"><label>Código do lançamento</label>
+         <input type="text" id="novo-id" placeholder="Ex: L6KR" oninput="this.value=this.value.toUpperCase()"></div>
+       <div class="field"><label>Nome (opcional)</label>
+         <input type="text" id="novo-rotulo" placeholder="Ex: L6 KR — Pós Cardio"></div>
+     </div>
+
+     <div id="blocoSubstituir" style="display:none">
+       <label class="check-line">
+         <input type="checkbox" id="imp-substituir">
+         <span>Substituir os leads que já existem neste lançamento</span>
+       </label>
+       <p class="check-hint">Deixe desmarcado para somar os novos leads aos atuais.</p>
+     </div>
+
+     <div class="upload-area" id="uploadArea" onclick="document.getElementById('csvInput').click()"
+       ondragover="event.preventDefault();this.classList.add('drag')"
+       ondragleave="this.classList.remove('drag')"
+       ondrop="handleDrop(event)">
+       <input type="file" id="csvInput" accept=".csv" onchange="handleCSVFile(this.files[0])">
+       <div class="upload-label">Arraste o CSV ou <span>clique para selecionar</span></div>
+       <div class="upload-preview" id="uploadPreview"></div>
+     </div>
+     <div id="importPreview"></div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" id="btnImport" style="display:none" onclick="confirmImport()">Importar para o banco</button>`);
+  onDestinoChange();
+}
+
+function onDestinoChange() {
+  const novo = document.getElementById('imp-destino').value === '__novo__';
+  document.getElementById('blocoNovo').style.display = novo ? 'block' : 'none';
+  document.getElementById('blocoSubstituir').style.display = novo ? 'none' : 'block';
+  if (novo) {
+    const campo = document.getElementById('novo-id');
+    if (campo && !campo.value && csvNomeArquivo) campo.value = sugereId(csvNomeArquivo);
+  }
+}
+function sugereId(arquivo) {
+  const m = arquivo.match(/L\d+[A-Z\-]*/i);
+  return m ? m[0].toUpperCase().replace(/[_\-]+$/,'') : '';
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadArea').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) handleCSVFile(f);
+}
+
+function handleCSVFile(file) {
+  if (!file) return;
+  csvNomeArquivo = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const linhas = parseCSV(e.target.result);
+    if (linhas.length < 2) { toast('Não consegui ler cabeçalho e linhas nesse arquivo.', 'error'); return; }
+    csvCols = linhas[0].map(c=>c.trim()).filter(Boolean);
+    csvParsed = linhas.slice(1).map(l => {
+      const o = {};
+      csvCols.forEach((c,i) => { o[c] = (l[i]||'').trim(); });
+      return o;
+    });
+
+    document.getElementById('uploadPreview').textContent =
+      file.name + ' — ' + nf(csvParsed.length) + ' leads';
+    const campo = document.getElementById('novo-id');
+    if (campo && !campo.value) campo.value = sugereId(file.name);
+
+    const emails = csvParsed.map(r => (r.EMAIL||'').toLowerCase()).filter(Boolean);
+    const repetidos = emails.length - new Set(emails).size;
+    const prev = csvParsed.slice(0,3);
+    document.getElementById('importPreview').innerHTML = `
+      <p style="font-size:11px;color:var(--muted);margin:10px 0 6px">
+        ${csvCols.length} colunas · ${emails.length ? repetidos + ' e-mail(s) repetido(s) no arquivo, todos serão importados e marcados' : 'sem coluna EMAIL: repetidos e recorrentes ficam sem marcação'}
+      </p>
+      <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--r)">
+        <table style="font-size:11px">
+          <thead><tr>${csvCols.map(c=>`<th style="padding:5px 8px">${esc(c)}</th>`).join('')}</tr></thead>
+          <tbody>${prev.map(r=>`<tr>${csvCols.map(c=>`<td style="padding:4px 8px">${esc((r[c]||'').slice(0,40))}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </div>`;
+    document.getElementById('btnImport').style.display = 'inline-block';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(texto) {
   if (texto.charCodeAt(0) === 0xFEFF) texto = texto.slice(1);
-  const sep = (texto.split("\n")[0].match(/;/g) || []).length >
-              (texto.split("\n")[0].match(/,/g) || []).length ? ";" : ",";
+  const primeira = texto.split('\n')[0];
+  const sep = (primeira.match(/;/g)||[]).length > (primeira.match(/,/g)||[]).length ? ';' : ',';
   const linhas = [];
-  let linha = [], valor = "", aspas = false;
-  for (let i = 0; i < texto.length; i++){
+  let linha = [], valor = '', aspas = false;
+  for (let i=0;i<texto.length;i++) {
     const c = texto[i];
-    if (aspas){
-      if (c === '"'){
-        if (texto[i + 1] === '"'){ valor += '"'; i++; }
-        else aspas = false;
-      } else valor += c;
+    if (aspas) {
+      if (c === '"') { if (texto[i+1] === '"') { valor+='"'; i++; } else aspas = false; }
+      else valor += c;
     } else {
       if (c === '"') aspas = true;
-      else if (c === sep){ linha.push(valor); valor = ""; }
-      else if (c === "\n"){ linha.push(valor); linhas.push(linha); linha = []; valor = ""; }
-      else if (c !== "\r") valor += c;
+      else if (c === sep) { linha.push(valor); valor=''; }
+      else if (c === '\n') { linha.push(valor); linhas.push(linha); linha=[]; valor=''; }
+      else if (c !== '\r') valor += c;
     }
   }
-  if (valor !== "" || linha.length){ linha.push(valor); linhas.push(linha); }
-  return linhas.filter(l => l.some(c => c.trim() !== ""));
+  if (valor !== '' || linha.length) { linha.push(valor); linhas.push(linha); }
+  return linhas.filter(l => l.some(c => c.trim() !== ''));
 }
 
-async function analisarArquivo(file){
-  const texto = await file.text();
-  const linhas = lerCSV(texto);
-  if (linhas.length < 2) throw new Error("O arquivo não tem cabeçalho e pelo menos uma linha de lead.");
-  const cabecalho = linhas[0].map(c => c.trim()).filter(Boolean);
-  if (!cabecalho.length) throw new Error("A primeira linha não parece um cabeçalho.");
-  const registros = linhas.slice(1).map(l => {
-    const o = {};
-    cabecalho.forEach((c, i) => { o[c] = (l[i] || "").trim(); });
-    return o;
-  });
-  return { cabecalho, registros };
-}
+async function confirmImport() {
+  if (!csvParsed.length) return;
+  const btn = document.getElementById('btnImport');
+  const destino = document.getElementById('imp-destino').value;
+  const criarNovo = destino === '__novo__';
 
-function mostrarPrevia(){
-  const previa = $("previa");
-  const a = estado.arquivo;
-  if (!a){ previa.hidden = true; return; }
-  const emails = a.registros.map(r => (r.EMAIL || "").toLowerCase()).filter(Boolean);
-  const repetidos = emails.length - new Set(emails).size;
-  previa.hidden = false;
-  previa.innerHTML = "";
-  const t = document.createElement("div");
-  t.className = "rotulo";
-  t.textContent = "O que veio no arquivo";
-  const ul = document.createElement("ul");
-  [
-    a.registros.length.toLocaleString("pt-BR") + " leads",
-    a.cabecalho.length + " colunas: " + a.cabecalho.join(", "),
-    emails.length ? repetidos + " e-mail(s) repetido(s) dentro do arquivo — todos serão importados e marcados"
-                  : "Sem coluna EMAIL: repetição e recorrência ficam sem marcação"
-  ].forEach(txt => {
-    const li = document.createElement("li");
-    li.textContent = txt;
-    ul.appendChild(li);
-  });
-  previa.append(t, ul);
-}
+  let id = destino, rotulo = null;
+  if (criarNovo) {
+    id = (document.getElementById('novo-id').value||'').trim();
+    rotulo = (document.getElementById('novo-rotulo').value||'').trim() || null;
+    if (!id) { toast('Dê um código ao lançamento.', 'error'); return; }
+    if (lancs.some(l => l.id === id)) { toast('Já existe um lançamento com esse código.', 'error'); return; }
+  }
 
-function conferirFormulario(){
-  const id = $("campoId").value.trim();
-  $("btnConfirmarImport").disabled = !(id && estado.arquivo);
-  const existe = estado.lancamentos.some(l => l.id === id);
-  $("opcaoSubstituir").hidden = !existe;
-}
+  const substituir = !criarNovo && document.getElementById('imp-substituir').checked;
 
-async function importar(){
-  const id = $("campoId").value.trim();
-  const rotulo = $("campoRotulo").value.trim() || null;
-  const a = estado.arquivo;
-  const substituir = $("campoSubstituir").checked && !$("opcaoSubstituir").hidden;
-  if (!id || !a) return;
-
-  $("btnConfirmarImport").disabled = true;
-  $("btnCancelarImport").disabled = true;
-  $("barra").className = "barra ativa";
-  $("barraCheia").style.width = "0%";
-
+  btn.textContent = 'Importando...'; btn.disabled = true;
   try {
-    const { error: e1 } = await db.from("lead_lancamentos")
-      .upsert({ id, rotulo, cols: a.cabecalho, total: a.registros.length, atualizado_em: new Date().toISOString() });
+    const registro = { id, cols: csvCols, total: csvParsed.length, atualizado_em: new Date().toISOString() };
+    if (rotulo) registro.rotulo = rotulo;
+    const { error: e1 } = await sb.from('lead_lancamentos').upsert(registro);
     if (e1) throw e1;
 
-    if (substituir){
-      const { error: e2 } = await db.from("leads").delete().eq("lancamento_id", id);
+    if (substituir) {
+      const { error: e2 } = await sb.from('leads').delete().eq('lancamento_id', id);
       if (e2) throw e2;
     }
 
-    for (let i = 0; i < a.registros.length; i += LOTE){
-      const lote = a.registros.slice(i, i + LOTE).map(dados => ({ lancamento_id: id, dados }));
-      const { error: e3 } = await db.from("leads").insert(lote);
+    for (let i=0;i<csvParsed.length;i+=LOTE) {
+      const lote = csvParsed.slice(i, i+LOTE).map(dados => ({ lancamento_id:id, dados }));
+      const { error: e3 } = await sb.from('leads').insert(lote);
       if (e3) throw e3;
-      $("barraCheia").style.width = Math.round(((i + lote.length) / a.registros.length) * 100) + "%";
+      btn.textContent = `Importando... ${Math.min(i+LOTE, csvParsed.length)}/${csvParsed.length}`;
     }
 
-    // total real depois da importação
-    const { count } = await db.from("leads").select("id", { count: "exact", head: true }).eq("lancamento_id", id);
-    if (typeof count === "number"){
-      await db.from("lead_lancamentos").update({ total: count }).eq("id", id);
-    }
+    const { count } = await sb.from('leads').select('id', { count:'exact', head:true }).eq('lancamento_id', id);
+    if (typeof count === 'number') await sb.from('lead_lancamentos').update({ total: count }).eq('id', id);
 
-    fecharImportar();
-    avisar(a.registros.length.toLocaleString("pt-BR") + " leads importados em " + id + ".", "ok");
-    await carregarLancamentos();
-    const novo = estado.lancamentos.find(l => l.id === id);
-    if (novo) abrirLancamento(novo);
-  } catch (err){
-    avisar("A importação parou: " + (err.message || err), "erro");
-    $("btnConfirmarImport").disabled = false;
-    $("btnCancelarImport").disabled = false;
-    $("barra").className = "barra";
+    closeModal();
+    toast(nf(csvParsed.length) + ' leads importados em ' + id + '!');
+    lancs = await fetchLancs();
+    renderLancamentos();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'error');
+    btn.textContent = 'Importar para o banco'; btn.disabled = false;
   }
 }
 
-function abrirImportar(){
-  estado.arquivo = null;
-  $("campoId").value = "";
-  $("campoRotulo").value = "";
-  $("campoArquivo").value = "";
-  $("campoSubstituir").checked = false;
-  $("previa").hidden = true;
-  $("opcaoSubstituir").hidden = true;
-  $("barra").className = "barra";
-  $("btnConfirmarImport").disabled = true;
-  $("btnCancelarImport").disabled = false;
-  $("modalImportar").classList.add("aberto");
-  $("campoId").focus();
+/* ── excluir ── */
+function openExcluir() {
+  const l = det.lanc;
+  openModal('Excluir lançamento',
+    `<p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+       Isso apaga ${nf(det.leads.length)} leads de ${esc(l.id)}. Não dá para desfazer.</p>
+     <div class="field"><label>Digite o código para confirmar</label>
+       <input type="text" id="exc-confirma" autocomplete="off"></div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-ghost btn-danger" onclick="confirmExcluir()">Excluir</button>`);
 }
-function fecharImportar(){ $("modalImportar").classList.remove("aberto"); }
-
-/* ---------- excluir ---------- */
-function abrirExcluir(){
-  if (!estado.atual) return;
-  $("textoExcluir").textContent =
-    "Isso apaga " + estado.leads.length.toLocaleString("pt-BR") + " leads de " + estado.atual.id + ". Não dá para desfazer.";
-  $("campoConfirma").value = "";
-  $("modalExcluir").classList.add("aberto");
-  $("campoConfirma").focus();
-}
-async function excluir(){
-  const id = estado.atual.id;
-  if ($("campoConfirma").value.trim() !== id){ avisar("O código digitado não confere.", "erro"); return; }
-  const { error } = await db.from("lead_lancamentos").delete().eq("id", id);
-  if (error){ avisar("Não foi possível excluir: " + error.message, "erro"); return; }
-  $("modalExcluir").classList.remove("aberto");
-  estado.atual = null;
-  estado.leads = [];
-  $("conteudo").hidden = true;
-  $("telaVazia").hidden = false;
-  avisar("Lançamento " + id + " excluído.", "ok");
-  await carregarLancamentos();
-}
-
-/* ---------- ligações ---------- */
-$("btnPainel").addEventListener("click", () => { location.href = "index.html"; });
-$("btnImportar").addEventListener("click", abrirImportar);
-$("btnCancelarImport").addEventListener("click", fecharImportar);
-$("btnConfirmarImport").addEventListener("click", importar);
-$("campoId").addEventListener("input", conferirFormulario);
-$("campoArquivo").addEventListener("change", async e => {
-  const file = e.target.files[0];
-  if (!file) { estado.arquivo = null; mostrarPrevia(); conferirFormulario(); return; }
-  try {
-    estado.arquivo = await analisarArquivo(file);
-    if (!$("campoId").value.trim()){
-      const m = file.name.match(/L\d+[A-Z\-]*/i);
-      if (m) $("campoId").value = m[0].toUpperCase();
-    }
-    mostrarPrevia();
-  } catch (err){
-    estado.arquivo = null;
-    mostrarPrevia();
-    avisar(err.message, "erro");
+async function confirmExcluir() {
+  const l = det.lanc;
+  if ((document.getElementById('exc-confirma').value||'').trim() !== l.id) {
+    toast('O código digitado não confere.', 'error'); return;
   }
-  conferirFormulario();
-});
+  const { error } = await sb.from('lead_lancamentos').delete().eq('id', l.id);
+  if (error) { toast('Não foi possível excluir: ' + error.message, 'error'); return; }
+  closeModal();
+  toast('Lançamento ' + l.id + ' excluído.');
+  lancs = await fetchLancs();
+  voltarParaLista();
+}
 
-$("btnExportar").addEventListener("click", exportarCSV);
-$("btnExcluir").addEventListener("click", abrirExcluir);
-$("btnCancelarExcluir").addEventListener("click", () => $("modalExcluir").classList.remove("aberto"));
-$("btnConfirmarExcluir").addEventListener("click", excluir);
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
+}
 
-$("busca").addEventListener("input", aplicarFiltros);
-$("filtroSource").addEventListener("change", aplicarFiltros);
-$("filtroData").addEventListener("change", aplicarFiltros);
-$("chipRepetidos").addEventListener("click", e => {
-  estado.soRepetidos = !estado.soRepetidos;
-  e.currentTarget.setAttribute("aria-pressed", String(estado.soRepetidos));
-  aplicarFiltros();
-});
-$("chipRecorrentes").addEventListener("click", e => {
-  estado.soRecorrentes = !estado.soRecorrentes;
-  e.currentTarget.setAttribute("aria-pressed", String(estado.soRecorrentes));
-  aplicarFiltros();
-});
-$("btnAnterior").addEventListener("click", () => { estado.pagina--; desenharTabela(); });
-$("btnProxima").addEventListener("click", () => { estado.pagina++; desenharTabela(); });
-
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape"){
-    fecharImportar();
-    $("modalExcluir").classList.remove("aberto");
-  }
-});
-
-iniciar();
+init();
 </script>
 </body>
 </html>
