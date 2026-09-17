@@ -58,8 +58,11 @@ button{font-family:inherit;color:inherit}
 .lanc-card::after{content:'';position:absolute;top:-40px;right:-40px;width:110px;height:110px;
   border-radius:50%;background:var(--c);opacity:.07;pointer-events:none}
 .lanc-card:hover{border-color:var(--c);transform:translateY(-2px)}
-.lanc-top{margin-bottom:12px}
-.lanc-nome{font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lanc-top{margin-bottom:12px;display:flex;align-items:flex-start;gap:6px}
+.lanc-nome{font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.btn-renomear{background:none;border:none;color:var(--hint);cursor:pointer;font-size:13px;line-height:1;
+  padding:0 2px;flex-shrink:0;transition:color .15s;position:relative;z-index:1}
+.btn-renomear:hover{color:var(--c)}
 .lanc-num{font-size:27px;font-weight:500;color:var(--c);line-height:1;letter-spacing:-.5px}
 .lanc-lbl{font-size:11px;color:var(--hint);font-family:var(--mono);margin-top:3px;margin-bottom:14px}
 .lanc-acoes{display:flex;gap:6px;flex-wrap:wrap}
@@ -215,16 +218,30 @@ const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf = n => Number(n||0).toLocaleString('pt-BR');
 
+// Matizes alternados de propósito: cards vizinhos nunca saem parecidos
 const CORES_LANC = [
-  {hex:'#CDA04C', rgb:'205,160,76'},  {hex:'#7cc4a8', rgb:'124,196,168'},
-  {hex:'#5b8aff', rgb:'91,138,255'},  {hex:'#a98bff', rgb:'169,139,255'},
-  {hex:'#f07ab0', rgb:'240,122,176'}, {hex:'#4dc9f6', rgb:'77,201,246'},
-  {hex:'#5fcd8a', rgb:'95,205,138'},  {hex:'#ffb94a', rgb:'255,185,74'}
+  {hex:'#CDA04C', rgb:'205,160,76'},  {hex:'#5b8aff', rgb:'91,138,255'},
+  {hex:'#5fcd8a', rgb:'95,205,138'},  {hex:'#f07ab0', rgb:'240,122,176'},
+  {hex:'#4dc9f6', rgb:'77,201,246'},  {hex:'#ffb94a', rgb:'255,185,74'},
+  {hex:'#a98bff', rgb:'169,139,255'}, {hex:'#7cc4a8', rgb:'124,196,168'},
+  {hex:'#e0705a', rgb:'224,112,90'},  {hex:'#b7c44e', rgb:'183,196,78'},
+  {hex:'#ff8fd0', rgb:'255,143,208'}, {hex:'#54d6c2', rgb:'84,214,194'}
 ];
+// A cor vem da posição na lista, não do nome: com 8 cores e 9 lançamentos
+// o resto do hash repetia (L1 e L2KR caíam na mesma).
 function corDoLancamento(id) {
-  let n = 0;
-  for (let i=0;i<id.length;i++) n = (n*31 + id.charCodeAt(i)) >>> 0;
-  return CORES_LANC[n % CORES_LANC.length];
+  const i = lancs.findIndex(l => l.id === id);
+  return CORES_LANC[(i < 0 ? 0 : i) % CORES_LANC.length];
+}
+
+// Ordena L1, L2KR, L10KR na ordem certa — texto puro põe L10 antes de L2
+function ordenarLancs(lista) {
+  return lista.slice().sort((a,b) => {
+    const na = parseInt((a.id.match(/\d+/)||[0])[0], 10);
+    const nb = parseInt((b.id.match(/\d+/)||[0])[0], 10);
+    if (na !== nb) return na - nb;
+    return a.id.localeCompare(b.id, 'pt-BR');
+  });
 }
 
 /* ── banco ── */
@@ -234,7 +251,7 @@ async function fetchLancs() {
     .select('id, rotulo, cols, total, unicos')
     .order('id');
   if (error) throw error;
-  return data || [];
+  return ordenarLancs(data || []);
 }
 async function fetchLeads(id) {
   const out = [];
@@ -277,6 +294,7 @@ function renderLancamentos() {
     <div class="lanc-card" style="--c:${cor.hex};--crgb:${cor.rgb}">
       <div class="lanc-top">
         <div class="lanc-nome" title="${esc(l.rotulo || l.id)}">${esc(l.rotulo || l.id)}</div>
+        ${isAdmin ? `<button class="btn-renomear" title="Renomear" onclick="openRenomear('${id}')">&#9998;</button>` : ''}
       </div>
       <div class="lanc-num">${nf(l.total)}</div>
       <div class="lanc-lbl">leads · ${nf(l.unicos)} e-mails únicos</div>
@@ -672,6 +690,54 @@ async function confirmImport() {
   } catch(e) {
     toast('Erro: ' + e.message, 'error');
     btn.textContent = 'Importar para o banco'; btn.disabled = false;
+  }
+}
+
+/* ── renomear ── */
+function openRenomear(id) {
+  const l = lancs.find(x => x.id === id);
+  if (!l) return;
+  openModal('Renomear lançamento',
+    `<div class="field"><label>Código</label>
+       <input type="text" id="ren-id" value="${esc(l.id)}" oninput="this.value=this.value.toUpperCase()"></div>
+     <div class="field"><label>Nome exibido (opcional)</label>
+       <input type="text" id="ren-rotulo" value="${esc(l.rotulo||'')}" placeholder="Ex: L1 KR — Captação"></div>
+     <p class="check-hint" style="margin:10px 0 0 0">
+       O código é a chave que liga os leads e cruza a recorrência entre lançamentos.
+       Ao mudá-lo, os ${nf(l.total)} leads acompanham. O nome é só o rótulo do card.</p>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-primary" id="btnRenomear" onclick="confirmRenomear('${esc(id).replace(/'/g,"\\'")}')">Salvar</button>`);
+}
+
+async function confirmRenomear(idAtual) {
+  const novoId = (document.getElementById('ren-id').value||'').trim();
+  const novoRotulo = (document.getElementById('ren-rotulo').value||'').trim() || null;
+  if (!novoId) { toast('O código não pode ficar vazio.', 'error'); return; }
+  if (novoId !== idAtual && lancs.some(l => l.id === novoId)) {
+    toast('Já existe um lançamento com esse código.', 'error'); return;
+  }
+
+  const btn = document.getElementById('btnRenomear');
+  btn.textContent = 'Salvando...'; btn.disabled = true;
+  const { error } = await sb.from('lead_lancamentos')
+    .update({ id: novoId, rotulo: novoRotulo, atualizado_em: new Date().toISOString() })
+    .eq('id', idAtual);
+
+  if (error) {
+    const fk = /foreign key|violates|constraint/i.test(error.message);
+    toast(fk ? 'O banco recusou a troca de código: falta rodar o leads_rename.sql.' : 'Erro: ' + error.message, 'error');
+    btn.textContent = 'Salvar'; btn.disabled = false;
+    return;
+  }
+
+  closeModal();
+  toast('Lançamento atualizado.');
+  lancs = await fetchLancs();
+  if (det.lanc && det.lanc.id === idAtual) {
+    det.lanc = lancs.find(l => l.id === novoId) || det.lanc;
+    renderDetalhe(); aplicarFiltros();
+  } else {
+    renderLancamentos();
   }
 }
 
