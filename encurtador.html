@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encurtador de Links — Instituto Kaleizu</title>
+<link rel="icon" href="favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="acesso.js" data-tool="encurtador"></script>
+<style>
+:root{
+  --bg:#060B1F;--surface:#0e1530;--card:#0f1428;--border:rgba(255,255,255,0.08);
+  --text:#e8eaf6;--muted:#8b93b8;--hint:#3a4060;--gold:#CDA04C;--gold-light:#e8c97a;
+  --green:#5fcd8a;--red:#e05a5a;--amber:#e8c97a;--blue:#5b8aff;--purple:#a98bff;--pink:#f07ab0;--teal:#7cc4a8;
+  --sans:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+a{color:var(--gold-light)}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 11px;outline:none;width:100%;color-scheme:dark}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+textarea{font-family:var(--mono);font-size:12px;min-height:160px;resize:vertical}
+input[type=checkbox]{width:auto;accent-color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+.top{display:flex;align-items:center;gap:16px;padding:18px 28px;border-bottom:1px solid var(--border)}
+.top a.back{color:var(--muted);text-decoration:none;font-size:13px}
+.top a.back:hover{color:var(--text)}
+.top h1{font-size:18px;font-weight:600}
+.top .dom{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 28px 80px}
+
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.tab{background:none;border:none;color:var(--muted);padding:10px 16px;font-size:14px;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--text);border-color:var(--gold)}
+.pane{display:none}.pane.active{display:block}
+
+.card{background:var(--card);border:1px solid var(--border);border-top:2px solid var(--gold);border-radius:12px;padding:20px;margin-bottom:18px}
+.lbl{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:2fr 1fr 1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:800px){.g4,.g3{grid-template-columns:1fr}}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:3px;margin-bottom:16px}
+.seg button{background:none;border:none;color:var(--muted);padding:6px 14px;border-radius:6px;font-size:13px}
+.seg button.active{background:var(--card);color:var(--gold-light)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:7px 14px;font-size:13px}
+.chip.on{border-color:var(--gold);color:var(--gold-light);background:rgba(205,160,76,.1)}
+.chip small{font-family:var(--mono);font-size:11px;opacity:.7;margin-left:4px}
+
+.btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 16px;font-size:13px;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#1a1405;font-weight:600}
+.btn.gold:hover{background:var(--gold-light)}
+.btn.danger{color:var(--red)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.end{justify-content:flex-end}
+.spacer{flex:1}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;background:var(--surface);white-space:nowrap}
+td{padding:9px 12px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.015)}
+td input{padding:6px 8px;font-family:var(--mono);font-size:12px}
+.mono{font-family:var(--mono);font-size:12px}
+.trunc{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.num{font-family:var(--mono);text-align:right}
+.tag{display:inline-block;white-space:nowrap;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
+.tag.ok{color:var(--green);border-color:rgba(95,205,138,.35)}
+.tag.bad{color:var(--red);border-color:rgba(224,90,90,.35)}
+.tag.fixo{color:var(--purple);border-color:rgba(169,139,255,.35)}
+.tag.off{color:var(--hint)}
+.slug{color:var(--gold-light);cursor:pointer;background:none;border:none;font-family:var(--mono);font-size:12px;padding:0;text-align:left}
+.slug:hover{text-decoration:underline}
+.icon{background:none;border:none;color:var(--muted);padding:4px 6px;border-radius:6px;font-size:14px}
+.icon:hover{color:var(--text);background:var(--surface)}
+.empty{padding:36px;text-align:center;color:var(--muted)}
+
+.result{margin-top:16px;border:1px solid rgba(95,205,138,.3);background:rgba(95,205,138,.05);border-radius:10px;padding:14px}
+.result h3{font-size:14px;margin-bottom:10px;color:var(--green)}
+.result .line{display:flex;gap:12px;align-items:center;padding:5px 0;font-size:13px}
+.result .line span:first-child{min-width:130px;color:var(--muted)}
+
+.modal-bg{position:fixed;inset:0;background:rgba(3,6,18,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--gold);border-radius:14px;padding:22px;width:100%;max-width:520px;max-height:90vh;overflow:auto}
+.modal h2{font-size:16px;margin-bottom:14px}
+.modal .grid{margin-bottom:16px}
+.modal p{color:var(--muted);font-size:13px;margin-bottom:14px;line-height:1.5}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--card);border:1px solid var(--border);border-left:3px solid var(--gold);padding:11px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:60}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.toast.err{border-left-color:var(--red)}
+.toast.ok{border-left-color:var(--green)}
+.admin-only{}
+body.readonly .admin-only{display:none!important}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="back" href="/">← Painel</a>
+  <h1>Encurtador de Links</h1>
+  <span class="dom" id="dom-label"></span>
+</header>
+
+<main class="wrap">
+  <nav class="tabs">
+    <button class="tab active" data-tab="gerar" onclick="showTab('gerar')">Gerar links</button>
+    <button class="tab" data-tab="lista" onclick="showTab('lista')">Links criados</button>
+    <button class="tab" data-tab="canais" onclick="showTab('canais')">Canais</button>
+  </nav>
+
+  <!-- ─────────── GERAR ─────────── -->
+  <section class="pane active" id="pane-gerar">
+    <div class="empty admin-only-inv" id="ro-gerar" style="display:none">Só administradores podem criar links. Veja os existentes na aba “Links criados”.</div>
+    <div class="admin-only">
+      <div class="seg">
+        <button id="mode-canal" class="active" onclick="setMode('canal')">Um destino, vários canais</button>
+        <button id="mode-lista" onclick="setMode('lista')">Colar lista</button>
+      </div>
+
+      <div class="card" id="box-canal">
+        <div class="grid g4">
+          <div><label class="lbl" for="f-destino">URL de destino</label>
+            <input id="f-destino" type="url" placeholder="https://institutokaleizu.com.br/..." oninput="buildPreview()"></div>
+          <div><label class="lbl" for="f-lanc">Lançamento</label>
+            <input id="f-lanc" placeholder="L23KR" oninput="onLancInput()"></div>
+          <div><label class="lbl" for="f-prefixo">Início da slug</label>
+            <input id="f-prefixo" placeholder="l23kr" oninput="prefixTouched=true;buildPreview()"></div>
+          <div><label class="lbl" for="f-content">utm_content</label>
+            <input id="f-content" placeholder="opcional" oninput="buildPreview()"></div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="row" style="margin-bottom:8px">
+            <span class="lbl" style="margin:0">Canais</span><span class="spacer"></span>
+            <button class="btn sm" onclick="toggleAllChips(true)">Marcar todos</button>
+            <button class="btn sm" onclick="toggleAllChips(false)">Limpar</button>
+          </div>
+          <div class="chips" id="chips"></div>
+        </div>
+        <label class="row" style="margin-top:16px;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="f-fixo" onchange="onFixoChange()">
+          Links fixos — a slug não muda entre lançamentos, só o destino é trocado depois
+        </label>
+      </div>
+
+      <div class="card" id="box-lista" style="display:none">
+        <label class="lbl" for="f-lista">Um link por linha: slug ; destino ; canal ; lançamento</label>
+        <textarea id="f-lista" oninput="buildPreview()" placeholder="l23kr-wpp ; https://institutokaleizu.com.br/l23 ; wpp ; L23KR
+l23kr-aula1 ; https://institutokaleizu.com.br/aula-1 ; email ; L23KR
+vet360-bio ; https://institutokaleizu.com.br/vet360 ; bio"></textarea>
+        <p class="hint">Aceita ponto e vírgula, vírgula ou tab (dá pra colar direto da planilha). Canal e lançamento são opcionais; o canal usa o código da aba “Canais” e preenche as UTMs.</p>
+      </div>
+
+      <div class="card">
+        <div class="row" style="margin-bottom:12px">
+          <span class="lbl" style="margin:0">Prévia</span><span class="spacer"></span>
+          <span class="hint" id="prev-status" style="margin:0"></span>
+          <button class="btn gold" id="btn-criar" onclick="criarLinks()" disabled>Criar links</button>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Canal</th><th>Slug</th><th>Link curto</th><th>Destino com UTMs</th><th></th></tr></thead>
+          <tbody id="prev-body"><tr><td colspan="5" class="empty">Preencha o destino e escolha os canais.</td></tr></tbody>
+        </table></div>
+        <div id="result"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── LISTA ─────────── -->
+  <section class="pane" id="pane-lista">
+    <div class="card">
+      <div class="grid g4" style="grid-template-columns:2fr 1fr 1fr auto">
+        <div><label class="lbl" for="q">Buscar</label><input id="q" type="search" placeholder="slug ou destino" oninput="renderLista()"></div>
+        <div><label class="lbl" for="q-lanc">Lançamento</label><select id="q-lanc" onchange="renderLista()"></select></div>
+        <div><label class="lbl" for="q-canal">Canal</label><select id="q-canal" onchange="renderLista()"></select></div>
+        <div><label class="lbl">&nbsp;</label>
+          <label class="row" style="gap:6px;height:37px;cursor:pointer"><input type="checkbox" id="q-fixo" onchange="renderLista()">Só fixos</label></div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <span class="hint" id="lista-count" style="margin:0"></span><span class="spacer"></span>
+      <button class="btn sm" onclick="copiarSelecionados()">Copiar selecionados</button>
+      <button class="btn sm" onclick="exportCSV()">Baixar CSV</button>
+      <button class="btn sm admin-only" onclick="openTrocarDestino()">Trocar destino dos selecionados</button>
+      <button class="btn sm" onclick="loadLinks()">Atualizar</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th><input type="checkbox" id="sel-all" onchange="selectAll(this.checked)"></th>
+        <th>Slug</th><th>Canal</th><th>Lançamento</th><th>Destino</th>
+        <th style="text-align:right">Cliques</th><th style="text-align:right">Hoje</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody id="lista-body"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+    </table></div>
+  </section>
+
+  <!-- ─────────── CANAIS ─────────── -->
+  <section class="pane" id="pane-canais">
+    <div class="row" style="margin-bottom:10px">
+      <span class="hint" style="margin:0">As UTMs de cada canal são aplicadas automaticamente. O utm_campaign é o código do lançamento.</span>
+      <span class="spacer"></span>
+      <button class="btn sm gold admin-only" onclick="openCanal()">Novo canal</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Nome</th><th>Código</th><th>utm_source</th><th>utm_medium</th><th></th></tr></thead>
+      <tbody id="canais-body"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="m-title"></h2>
+    <div id="m-body"></div>
+    <div class="row end">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn gold" id="m-ok"></button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://iabugpuqlcfftwabuxsj.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYnVncHVxbGNmZnR3YWJ1eHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTA5MTIsImV4cCI6MjA5MTY2NjkxMn0.Rs2OJlbd8_2TMroE9iehTtZLFdBImVfBpKEH-RT_3UY";
+const GO = "https://go.institutokaleizu.com.br/";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let isAdmin = false;
+let CANAIS = [];
+let LINKS = [];
+let PREVIEW = [];      // [{canal, slug, destino, lancamento, utm_*, fixo, status}]
+let selected = new Set();
+let mode = 'canal';
+let prefixTouched = false;
+let chipsOn = new Set();
+let checkTimer = null;
+
+// ── utilidades ─────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slugify = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+const canalBy = cod => CANAIS.find(c => c.codigo === cod);
+const shortUrl = slug => GO + slug;
+
+function toast(msg, kind = '') {
+  const t = $('toast');
+  t.textContent = msg; t.className = 'toast show ' + kind;
+  clearTimeout(t._h); t._h = setTimeout(() => t.className = 'toast', 2600);
+}
+async function copy(text, msg = 'Copiado') {
+  try { await navigator.clipboard.writeText(text); toast(msg, 'ok'); }
+  catch { toast('Não foi possível copiar', 'err'); }
+}
+function fullUrl(l) {
+  try {
+    const u = new URL(l.destino);
+    for (const k of ['utm_source','utm_medium','utm_campaign','utm_content'])
+      if (l[k] && !u.searchParams.has(k)) u.searchParams.set(k, l[k]);
+    return u.toString();
+  } catch { return l.destino || ''; }
+}
+const validUrl = s => { try { const u = new URL(s); return /^https?:$/.test(u.protocol); } catch { return false; } };
+function fmtDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+// ── modal ──────────────────────────────────────────────
+let modalOk = null;
+function openModal(title, bodyHtml, okText, onOk, danger = false) {
+  $('m-title').textContent = title;
+  $('m-body').innerHTML = bodyHtml;
+  const b = $('m-ok');
+  b.textContent = okText; b.className = 'btn ' + (danger ? 'danger' : 'gold'); b.disabled = false;
+  modalOk = onOk;
+  $('modal').classList.add('open');
+  setTimeout(() => $('m-body').querySelector('input,select')?.focus(), 30);
+}
+function closeModal() { $('modal').classList.remove('open'); modalOk = null; }
+$('m-ok').onclick = async () => {
+  if (!modalOk) return;
+  $('m-ok').disabled = true;
+  const keep = await modalOk();
+  $('m-ok').disabled = false;
+  if (keep !== false) closeModal();
+};
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── abas / modos ───────────────────────────────────────
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + t));
+  if (t === 'lista') loadLinks();
+}
+function setMode(m) {
+  mode = m;
+  $('mode-canal').classList.toggle('active', m === 'canal');
+  $('mode-lista').classList.toggle('active', m === 'lista');
+  $('box-canal').style.display = m === 'canal' ? '' : 'none';
+  $('box-lista').style.display = m === 'lista' ? '' : 'none';
+  $('result').innerHTML = '';
+  buildPreview();
+}
+
+// ── canais ─────────────────────────────────────────────
+async function loadCanais() {
+  const { data, error } = await sb.from('canais_link').select('*').order('position');
+  if (error) return toast('Erro ao carregar canais: ' + error.message, 'err');
+  CANAIS = data || [];
+  renderChips(); renderCanais(); fillFilters();
+}
+function renderChips() {
+  $('chips').innerHTML = CANAIS.map(c =>
+    `<button class="chip ${chipsOn.has(c.codigo) ? 'on' : ''}" onclick="toggleChip('${esc(c.codigo)}')">${esc(c.nome)}<small>${esc(c.codigo)}</small></button>`
+  ).join('') || '<span class="hint">Nenhum canal cadastrado.</span>';
+}
+function toggleChip(cod) { chipsOn.has(cod) ? chipsOn.delete(cod) : chipsOn.add(cod); renderChips(); buildPreview(); }
+function toggleAllChips(on) { chipsOn = new Set(on ? CANAIS.map(c => c.codigo) : []); renderChips(); buildPreview(); }
+
+function renderCanais() {
+  $('canais-body').innerHTML = CANAIS.map(c => `<tr>
+    <td>${esc(c.nome)}</td><td class="mono">${esc(c.codigo)}</td>
+    <td class="mono">${esc(c.utm_source)}</td><td class="mono">${esc(c.utm_medium)}</td>
+    <td style="text-align:right;white-space:nowrap" class="admin-only">
+      <button class="icon" title="Editar" onclick="openCanal('${esc(c.codigo)}')">✎</button>
+      <button class="icon" title="Excluir" onclick="delCanal('${esc(c.codigo)}')">✕</button>
+    </td></tr>`).join('') || '<tr><td colspan="5" class="empty">Nenhum canal.</td></tr>';
+}
+function openCanal(cod) {
+  const c = cod ? canalBy(cod) : { nome:'', codigo:'', utm_source:'', utm_medium:'' };
+  openModal(cod ? 'Editar canal' : 'Novo canal', `
+    <div class="grid">
+      <div><label class="lbl">Nome</label><input id="c-nome" value="${esc(c.nome)}" placeholder="Instagram stories"></div>
+      <div><label class="lbl">Código (vai na slug)</label><input id="c-cod" value="${esc(c.codigo)}" placeholder="stories"></div>
+      <div class="grid g3" style="grid-template-columns:1fr 1fr">
+        <div><label class="lbl">utm_source</label><input id="c-src" value="${esc(c.utm_source)}" placeholder="instagram"></div>
+        <div><label class="lbl">utm_medium</label><input id="c-med" value="${esc(c.utm_medium)}" placeholder="stories"></div>
+      </div>
+    </div>`, 'Salvar canal', async () => {
+      const row = {
+        nome: $('c-nome').value.trim(),
+        codigo: slugify($('c-cod').value),
+        utm_source: $('c-src').value.trim().toLowerCase(),
+        utm_medium: $('c-med').value.trim().toLowerCase(),
+      };
+      if (!row.nome || !row.codigo || !row.utm_source || !row.utm_medium) { toast('Preencha todos os campos', 'err'); return false; }
+      let res;
+      if (cod) res = await sb.from('canais_link').update(row).eq('codigo', cod).select();
+      else res = await sb.from('canais_link').insert({ ...row, position: CANAIS.length + 1 }).select();
+      if (res.error) { toast(res.error.message, 'err'); return false; }
+      if (!res.data?.length) { toast('Sem permissão para salvar', 'err'); return false; }
+      toast('Canal salvo', 'ok'); await loadCanais();
+    });
+}
+function delCanal(cod) {
+  const c = canalBy(cod);
+  openModal('Excluir canal', `<p>Excluir <b>${esc(c.nome)}</b>? Os links já criados continuam funcionando, só perdem a referência ao canal.</p>`,
+    'Excluir canal', async () => {
+      const { data, error } = await sb.from('canais_link').delete().eq('codigo', cod).select();
+      if (error || !data?.length) { toast(error?.message || 'Sem permissão para excluir', 'err'); return false; }
+      chipsOn.delete(cod); toast('Canal excluído', 'ok'); await loadCanais();
+    }, true);
+}
+
+// ── prévia ─────────────────────────────────────────────
+function onLancInput() {
+  if (!prefixTouched && !$('f-fixo').checked) $('f-prefixo').value = slugify($('f-lanc').value);
+  buildPreview();
+}
+function onFixoChange() {
+  if (!prefixTouched) $('f-prefixo').value = $('f-fixo').checked ? '' : slugify($('f-lanc').value);
+  buildPreview();
+}
+function rowFor(canalCod, slug, destino, lanc, content, fixo) {
+  const c = canalBy(canalCod);
+  return {
+    canal: c ? c.codigo : null,
+    slug: slugify(slug),
+    destino: destino.trim(),
+    lancamento: lanc ? lanc.trim().toUpperCase() : null,
+    utm_source: c?.utm_source || null,
+    utm_medium: c?.utm_medium || null,
+    utm_campaign: lanc ? lanc.trim().toLowerCase() : null,
+    utm_content: content ? content.trim() : null,
+    fixo: !!fixo,
+    status: 'checando',
+    _canalNome: c ? c.nome : (canalCod ? `? ${canalCod}` : '—'),
+  };
+}
+function buildPreview() {
+  $('result').innerHTML = '';
+  PREVIEW = [];
+  if (mode === 'canal') {
+    const dest = $('f-destino').value, lanc = $('f-lanc').value, pre = slugify($('f-prefixo').value);
+    const content = $('f-content').value, fixo = $('f-fixo').checked;
+    if (dest) for (const c of CANAIS.filter(c => chipsOn.has(c.codigo)))
+      PREVIEW.push(rowFor(c.codigo, pre ? `${pre}-${c.codigo}` : c.codigo, dest, lanc, content, fixo));
+  } else {
+    for (const raw of $('f-lista').value.split('\n')) {
+      if (!raw.trim()) continue;
+      const sep = raw.includes('\t') ? '\t' : raw.includes(';') ? ';' : ',';
+      const p = raw.split(sep).map(s => s.trim());
+      if (p.length < 2) { PREVIEW.push({ ...rowFor('', p[0], '', '', '', false), status: 'formato' }); continue; }
+      PREVIEW.push(rowFor(p[2] || '', p[0], p[1], p[3] || '', '', false));
+    }
+  }
+  renderPreview();
+  clearTimeout(checkTimer); checkTimer = setTimeout(checkSlugs, 350);
+}
+function statusTag(s) {
+  return {
+    ok: '<span class="tag ok">disponível</span>',
+    criado: '<span class="tag ok">criado ✓</span>',
+    existe: '<span class="tag bad">slug já existe</span>',
+    repetida: '<span class="tag bad">repetida na lista</span>',
+    url: '<span class="tag bad">URL inválida</span>',
+    vazia: '<span class="tag bad">slug vazia</span>',
+    canal: '<span class="tag bad">canal não existe</span>',
+    formato: '<span class="tag bad">linha incompleta</span>',
+    checando: '<span class="tag">checando…</span>',
+  }[s] || '';
+}
+function renderPreview() {
+  const body = $('prev-body');
+  if (!PREVIEW.length) {
+    body.innerHTML = `<tr><td colspan="5" class="empty">${mode === 'canal' ? 'Preencha o destino e escolha os canais.' : 'Cole a lista acima.'}</td></tr>`;
+  } else {
+    body.innerHTML = PREVIEW.map((r, i) => `<tr>
+      <td>${esc(r._canalNome)}${r.fixo ? ' <span class="tag fixo">fixo</span>' : ''}</td>
+      <td style="min-width:170px"><input value="${esc(r.slug)}" onchange="editSlug(${i}, this.value)"></td>
+      <td class="mono" style="white-space:nowrap">${r.slug ? esc(shortUrl(r.slug)) : ''}</td>
+      <td class="trunc mono" title="${esc(fullUrl(r))}">${esc(fullUrl(r))}</td>
+      <td>${statusTag(r.status)}</td></tr>`).join('');
+  }
+  const ok = PREVIEW.filter(r => r.status === 'ok').length;
+  const bad = PREVIEW.filter(r => !['ok','checando','criado'].includes(r.status)).length;
+  $('prev-status').textContent = PREVIEW.length ? `${ok} prontos${bad ? ` · ${bad} com problema` : ''}` : '';
+  $('btn-criar').disabled = !ok || bad > 0 || PREVIEW.some(r => r.status === 'checando');
+  $('btn-criar').textContent = ok ? `Criar ${ok} link${ok > 1 ? 's' : ''}` : 'Criar links';
+}
+function editSlug(i, v) { PREVIEW[i].slug = slugify(v); PREVIEW[i].status = 'checando'; renderPreview(); checkSlugs(); }
+
+async function checkSlugs() {
+  const slugs = [...new Set(PREVIEW.map(r => r.slug).filter(Boolean))];
+  let taken = new Set();
+  if (slugs.length) {
+    const { data, error } = await sb.from('links_curtos').select('slug').in('slug', slugs);
+    if (error) return toast('Erro ao verificar slugs: ' + error.message, 'err');
+    taken = new Set((data || []).map(d => d.slug));
+  }
+  const count = {};
+  PREVIEW.forEach(r => count[r.slug] = (count[r.slug] || 0) + 1);
+  PREVIEW.forEach(r => {
+    if (r.status === 'formato') return;
+    r.status = !r.slug ? 'vazia'
+      : !validUrl(r.destino) ? 'url'
+      : r._canalNome.startsWith('?') ? 'canal'
+      : count[r.slug] > 1 ? 'repetida'
+      : taken.has(r.slug) ? 'existe' : 'ok';
+  });
+  renderPreview();
+}
+
+async function criarLinks() {
+  const rows = PREVIEW.filter(r => r.status === 'ok').map(r => ({
+    slug: r.slug, destino: r.destino, canal: r.canal, lancamento: r.lancamento,
+    utm_source: r.utm_source, utm_medium: r.utm_medium, utm_campaign: r.utm_campaign,
+    utm_content: r.utm_content, fixo: r.fixo,
+  }));
+  if (!rows.length) return;
+  $('btn-criar').disabled = true;
+  const { data, error } = await sb.from('links_curtos').insert(rows).select();
+  if (error) { toast(error.code === '23505' ? 'Alguma slug foi criada por outra pessoa agora — revise a prévia' : error.message, 'err'); checkSlugs(); return; }
+  if (!data?.length) { toast('Sem permissão para criar links', 'err'); renderPreview(); return; }
+  const nomes = Object.fromEntries(PREVIEW.map(r => [r.slug, r._canalNome]));
+  const txt = data.map(l => `${nomes[l.slug] && nomes[l.slug] !== '—' ? nomes[l.slug] + ': ' : ''}${shortUrl(l.slug)}`).join('\n');
+  $('result').innerHTML = `<div class="result">
+    <div class="row" style="margin-bottom:8px"><h3 style="margin:0">${data.length} link${data.length > 1 ? 's' : ''} criado${data.length > 1 ? 's' : ''}</h3><span class="spacer"></span>
+      <button class="btn sm gold" id="copy-all">Copiar todos</button></div>
+    ${data.map(l => `<div class="line"><span>${esc(nomes[l.slug] || '')}</span>
+      <button class="slug" onclick="copy('${esc(shortUrl(l.slug))}')">${esc(shortUrl(l.slug))}</button></div>`).join('')}
+  </div>`;
+  $('copy-all').onclick = () => copy(txt, 'Links copiados');
+  PREVIEW.forEach(r => { if (r.status === 'ok') r.status = 'criado'; });
+  renderPreview();
+  $('btn-criar').disabled = true;
+  toast('Links criados', 'ok');
+}
+
+// ── lista ──────────────────────────────────────────────
+async function loadLinks() {
+  const { data, error } = await sb.from('links_curtos_resumo').select('*').order('criado_em', { ascending: false });
+  if (error) { $('lista-body').innerHTML = `<tr><td colspan="9" class="empty">Erro: ${esc(error.message)}</td></tr>`; return; }
+  LINKS = data || [];
+  const ids = new Set(LINKS.map(l => l.id));
+  selected = new Set([...selected].filter(id => ids.has(id)));
+  fillFilters(); renderLista();
+}
+function fillFilters() {
+  const keepL = $('q-lanc').value, keepC = $('q-canal').value;
+  const lancs = [...new Set(LINKS.map(l => l.lancamento).filter(Boolean))].sort().reverse();
+  $('q-lanc').innerHTML = '<option value="">Todos</option><option value="__none">Sem lançamento</option>' +
+    lancs.map(l => `<option>${esc(l)}</option>`).join('');
+  $('q-canal').innerHTML = '<option value="">Todos</option>' +
+    CANAIS.map(c => `<option value="${esc(c.codigo)}">${esc(c.nome)}</option>`).join('');
+  $('q-lanc').value = keepL; $('q-canal').value = keepC;
+}
+function filtered() {
+  const q = $('q').value.trim().toLowerCase(), la = $('q-lanc').value, ca = $('q-canal').value, fx = $('q-fixo').checked;
+  return LINKS.filter(l =>
+    (!q || l.slug.includes(q) || (l.destino || '').toLowerCase().includes(q)) &&
+    (!la || (la === '__none' ? !l.lancamento : l.lancamento === la)) &&
+    (!ca || l.canal === ca) && (!fx || l.fixo));
+}
+function renderLista() {
+  const rows = filtered();
+  const tot = rows.reduce((s, l) => s + Number(l.cliques || 0), 0);
+  $('lista-count').textContent = `${rows.length} link${rows.length !== 1 ? 's' : ''} · ${tot} clique${tot !== 1 ? 's' : ''}${selected.size ? ` · ${selected.size} selecionado${selected.size > 1 ? 's' : ''}` : ''}`;
+  $('sel-all').checked = rows.length > 0 && rows.every(l => selected.has(l.id));
+  $('lista-body').innerHTML = rows.map(l => `<tr>
+    <td><input type="checkbox" ${selected.has(l.id) ? 'checked' : ''} onchange="toggleSel('${l.id}', this.checked)"></td>
+    <td><button class="slug" title="Copiar" onclick="copy('${esc(shortUrl(l.slug))}')">${esc(l.slug)}</button>
+      ${l.fixo ? ' <span class="tag fixo">fixo</span>' : ''}</td>
+    <td>${esc(canalBy(l.canal)?.nome || '—')}</td>
+    <td class="mono">${esc(l.lancamento || '—')}</td>
+    <td class="trunc mono" title="${esc(fullUrl(l))}"><a href="${esc(fullUrl(l))}" target="_blank" rel="noopener" style="color:inherit">${esc(l.destino)}</a></td>
+    <td class="num">${l.cliques}</td>
+    <td class="num" title="${l.ultimo_clique ? 'Último: ' + fmtDate(l.ultimo_clique) : ''}">${l.cliques_hoje}</td>
+    <td>${l.ativo ? '<span class="tag ok">ativo</span>' : '<span class="tag off">pausado</span>'}</td>
+    <td style="text-align:right;white-space:nowrap" class="admin-only">
+      <button class="icon" title="${l.ativo ? 'Pausar' : 'Ativar'}" onclick="toggleAtivo('${l.id}')">${l.ativo ? '⏸' : '▶'}</button>
+      <button class="icon" title="Editar" onclick="openEdit('${l.id}')">✎</button>
+      <button class="icon" title="Excluir" onclick="delLink('${l.id}')">✕</button>
+    </td></tr>`).join('') || '<tr><td colspan="9" class="empty">Nenhum link encontrado.</td></tr>';
+}
+function toggleSel(id, on) { on ? selected.add(id) : selected.delete(id); renderLista(); }
+function selectAll(on) { filtered().forEach(l => on ? selected.add(l.id) : selected.delete(l.id)); renderLista(); }
+function selRows() { return LINKS.filter(l => selected.has(l.id)); }
+
+function copiarSelecionados() {
+  const rows = selected.size ? selRows() : filtered();
+  if (!rows.length) return toast('Nada para copiar', 'err');
+  copy(rows.map(l => `${canalBy(l.canal)?.nome ? canalBy(l.canal).nome + ': ' : ''}${shortUrl(l.slug)}`).join('\n'),
+    `${rows.length} link${rows.length > 1 ? 's' : ''} copiado${rows.length > 1 ? 's' : ''}`);
+}
+function exportCSV() {
+  const rows = selected.size ? selRows() : filtered();
+  const cols = ['slug','link_curto','canal','lancamento','destino_completo','cliques','fixo','ativo','criado_em'];
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [cols.join(';'), ...rows.map(l => [l.slug, shortUrl(l.slug), canalBy(l.canal)?.nome || '', l.lancamento,
+    fullUrl(l), l.cliques, l.fixo ? 'sim' : 'não', l.ativo ? 'sim' : 'não', fmtDate(l.criado_em)].map(q).join(';'))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `links-curtos-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+async function updateLink(id, patch) {
+  const { data, error } = await sb.from('links_curtos').update({ ...patch, atualizado_em: new Date().toISOString() }).eq('id', id).select();
+  if (error) { toast(error.code === '23505' ? 'Essa slug já existe' : error.message, 'err'); return false; }
+  if (!data?.length) { toast('Sem permissão para editar', 'err'); return false; }
+  return true;
+}
+async function toggleAtivo(id) {
+  const l = LINKS.find(x => x.id === id);
+  if (await updateLink(id, { ativo: !l.ativo })) { toast(l.ativo ? 'Link pausado' : 'Link ativado', 'ok'); loadLinks(); }
+}
+function openEdit(id) {
+  const l = LINKS.find(x => x.id === id);
+  openModal('Editar link', `
+    <div class="grid">
+      <div><label class="lbl">Slug</label><input id="e-slug" value="${esc(l.slug)}">
+        <p class="hint">Mudar a slug quebra o link antigo que já foi divulgado.</p></div>
+      <div><label class="lbl">URL de destino</label><input id="e-dest" value="${esc(l.destino)}"></div>
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div><label class="lbl">Canal</label><select id="e-canal"><option value="">—</option>
+          ${CANAIS.map(c => `<option value="${esc(c.codigo)}" ${c.codigo === l.canal ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></div>
+        <div><label class="lbl">Lançamento</label><input id="e-lanc" value="${esc(l.lancamento || '')}"></div>
+        <div><label class="lbl">utm_source</label><input id="e-src" value="${esc(l.utm_source || '')}"></div>
+        <div><label class="lbl">utm_medium</label><input id="e-med" value="${esc(l.utm_medium || '')}"></div>
+        <div><label class="lbl">utm_campaign</label><input id="e-camp" value="${esc(l.utm_campaign || '')}"></div>
+        <div><label class="lbl">utm_content</label><input id="e-cont" value="${esc(l.utm_content || '')}"></div>
+      </div>
+      <label class="row" style="gap:8px;cursor:pointer"><input type="checkbox" id="e-fixo" ${l.fixo ? 'checked' : ''}>Link fixo</label>
+    </div>`, 'Salvar link', async () => {
+      const dest = $('e-dest').value.trim(), slug = slugify($('e-slug').value);
+      if (!validUrl(dest)) { toast('URL de destino inválida', 'err'); return false; }
+      if (!slug) { toast('Slug vazia', 'err'); return false; }
+      const lanc = $('e-lanc').value.trim();
+      const ok = await updateLink(id, {
+        slug, destino: dest, canal: $('e-canal').value || null,
+        lancamento: lanc ? lanc.toUpperCase() : null,
+        utm_source: $('e-src').value.trim() || null, utm_medium: $('e-med').value.trim() || null,
+        utm_campaign: $('e-camp').value.trim() || null, utm_content: $('e-cont').value.trim() || null,
+        fixo: $('e-fixo').checked,
+      });
+      if (!ok) return false;
+      toast('Link salvo', 'ok'); loadLinks();
+    });
+  $('e-canal').onchange = () => {
+    const c = canalBy($('e-canal').value);
+    if (c) { $('e-src').value = c.utm_source; $('e-med').value = c.utm_medium; }
+  };
+}
+function openTrocarDestino() {
+  const rows = selRows();
+  if (!rows.length) return toast('Selecione os links (dica: filtre por “Só fixos”)', 'err');
+  openModal(`Trocar destino de ${rows.length} link${rows.length > 1 ? 's' : ''}`, `
+    <p>As slugs continuam as mesmas; só o destino muda. Os cliques antigos ficam registrados com o lançamento anterior.</p>
+    <div class="grid">
+      <div><label class="lbl">Novo destino</label><input id="t-dest" placeholder="https://..."></div>
+      <div><label class="lbl">Novo lançamento</label><input id="t-lanc" placeholder="deixe vazio para manter"></div>
+    </div>
+    <p class="hint">${rows.map(l => esc(l.slug)).join(', ')}</p>`, 'Trocar destino', async () => {
+      const dest = $('t-dest').value.trim(), lanc = $('t-lanc').value.trim();
+      if (!validUrl(dest)) { toast('URL de destino inválida', 'err'); return false; }
+      const patch = { destino: dest, atualizado_em: new Date().toISOString() };
+      if (lanc) { patch.lancamento = lanc.toUpperCase(); patch.utm_campaign = lanc.toLowerCase(); }
+      const { data, error } = await sb.from('links_curtos').update(patch).in('id', rows.map(l => l.id)).select();
+      if (error) { toast(error.message, 'err'); return false; }
+      if (!data?.length) { toast('Sem permissão para editar', 'err'); return false; }
+      toast(`Destino trocado em ${data.length} link${data.length > 1 ? 's' : ''}`, 'ok'); loadLinks();
+    });
+}
+function delLink(id) {
+  const l = LINKS.find(x => x.id === id);
+  openModal('Excluir link', `<p>Excluir <b class="mono">${esc(l.slug)}</b> e os ${l.cliques} cliques registrados? Quem acessar o link antigo cai no site do Instituto. Para só interromper, use “Pausar”.</p>`,
+    'Excluir link', async () => {
+      const { data, error } = await sb.from('links_curtos').delete().eq('id', id).select();
+      if (error || !data?.length) { toast(error?.message || 'Sem permissão para excluir', 'err'); return false; }
+      selected.delete(id); toast('Link excluído', 'ok'); loadLinks();
+    }, true);
+}
+
+// ── início ─────────────────────────────────────────────
+(async function init() {
+  $('dom-label').textContent = GO.replace('https://', '');
+  const { data } = await sb.auth.getUser();
+  isAdmin = data?.user?.user_metadata?.role === 'admin';
+  if (!isAdmin) {
+    document.body.classList.add('readonly');
+    $('ro-gerar').style.display = '';
+    showTab('lista');
+  }
+  await loadCanais();
+  if (isAdmin) loadLinks();
+})();
+</script>
+</body>
+</html>

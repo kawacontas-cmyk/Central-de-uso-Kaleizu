@@ -1,5 +1,15 @@
 {
   "rewrites": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "go.institutokaleizu.com.br" }],
+      "destination": "/api/r?slug="
+    },
+    {
+      "source": "/:slug",
+      "has": [{ "type": "host", "value": "go.institutokaleizu.com.br" }],
+      "destination": "/api/r?slug=:slug"
+    },
     { "source": "/p/:id", "destination": "/api/pagina?id=:id" }
   ]
 }
