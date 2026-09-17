@@ -40,15 +40,20 @@
   .selector-header img { height: 64px; mix-blend-mode: lighten; margin-bottom: 1rem; }
   .selector-header h1 { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
   .selector-header p { font-size: 14px; color: var(--text-muted); }
-  .apps-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; width: 100%; max-width: 900px; }
-  /* cada card ocupa 2 das 6 colunas: 3 em cima, 3 embaixo */
-  .app-card { grid-column: span 2; }
+  /* flex centralizado: 4 por linha; a última linha fica no meio mesmo incompleta */
+  .apps-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; width: 100%; max-width: 1180px; }
+  .app-card { flex: 0 0 calc((100% - 48px) / 4); }
+  @media (max-width: 1100px) {
+    .apps-grid { max-width: 900px; }
+    .app-card { flex-basis: calc((100% - 32px) / 3); }
+  }
   @media (max-width: 860px) {
-    .apps-grid { grid-template-columns: repeat(2, 1fr); max-width: 460px; }
-    .app-card { grid-column: auto; }
+    .apps-grid { max-width: 460px; }
+    .app-card { flex-basis: calc((100% - 16px) / 2); }
   }
   @media (max-width: 480px) {
-    .apps-grid { grid-template-columns: 1fr; max-width: 320px; }
+    .apps-grid { max-width: 320px; }
+    .app-card { flex-basis: 100%; }
   }
   .app-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; cursor: pointer; transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden; text-decoration: none; }
   .app-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
@@ -333,6 +338,18 @@
       <div class="app-card-desc">Liberação dos acessos bônus, prazo restante e régua de renovação.</div>
     </a>
 
+    <a class="app-card" href="encurtador.html" data-tool="encurtador">
+      <span class="app-card-badge badge-live">Disponível</span>
+      <div class="app-card-icon" style="background:rgba(91,138,255,0.12);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#5b8aff" stroke-width="2">
+          <path d="M4 12h9"/><path d="M10 8l4 4-4 4"/>
+          <path d="M17 5h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/>
+        </svg>
+      </div>
+      <div class="app-card-name">Encurtador de Links</div>
+      <div class="app-card-desc">Links curtos com UTM por canal, criados em lote, com contagem de cliques.</div>
+    </a>
+
   </div>
   <div id="no-tools" class="no-tools" style="display:none">Você ainda não tem acesso a nenhuma ferramenta. Fale com um administrador.</div>
   <div class="selector-footer">
@@ -438,7 +455,8 @@ const TOOLS = [
   { id: "cruzamento", name: "Cruzamento de Pesquisas" },
   { id: "dashboard",  name: "Dashboard de Métricas" },
   { id: "alunos",     name: "Controle de Alunos" },
-  { id: "clube",      name: "Clube do Vet" }
+  { id: "clube",      name: "Clube do Vet" },
+  { id: "encurtador", name: "Encurtador de Links" }
 ];
 const ALL_TOOL_IDS = TOOLS.map(t => t.id);
 
