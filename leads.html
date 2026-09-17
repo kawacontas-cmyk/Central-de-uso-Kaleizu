@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Central de Leads · Instituto Kaleizu</title>
+<link rel="icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="acesso.js" data-tool="leads"></script>
+<style>
+:root{
+  --bg:#060B1F; --surface:#0e1530; --card:#0f1428;
+  --border:rgba(255,255,255,0.08);
+  --text:#e8eaf6; --muted:#8b93b8; --hint:#3a4060;
+  --gold:#CDA04C; --gold-light:#e8c97a;
+  --verde:#5fcd8a; --vermelho:#e05a5a; --ambar:#e8c97a;
+  --azul:#5b8aff; --roxo:#a98bff; --rosa:#f07ab0; --agua:#7cc4a8;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:'DM Sans',system-ui,sans-serif;font-size:14px;
+}
+button{font-family:inherit;color:inherit;cursor:pointer}
+input,select{font-family:inherit;color:inherit}
+.rotulo{
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);
+}
+.mono{font-family:'DM Mono',monospace}
+
+/* topo */
+.topo{
+  display:flex;align-items:center;gap:16px;
+  padding:14px 22px;border-bottom:1px solid var(--border);background:var(--surface);
+  position:sticky;top:0;z-index:20;
+}
+.topo h1{font-size:16px;font-weight:700;margin:0;letter-spacing:.01em}
+.topo .marca{width:26px;height:26px;border-radius:7px;background:linear-gradient(140deg,var(--gold),#8a6420);flex:none}
+.topo .direita{margin-left:auto;display:flex;align-items:center;gap:10px}
+
+.btn{
+  border:1px solid var(--border);background:var(--card);color:var(--text);
+  padding:8px 14px;border-radius:9px;font-size:13px;font-weight:500;
+  transition:border-color .15s,background .15s;
+}
+.btn:hover{border-color:rgba(205,160,76,.5)}
+.btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.btn.ouro{background:linear-gradient(140deg,var(--gold),#a97f34);border-color:transparent;color:#1a1204;font-weight:700}
+.btn.risco:hover{border-color:rgba(224,90,90,.6);color:var(--vermelho)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.pequeno{padding:6px 10px;font-size:12px}
+
+/* estrutura */
+.corpo{display:grid;grid-template-columns:262px 1fr;min-height:calc(100vh - 57px)}
+.lateral{border-right:1px solid var(--border);background:var(--surface);padding:16px 12px;display:flex;flex-direction:column;gap:12px}
+.lista{display:flex;flex-direction:column;gap:6px;overflow:auto}
+.item{
+  text-align:left;width:100%;border:1px solid var(--border);background:var(--card);
+  border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;
+}
+.item:hover{border-color:rgba(205,160,76,.4)}
+.item[aria-current="true"]{border-color:var(--gold);background:#141c3a}
+.item strong{font-size:13px;font-weight:700}
+.item span{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.principal{padding:20px 22px 40px;min-width:0}
+
+/* cards de número */
+.numeros{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.num{position:relative;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 14px 14px;overflow:hidden}
+.num::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--gold),var(--gold-light))}
+.num b{display:block;font-family:'DM Mono',monospace;font-size:24px;font-weight:500;margin-top:6px}
+.num.alerta b{color:var(--ambar)}
+.num.info b{color:var(--azul)}
+
+/* filtros */
+.filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.campo{
+  background:var(--surface);border:1px solid var(--border);border-radius:9px;
+  padding:9px 12px;font-size:13px;min-width:180px;
+}
+.campo:focus{outline:none;border-color:var(--gold)}
+select.campo{min-width:170px}
+.chip{
+  border:1px solid var(--border);background:var(--surface);border-radius:999px;
+  padding:7px 13px;font-size:12px;color:var(--muted);
+}
+.chip[aria-pressed="true"]{border-color:var(--gold);color:var(--gold-light);background:#141c3a}
+
+/* tabela */
+.quadro{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
+.rolagem{overflow-x:auto;max-height:64vh;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+th{
+  position:sticky;top:0;background:#111832;z-index:2;text-align:left;
+  padding:10px 12px;border-bottom:1px solid var(--border);
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);
+}
+td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04);max-width:340px;overflow:hidden;text-overflow:ellipsis}
+tbody tr:hover td{background:rgba(255,255,255,.02)}
+td.vazio{color:var(--hint)}
+.selo{
+  display:inline-block;font-family:'DM Mono',monospace;font-size:10px;
+  padding:2px 7px;border-radius:999px;margin-right:5px;letter-spacing:.06em;
+}
+.selo.rep{background:rgba(232,201,122,.14);color:var(--ambar);border:1px solid rgba(232,201,122,.35)}
+.selo.rec{background:rgba(91,138,255,.14);color:var(--azul);border:1px solid rgba(91,138,255,.35)}
+.rodape-tabela{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--border);flex-wrap:wrap}
+.rodape-tabela .conta{margin-left:auto;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px}
+
+.vazia{padding:60px 20px;text-align:center;color:var(--muted)}
+.vazia p{margin:8px 0 18px}
+
+/* modal */
+.fundo{position:fixed;inset:0;background:rgba(3,6,18,.78);display:none;align-items:center;justify-content:center;z-index:60;padding:18px}
+.fundo.aberto{display:flex}
+.modal{
+  background:var(--card);border:1px solid var(--gold);border-radius:14px;
+  width:min(560px,100%);max-height:88vh;overflow:auto;padding:22px;
+}
+.modal h2{margin:0 0 4px;font-size:17px}
+.modal p.sub{margin:0 0 18px;color:var(--muted);font-size:13px}
+.linha{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.linha input[type=text],.linha input[type=file]{width:100%}
+.previa{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--surface);font-size:12px;margin-bottom:14px}
+.previa ul{margin:6px 0 0;padding-left:18px;color:var(--muted)}
+.opcao{display:flex;gap:9px;align-items:flex-start;margin-bottom:14px;font-size:13px;color:var(--muted)}
+.opcao input{margin-top:2px}
+.acoes{display:flex;gap:10px;justify-content:flex-end}
+.barra{height:6px;border-radius:999px;background:var(--surface);overflow:hidden;margin-bottom:14px;display:none}
+.barra.ativa{display:block}
+.barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-light));transition:width .2s}
+
+/* aviso */
+.aviso{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(14px);
+  background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);
+  padding:12px 18px;border-radius:10px;font-size:13px;z-index:80;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;
+}
+.aviso.aberto{opacity:1;transform:translateX(-50%) translateY(0)}
+.aviso.erro{border-left-color:var(--vermelho)}
+.aviso.ok{border-left-color:var(--verde)}
+
+@media (max-width:860px){
+  .corpo{grid-template-columns:1fr}
+  .lateral{border-right:none;border-bottom:1px solid var(--border)}
+  .lista{flex-direction:row;overflow-x:auto}
+  .item{min-width:170px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="marca"></div>
+  <h1>Central de Leads</h1>
+  <div class="direita">
+    <button class="btn pequeno" id="btnPainel">Voltar ao painel</button>
+    <button class="btn ouro pequeno" id="btnImportar" hidden>Importar lançamento</button>
+  </div>
+</header>
+
+<div class="corpo">
+  <aside class="lateral">
+    <div class="rotulo">Lançamentos</div>
+    <div class="lista" id="listaLancamentos"></div>
+  </aside>
+
+  <main class="principal" id="principal">
+    <div class="vazia" id="telaVazia">
+      <div class="rotulo">Nenhum lançamento aberto</div>
+      <p>Escolha um lançamento na lateral para ver os leads.</p>
+    </div>
+
+    <section id="conteudo" hidden>
+      <div class="numeros">
+        <div class="num"><div class="rotulo">Leads</div><b id="nTotal">0</b></div>
+        <div class="num"><div class="rotulo">E-mails únicos</div><b id="nUnicos">0</b></div>
+        <div class="num alerta"><div class="rotulo">Repetidos aqui</div><b id="nRepetidos">0</b></div>
+        <div class="num info"><div class="rotulo">Já vieram antes</div><b id="nRecorrentes">0</b></div>
+      </div>
+
+      <div class="filtros">
+        <input type="search" class="campo" id="busca" placeholder="Buscar nome, e-mail, telefone…">
+        <select class="campo" id="filtroSource"><option value="">Todas as origens</option></select>
+        <select class="campo" id="filtroData"><option value="">Todas as datas</option></select>
+        <button class="chip" id="chipRepetidos" aria-pressed="false">Só repetidos</button>
+        <button class="chip" id="chipRecorrentes" aria-pressed="false">Só recorrentes</button>
+        <button class="btn pequeno" id="btnExportar">Exportar CSV</button>
+        <button class="btn pequeno risco" id="btnExcluir" hidden>Excluir lançamento</button>
+      </div>
+
+      <div class="quadro">
+        <div class="rolagem">
+          <table>
+            <thead><tr id="cabecalho"></tr></thead>
+            <tbody id="linhas"></tbody>
+          </table>
+        </div>
+        <div class="rodape-tabela">
+          <button class="btn pequeno" id="btnAnterior">Anterior</button>
+          <button class="btn pequeno" id="btnProxima">Próxima</button>
+          <span class="conta" id="contaPagina"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- modal importar -->
+<div class="fundo" id="modalImportar">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloImportar">
+    <h2 id="tituloImportar">Importar lançamento</h2>
+    <p class="sub">O arquivo precisa ter o cabeçalho na primeira linha, como sai do Sheets.</p>
+
+    <div class="linha">
+      <label class="rotulo" for="campoId">Código do lançamento</label>
+      <input type="text" class="campo" id="campoId" placeholder="L5KR" autocomplete="off">
+    </div>
+    <div class="linha">
+      <label class="rotulo" for="campoRotulo">Nome (opcional)</label>
+      <input type="text" class="campo" id="campoRotulo" placeholder="L5 KR — Pós Cardio" autocomplete="off">
+    </div>
+    <div class="linha">
+      <label class="rotulo" for="campoArquivo">Arquivo CSV</label>
+      <input type="file" class="campo" id="campoArquivo" accept=".csv,text/csv">
+    </div>
+
+    <div class="previa" id="previa" hidden></div>
+
+    <div class="opcao" id="opcaoSubstituir" hidden>
+      <input type="checkbox" id="campoSubstituir">
+      <label for="campoSubstituir">Este código já existe. Marque para apagar os leads que estão lá e importar de novo; deixe desmarcado para somar ao que já existe.</label>
+    </div>
+
+    <div class="barra" id="barra"><i id="barraCheia"></i></div>
+
+    <div class="acoes">
+      <button class="btn" id="btnCancelarImport">Cancelar</button>
+      <button class="btn ouro" id="btnConfirmarImport" disabled>Importar leads</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal excluir -->
+<div class="fundo" id="modalExcluir">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloExcluir">
+    <h2 id="tituloExcluir">Excluir lançamento</h2>
+    <p class="sub" id="textoExcluir"></p>
+    <div class="linha">
+      <label class="rotulo" for="campoConfirma">Digite o código para confirmar</label>
+      <input type="text" class="campo" id="campoConfirma" autocomplete="off">
+    </div>
+    <div class="acoes">
+      <button class="btn" id="btnCancelarExcluir">Cancelar</button>
+      <button class="btn risco" id="btnConfirmarExcluir">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="aviso" id="aviso"></div>
+
+<script>
+/* ============================================================
+   Copie as duas constantes abaixo do topo de pesquisas.html
+   ============================================================ */
+const SUPABASE_URL = "https://iabugpuqlcfftwabuxsj.supabase.co";
+const SUPABASE_KEY = "COLE_AQUI_A_CHAVE_PUBLICAVEL";
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const POR_PAGINA = 100;
+const LOTE = 500;
+
+const estado = {
+  admin: false,
+  lancamentos: [],
+  atual: null,      // { id, rotulo, cols }
+  leads: [],        // { dados, _rep, _rec }
+  filtrados: [],
+  pagina: 1,
+  soRepetidos: false,
+  soRecorrentes: false,
+  arquivo: null     // { cabecalho, linhas }
+};
+
+const $ = id => document.getElementById(id);
+
+/* ---------- avisos ---------- */
+let avisoTimer;
+function avisar(texto, tipo){
+  const el = $("aviso");
+  el.textContent = texto;
+  el.className = "aviso aberto" + (tipo ? " " + tipo : "");
+  clearTimeout(avisoTimer);
+  avisoTimer = setTimeout(() => { el.className = "aviso"; }, 4200);
+}
+
+/* ---------- início ---------- */
+async function iniciar(){
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) { location.href = "/"; return; }
+  estado.admin = session.user?.user_metadata?.role === "admin";
+  if (estado.admin) {
+    $("btnImportar").hidden = false;
+    $("btnExcluir").hidden = false;
+  }
+  await carregarLancamentos();
+}
+
+async function carregarLancamentos(){
+  const { data, error } = await db
+    .from("lead_lancamentos_resumo")
+    .select("id, rotulo, cols, total, unicos")
+    .order("id");
+  if (error) { avisar("Não foi possível carregar os lançamentos: " + error.message, "erro"); return; }
+  estado.lancamentos = data || [];
+  desenharLateral();
+}
+
+function desenharLateral(){
+  const lista = $("listaLancamentos");
+  lista.innerHTML = "";
+  if (!estado.lancamentos.length){
+    const p = document.createElement("p");
+    p.className = "rotulo";
+    p.style.color = "var(--hint)";
+    p.textContent = "Nada importado ainda";
+    lista.appendChild(p);
+    return;
+  }
+  estado.lancamentos.forEach(l => {
+    const b = document.createElement("button");
+    b.className = "item";
+    b.setAttribute("aria-current", estado.atual && estado.atual.id === l.id ? "true" : "false");
+    const nome = document.createElement("strong");
+    nome.textContent = l.rotulo || l.id;
+    const conta = document.createElement("span");
+    conta.textContent = Number(l.total).toLocaleString("pt-BR") + " leads";
+    b.append(nome, conta);
+    b.addEventListener("click", () => abrirLancamento(l));
+    lista.appendChild(b);
+  });
+}
+
+/* ---------- abrir um lançamento ---------- */
+async function abrirLancamento(lanc){
+  estado.atual = lanc;
+  estado.pagina = 1;
+  estado.soRepetidos = false;
+  estado.soRecorrentes = false;
+  $("chipRepetidos").setAttribute("aria-pressed", "false");
+  $("chipRecorrentes").setAttribute("aria-pressed", "false");
+  $("busca").value = "";
+  desenharLateral();
+  $("telaVazia").hidden = true;
+  $("conteudo").hidden = false;
+  $("linhas").innerHTML = "<tr><td class='vazio'>Carregando…</td></tr>";
+
+  const leads = [];
+  let de = 0;
+  while (true){
+    const { data, error } = await db
+      .from("leads")
+      .select("dados, email")
+      .eq("lancamento_id", lanc.id)
+      .order("id")
+      .range(de, de + 999);
+    if (error) { avisar("Erro ao ler os leads: " + error.message, "erro"); return; }
+    leads.push(...data);
+    if (data.length < 1000) break;
+    de += 1000;
+  }
+
+  // repetidos dentro do próprio lançamento
+  const contagem = {};
+  leads.forEach(l => { if (l.email) contagem[l.email] = (contagem[l.email] || 0) + 1; });
+
+  // recorrentes: e-mail que já apareceu em outro lançamento
+  let recorrentes = {};
+  const { data: rec, error: erroRec } = await db.rpc("leads_recorrentes", { p_lanc: lanc.id });
+  if (erroRec) avisar("Os leads carregaram, mas a marcação de recorrência falhou.", "erro");
+  else (rec || []).forEach(r => { recorrentes[r.email] = r.lancamentos; });
+
+  estado.leads = leads.map(l => ({
+    dados: l.dados,
+    email: l.email,
+    _rep: !!(l.email && contagem[l.email] > 1),
+    _rec: recorrentes[l.email] || null
+  }));
+
+  montarFiltros();
+  aplicarFiltros();
+}
+
+function montarFiltros(){
+  const cols = estado.atual.cols || [];
+  const preencher = (sel, campo, primeiro) => {
+    const valores = [...new Set(estado.leads.map(l => (l.dados[campo] || "").trim()).filter(Boolean))].sort();
+    sel.innerHTML = "";
+    const op = document.createElement("option");
+    op.value = ""; op.textContent = primeiro;
+    sel.appendChild(op);
+    valores.forEach(v => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = v;
+      sel.appendChild(o);
+    });
+    sel.parentElement && (sel.hidden = !cols.includes(campo));
+  };
+  preencher($("filtroSource"), "UTM_SOURCE", "Todas as origens");
+  preencher($("filtroData"), "DATA", "Todas as datas");
+}
+
+function aplicarFiltros(){
+  const termo = $("busca").value.trim().toLowerCase();
+  const origem = $("filtroSource").value;
+  const data = $("filtroData").value;
+
+  estado.filtrados = estado.leads.filter(l => {
+    if (estado.soRepetidos && !l._rep) return false;
+    if (estado.soRecorrentes && !l._rec) return false;
+    if (origem && (l.dados.UTM_SOURCE || "").trim() !== origem) return false;
+    if (data && (l.dados.DATA || "").trim() !== data) return false;
+    if (termo){
+      const alvo = Object.values(l.dados).join(" ").toLowerCase();
+      if (!alvo.includes(termo)) return false;
+    }
+    return true;
+  });
+
+  estado.pagina = 1;
+  atualizarNumeros();
+  desenharTabela();
+}
+
+function atualizarNumeros(){
+  const total = estado.leads.length;
+  const unicos = new Set(estado.leads.map(l => l.email).filter(Boolean)).size;
+  const repetidos = estado.leads.filter(l => l._rep).length;
+  const recorrentes = estado.leads.filter(l => l._rec).length;
+  $("nTotal").textContent = total.toLocaleString("pt-BR");
+  $("nUnicos").textContent = unicos.toLocaleString("pt-BR");
+  $("nRepetidos").textContent = repetidos.toLocaleString("pt-BR");
+  $("nRecorrentes").textContent = recorrentes.toLocaleString("pt-BR");
+}
+
+function desenharTabela(){
+  const cols = estado.atual.cols || [];
+  const cab = $("cabecalho");
+  cab.innerHTML = "";
+  const thSelo = document.createElement("th");
+  thSelo.textContent = "Situação";
+  cab.appendChild(thSelo);
+  cols.forEach(c => {
+    const th = document.createElement("th");
+    th.textContent = c;
+    cab.appendChild(th);
+  });
+
+  const corpo = $("linhas");
+  corpo.innerHTML = "";
+
+  const totalPaginas = Math.max(1, Math.ceil(estado.filtrados.length / POR_PAGINA));
+  if (estado.pagina > totalPaginas) estado.pagina = totalPaginas;
+  const inicio = (estado.pagina - 1) * POR_PAGINA;
+  const pagina = estado.filtrados.slice(inicio, inicio + POR_PAGINA);
+
+  if (!pagina.length){
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.className = "vazio";
+    td.colSpan = cols.length + 1;
+    td.textContent = "Nenhum lead com esses filtros.";
+    tr.appendChild(td);
+    corpo.appendChild(tr);
+  }
+
+  pagina.forEach(l => {
+    const tr = document.createElement("tr");
+    const tdSelo = document.createElement("td");
+    if (l._rep){
+      const s = document.createElement("span");
+      s.className = "selo rep"; s.textContent = "repetido";
+      tdSelo.appendChild(s);
+    }
+    if (l._rec){
+      const s = document.createElement("span");
+      s.className = "selo rec"; s.textContent = "veio em " + l._rec.join(", ");
+      s.title = "Mesmo e-mail em: " + l._rec.join(", ");
+      tdSelo.appendChild(s);
+    }
+    if (!tdSelo.childNodes.length){ tdSelo.className = "vazio"; tdSelo.textContent = "—"; }
+    tr.appendChild(tdSelo);
+
+    cols.forEach(c => {
+      const td = document.createElement("td");
+      const v = (l.dados[c] || "").trim();
+      if (v){ td.textContent = v; td.title = v; }
+      else { td.className = "vazio"; td.textContent = "—"; }
+      tr.appendChild(td);
+    });
+    corpo.appendChild(tr);
+  });
+
+  $("contaPagina").textContent =
+    estado.filtrados.length.toLocaleString("pt-BR") + " de " +
+    estado.leads.length.toLocaleString("pt-BR") + " · página " + estado.pagina + "/" + totalPaginas;
+  $("btnAnterior").disabled = estado.pagina <= 1;
+  $("btnProxima").disabled = estado.pagina >= totalPaginas;
+}
+
+/* ---------- exportar ---------- */
+function exportarCSV(){
+  if (!estado.filtrados.length){ avisar("Não há nada para exportar com esses filtros."); return; }
+  const cols = estado.atual.cols || [];
+  const escapar = v => {
+    const s = (v ?? "").toString();
+    return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const linhas = [
+    [...cols, "SITUACAO"].join(","),
+    ...estado.filtrados.map(l => {
+      const marcas = [l._rep ? "repetido" : "", l._rec ? "recorrente(" + l._rec.join(" ") + ")" : ""].filter(Boolean).join(" ");
+      return [...cols.map(c => escapar(l.dados[c])), escapar(marcas)].join(",");
+    })
+  ].join("\r\n");
+
+  const blob = new Blob(["\ufeff" + linhas], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "leads_" + estado.atual.id + ".csv";
+  a.click();
+  URL.revokeObjectURL(url);
+  avisar("CSV gerado.", "ok");
+}
+
+/* ---------- leitura de CSV ---------- */
+function lerCSV(texto){
+  if (texto.charCodeAt(0) === 0xFEFF) texto = texto.slice(1);
+  const sep = (texto.split("\n")[0].match(/;/g) || []).length >
+              (texto.split("\n")[0].match(/,/g) || []).length ? ";" : ",";
+  const linhas = [];
+  let linha = [], valor = "", aspas = false;
+  for (let i = 0; i < texto.length; i++){
+    const c = texto[i];
+    if (aspas){
+      if (c === '"'){
+        if (texto[i + 1] === '"'){ valor += '"'; i++; }
+        else aspas = false;
+      } else valor += c;
+    } else {
+      if (c === '"') aspas = true;
+      else if (c === sep){ linha.push(valor); valor = ""; }
+      else if (c === "\n"){ linha.push(valor); linhas.push(linha); linha = []; valor = ""; }
+      else if (c !== "\r") valor += c;
+    }
+  }
+  if (valor !== "" || linha.length){ linha.push(valor); linhas.push(linha); }
+  return linhas.filter(l => l.some(c => c.trim() !== ""));
+}
+
+async function analisarArquivo(file){
+  const texto = await file.text();
+  const linhas = lerCSV(texto);
+  if (linhas.length < 2) throw new Error("O arquivo não tem cabeçalho e pelo menos uma linha de lead.");
+  const cabecalho = linhas[0].map(c => c.trim()).filter(Boolean);
+  if (!cabecalho.length) throw new Error("A primeira linha não parece um cabeçalho.");
+  const registros = linhas.slice(1).map(l => {
+    const o = {};
+    cabecalho.forEach((c, i) => { o[c] = (l[i] || "").trim(); });
+    return o;
+  });
+  return { cabecalho, registros };
+}
+
+function mostrarPrevia(){
+  const previa = $("previa");
+  const a = estado.arquivo;
+  if (!a){ previa.hidden = true; return; }
+  const emails = a.registros.map(r => (r.EMAIL || "").toLowerCase()).filter(Boolean);
+  const repetidos = emails.length - new Set(emails).size;
+  previa.hidden = false;
+  previa.innerHTML = "";
+  const t = document.createElement("div");
+  t.className = "rotulo";
+  t.textContent = "O que veio no arquivo";
+  const ul = document.createElement("ul");
+  [
+    a.registros.length.toLocaleString("pt-BR") + " leads",
+    a.cabecalho.length + " colunas: " + a.cabecalho.join(", "),
+    emails.length ? repetidos + " e-mail(s) repetido(s) dentro do arquivo — todos serão importados e marcados"
+                  : "Sem coluna EMAIL: repetição e recorrência ficam sem marcação"
+  ].forEach(txt => {
+    const li = document.createElement("li");
+    li.textContent = txt;
+    ul.appendChild(li);
+  });
+  previa.append(t, ul);
+}
+
+function conferirFormulario(){
+  const id = $("campoId").value.trim();
+  $("btnConfirmarImport").disabled = !(id && estado.arquivo);
+  const existe = estado.lancamentos.some(l => l.id === id);
+  $("opcaoSubstituir").hidden = !existe;
+}
+
+async function importar(){
+  const id = $("campoId").value.trim();
+  const rotulo = $("campoRotulo").value.trim() || null;
+  const a = estado.arquivo;
+  const substituir = $("campoSubstituir").checked && !$("opcaoSubstituir").hidden;
+  if (!id || !a) return;
+
+  $("btnConfirmarImport").disabled = true;
+  $("btnCancelarImport").disabled = true;
+  $("barra").className = "barra ativa";
+  $("barraCheia").style.width = "0%";
+
+  try {
+    const { error: e1 } = await db.from("lead_lancamentos")
+      .upsert({ id, rotulo, cols: a.cabecalho, total: a.registros.length, atualizado_em: new Date().toISOString() });
+    if (e1) throw e1;
+
+    if (substituir){
+      const { error: e2 } = await db.from("leads").delete().eq("lancamento_id", id);
+      if (e2) throw e2;
+    }
+
+    for (let i = 0; i < a.registros.length; i += LOTE){
+      const lote = a.registros.slice(i, i + LOTE).map(dados => ({ lancamento_id: id, dados }));
+      const { error: e3 } = await db.from("leads").insert(lote);
+      if (e3) throw e3;
+      $("barraCheia").style.width = Math.round(((i + lote.length) / a.registros.length) * 100) + "%";
+    }
+
+    // total real depois da importação
+    const { count } = await db.from("leads").select("id", { count: "exact", head: true }).eq("lancamento_id", id);
+    if (typeof count === "number"){
+      await db.from("lead_lancamentos").update({ total: count }).eq("id", id);
+    }
+
+    fecharImportar();
+    avisar(a.registros.length.toLocaleString("pt-BR") + " leads importados em " + id + ".", "ok");
+    await carregarLancamentos();
+    const novo = estado.lancamentos.find(l => l.id === id);
+    if (novo) abrirLancamento(novo);
+  } catch (err){
+    avisar("A importação parou: " + (err.message || err), "erro");
+    $("btnConfirmarImport").disabled = false;
+    $("btnCancelarImport").disabled = false;
+    $("barra").className = "barra";
+  }
+}
+
+function abrirImportar(){
+  estado.arquivo = null;
+  $("campoId").value = "";
+  $("campoRotulo").value = "";
+  $("campoArquivo").value = "";
+  $("campoSubstituir").checked = false;
+  $("previa").hidden = true;
+  $("opcaoSubstituir").hidden = true;
+  $("barra").className = "barra";
+  $("btnConfirmarImport").disabled = true;
+  $("btnCancelarImport").disabled = false;
+  $("modalImportar").classList.add("aberto");
+  $("campoId").focus();
+}
+function fecharImportar(){ $("modalImportar").classList.remove("aberto"); }
+
+/* ---------- excluir ---------- */
+function abrirExcluir(){
+  if (!estado.atual) return;
+  $("textoExcluir").textContent =
+    "Isso apaga " + estado.leads.length.toLocaleString("pt-BR") + " leads de " + estado.atual.id + ". Não dá para desfazer.";
+  $("campoConfirma").value = "";
+  $("modalExcluir").classList.add("aberto");
+  $("campoConfirma").focus();
+}
+async function excluir(){
+  const id = estado.atual.id;
+  if ($("campoConfirma").value.trim() !== id){ avisar("O código digitado não confere.", "erro"); return; }
+  const { error } = await db.from("lead_lancamentos").delete().eq("id", id);
+  if (error){ avisar("Não foi possível excluir: " + error.message, "erro"); return; }
+  $("modalExcluir").classList.remove("aberto");
+  estado.atual = null;
+  estado.leads = [];
+  $("conteudo").hidden = true;
+  $("telaVazia").hidden = false;
+  avisar("Lançamento " + id + " excluído.", "ok");
+  await carregarLancamentos();
+}
+
+/* ---------- ligações ---------- */
+$("btnPainel").addEventListener("click", () => { location.href = "/"; });
+$("btnImportar").addEventListener("click", abrirImportar);
+$("btnCancelarImport").addEventListener("click", fecharImportar);
+$("btnConfirmarImport").addEventListener("click", importar);
+$("campoId").addEventListener("input", conferirFormulario);
+$("campoArquivo").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) { estado.arquivo = null; mostrarPrevia(); conferirFormulario(); return; }
+  try {
+    estado.arquivo = await analisarArquivo(file);
+    if (!$("campoId").value.trim()){
+      const m = file.name.match(/L\d+[A-Z\-]*/i);
+      if (m) $("campoId").value = m[0].toUpperCase();
+    }
+    mostrarPrevia();
+  } catch (err){
+    estado.arquivo = null;
+    mostrarPrevia();
+    avisar(err.message, "erro");
+  }
+  conferirFormulario();
+});
+
+$("btnExportar").addEventListener("click", exportarCSV);
+$("btnExcluir").addEventListener("click", abrirExcluir);
+$("btnCancelarExcluir").addEventListener("click", () => $("modalExcluir").classList.remove("aberto"));
+$("btnConfirmarExcluir").addEventListener("click", excluir);
+
+$("busca").addEventListener("input", aplicarFiltros);
+$("filtroSource").addEventListener("change", aplicarFiltros);
+$("filtroData").addEventListener("change", aplicarFiltros);
+$("chipRepetidos").addEventListener("click", e => {
+  estado.soRepetidos = !estado.soRepetidos;
+  e.currentTarget.setAttribute("aria-pressed", String(estado.soRepetidos));
+  aplicarFiltros();
+});
+$("chipRecorrentes").addEventListener("click", e => {
+  estado.soRecorrentes = !estado.soRecorrentes;
+  e.currentTarget.setAttribute("aria-pressed", String(estado.soRecorrentes));
+  aplicarFiltros();
+});
+$("btnAnterior").addEventListener("click", () => { estado.pagina--; desenharTabela(); });
+$("btnProxima").addEventListener("click", () => { estado.pagina++; desenharTabela(); });
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape"){
+    fecharImportar();
+    $("modalExcluir").classList.remove("aberto");
+  }
+});
+
+iniciar();
+</script>
+</body>
+</html>
