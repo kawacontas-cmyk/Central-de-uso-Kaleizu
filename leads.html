@@ -268,11 +268,8 @@ td.vazio{color:var(--hint)}
 <div class="aviso" id="aviso"></div>
 
 <script>
-/* ============================================================
-   Copie as duas constantes abaixo do topo de pesquisas.html
-   ============================================================ */
 const SUPABASE_URL = "https://iabugpuqlcfftwabuxsj.supabase.co";
-const SUPABASE_KEY = "COLE_AQUI_A_CHAVE_PUBLICAVEL";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYnVncHVxbGNmZnR3YWJ1eHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTA5MTIsImV4cCI6MjA5MTY2NjkxMn0.Rs2OJlbd8_2TMroE9iehTtZLFdBImVfBpKEH-RT_3UY";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -306,7 +303,7 @@ function avisar(texto, tipo){
 /* ---------- início ---------- */
 async function iniciar(){
   const { data: { session } } = await db.auth.getSession();
-  if (!session) { location.href = "/"; return; }
+  if (!session) { location.href = "index.html"; return; }
   estado.admin = session.user?.user_metadata?.role === "admin";
   if (estado.admin) {
     $("btnImportar").hidden = false;
@@ -702,7 +699,7 @@ async function excluir(){
 }
 
 /* ---------- ligações ---------- */
-$("btnPainel").addEventListener("click", () => { location.href = "/"; });
+$("btnPainel").addEventListener("click", () => { location.href = "index.html"; });
 $("btnImportar").addEventListener("click", abrirImportar);
 $("btnCancelarImport").addEventListener("click", fecharImportar);
 $("btnConfirmarImport").addEventListener("click", importar);
