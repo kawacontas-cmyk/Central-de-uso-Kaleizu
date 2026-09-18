@@ -255,6 +255,48 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .sub-rodape{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:18px;font-size:12px;color:var(--muted)}
 @media (max-width:980px){.org-grade{grid-template-columns:1fr}.org-grafico{min-height:280px}}
 
+/* explorar tráfego */
+.pills{display:inline-flex;gap:4px;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:99px;flex-wrap:wrap}
+.pill{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;padding:6px 12px;border-radius:99px;cursor:pointer;white-space:nowrap}
+.pill:hover{color:var(--text)}
+.pill.on{background:var(--gold);color:#060B1F;font-weight:600}
+.tr-grade{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px;margin-bottom:16px;align-items:stretch}
+.tr-funil{display:flex;flex-direction:column}
+.tr-funil .funil-svg{margin:auto 0;max-height:none}
+.tr-dir{display:flex;flex-direction:column;gap:16px;min-width:0}
+.g3.sem-margem{margin-bottom:0}
+.tr-grafico{height:280px;margin-top:10px}
+.tr-base{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:stretch}
+.op-cab{margin-bottom:12px}
+.op-cab .pills{border-radius:10px}
+.op-cab .pill{border-radius:7px}
+.sub-abas{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.sub-aba{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font:inherit;font-size:13px;padding:8px 12px;cursor:pointer;margin-bottom:-1px}
+.sub-aba:hover{color:var(--text)}
+.sub-aba.on{color:var(--gold-light);border-bottom-color:var(--gold);font-weight:600}
+.op-vazio{min-height:220px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:13px;padding:0 20px}
+.op-nota{font-size:11px;color:var(--hint);margin-top:10px;font-family:'DM Mono',monospace}
+.tr-criativos{display:flex;flex-direction:column}
+.carrossel{flex:1;display:flex;flex-direction:column;margin-top:14px;min-height:300px}
+.slide{display:none;flex:1;flex-direction:column;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}
+.slide.on{display:flex}
+.slide-arte{flex:1;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--hint);
+  background:radial-gradient(120% 90% at 50% 0%,rgba(169,139,255,.18),transparent 65%),linear-gradient(180deg,#141b38,#0b1026)}
+.slide-arte svg{width:34px;height:34px}
+.slide-arte span{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.slide-info{padding:14px 16px}
+.slide-nome{font-weight:600;font-size:15px;line-height:1.35}
+.slide-conj{font-size:12px;color:var(--muted);margin-top:2px}
+.slide-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip-dado{font-family:'DM Mono',monospace;font-size:11px;padding:3px 9px;border-radius:99px;background:rgba(139,92,246,.2);color:#d6c9ff}
+.carrossel-nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px}
+.seta-car{background:none;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1}
+.seta-car:hover{color:var(--gold-light);border-color:var(--gold)}
+.pontos{display:flex;gap:6px}
+.ponto{width:8px;height:8px;border-radius:50%;border:none;background:var(--hint);cursor:pointer;padding:0}
+.ponto.on{background:var(--gold)}
+@media (max-width:1100px){.tr-grade,.tr-base{grid-template-columns:1fr}}
+
 /* respostas abertas */
 .abertas{list-style:none;display:flex;flex-direction:column;gap:8px}
 .abertas li{font-size:13px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;line-height:1.45}
@@ -881,8 +923,9 @@ function abaGeral(c) {
   desenharDesempenho(c);
 }
 
-function funilSvg(camadas) {
-  const W = 400, H = 44, gap = 4, n = camadas.length;
+function funilSvg(camadas, tamanho) {
+  const grande = tamanho === 'grande';
+  const W = 400, H = grande ? 78 : 44, gap = grande ? 6 : 4, n = camadas.length;
   const larg = i => W - (W * 0.55) * (i / n);      // topo de cada camada
   const cores = ['#6d4fd1', '#7f62dc', '#9277e4', '#a98bff'];
   return `<svg class="funil-svg" viewBox="0 0 ${W} ${n * (H + gap)}" role="img" aria-label="Funil do tráfego">
@@ -890,22 +933,27 @@ function funilSvg(camadas) {
       const t = larg(i), b = larg(i + 1), y = i * (H + gap);
       const x1 = (W - t) / 2, x2 = (W + t) / 2, x3 = (W + b) / 2, x4 = (W - b) / 2;
       return `<polygon points="${x1},${y} ${x2},${y} ${x3},${y + H} ${x4},${y + H}" fill="${cores[i % cores.length]}"/>
-        <text x="${W / 2}" y="${y + 19}" text-anchor="middle" class="fv">${esc(c.v)}</text>
-        <text x="${W / 2}" y="${y + 33}" text-anchor="middle" class="fr">${esc(c.r)}</text>`;
+        <text x="${W / 2}" y="${y + H / 2 - 1}" text-anchor="middle" class="fv">${esc(c.v)}</text>
+        <text x="${W / 2}" y="${y + H / 2 + 13}" text-anchor="middle" class="fr">${esc(c.r)}</text>`;
     }).join('')}
   </svg>`;
 }
 
-function desenharDesempenho(c) {
-  const P = d => c.porDia[d];
-  charts.gDesemp = new Chart($('gDesemp'), {
+function desenharDesempenho(c, o = {}) {
+  const id = o.id || 'gDesemp';
+  const leads = o.leads || c.dias.map(d => c.porDia[d].leads);
+  const gasto = o.gasto || c.dias.map(d => c.porDia[d].gasto);
+  const traf = o.trafego || c.dias.map(d => c.trafegoDia(d));
+  // O CPL é só do tráfego; quando há orgânicos no dia, deixa claro sobre quantos leads ele foi calculado
+  const rodape = o.rodape || (i => c.porDia[c.dias[i]].organicos ? `CPL sobre ${int.format(traf[i])} leads de tráfego` : '');
+  charts[id] = new Chart($(id), {
     data: {
       labels: rotulosDias(c),
       datasets: [
         // Leads e gasto lado a lado, no mesmo eixo (os leads ficam baixinhos, como referência)
-        { type: 'bar', label: 'Leads', data: c.dias.map(d => P(d).leads), fmt: 'int', yAxisID: 'y', backgroundColor: '#6d4fd1', hoverBackgroundColor: '#8a6ff0', borderRadius: 3, maxBarThickness: 16, barPercentage: 1, categoryPercentage: .5, order: 2 },
-        { type: 'bar', label: 'Gasto', data: c.dias.map(d => P(d).gasto), fmt: 'moeda', yAxisID: 'y', backgroundColor: COR.purple, hoverBackgroundColor: '#c2adff', borderRadius: 3, maxBarThickness: 16, barPercentage: 1, categoryPercentage: .5, order: 2 },
-        { type: 'line', label: 'CPL', data: c.dias.map(d => div(P(d).gasto, c.trafegoDia(d))), fmt: 'moeda', yAxisID: 'y1', borderColor: '#e8eaf6', backgroundColor: '#e8eaf6', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .4, spanGaps: true, order: 1 },
+        { type: 'bar', label: 'Leads', data: leads, fmt: 'int', yAxisID: 'y', backgroundColor: '#6d4fd1', hoverBackgroundColor: '#8a6ff0', borderRadius: 3, maxBarThickness: 16, barPercentage: 1, categoryPercentage: .5, order: 2 },
+        { type: 'bar', label: 'Gasto', data: gasto, fmt: 'moeda', yAxisID: 'y', backgroundColor: COR.purple, hoverBackgroundColor: '#c2adff', borderRadius: 3, maxBarThickness: 16, barPercentage: 1, categoryPercentage: .5, order: 2 },
+        { type: 'line', label: 'CPL', data: gasto.map((g, i) => div(g, traf[i])), fmt: 'moeda', yAxisID: 'y1', borderColor: '#e8eaf6', backgroundColor: '#e8eaf6', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .4, spanGaps: true, order: 1 },
       ],
     },
     options: {
@@ -920,11 +968,7 @@ function desenharDesempenho(c) {
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${formatar(ctx.raw, ctx.dataset.fmt)}`,
             labelPointStyle: () => ({ pointStyle: 'circle', rotation: 0 }),
-            footer: items => {
-              // O CPL é só do tráfego; quando há orgânicos no dia, deixa claro sobre quantos leads ele foi calculado
-              const d = c.dias[items[0].dataIndex];
-              return P(d).organicos ? `CPL sobre ${int.format(c.trafegoDia(d))} leads de tráfego` : '';
-            },
+            footer: items => rodape(items[0].dataIndex),
           },
         },
       },
@@ -946,6 +990,7 @@ function explorar(tipo) {
   history.pushState(null, '', `?id=${encodeURIComponent(atualId)}&ver=${tipo}`);
   est.sub = tipo;
   if (tipo === 'organico') Object.assign(org, { canal: 'todos', agrupar: 'canal', periodo: 'data' });
+  if (tipo === 'trafego') Object.assign(traf, { temp: 'todas', foco: 'oportunidades', nivel: 'campanha', slide: 0 });
   renderAba();
   window.scrollTo(0, 0);
 }
@@ -977,10 +1022,7 @@ function rodapeSub() {
 function renderSub() {
   const c = calcular(est.de, est.ate);
   if (est.sub === 'organico') return subOrganico(c);
-  // Tráfego: funil, métricas por dia e criativos, em tela cheia
-  $('conteudo').innerHTML = migalha('Tráfego') + '<div id="subA"></div><div id="subB" class="exp-b"></div>' + rodapeSub();
-  alvoRender = 'subA';
-  try { abaMidia(c); alvoRender = 'subB'; abaCriativos(c); } finally { alvoRender = 'conteudo'; }
+  return subTrafego(c);
 }
 
 const chaveOrg = {
@@ -1066,6 +1108,194 @@ function subOrganico(c) {
     rotulos = c.dias.map(ddmm); dados = c.dias.map(d => porDia[d]);
   }
   desenhar('gOrgDia', 'bar', rotulos, [{ label: 'Leads orgânicos', data: dados, cor: '#8b5cf6' }]);
+}
+
+// ---------- Explorar: Tráfego ----------
+const traf = { temp: 'todas', foco: 'oportunidades', nivel: 'campanha', slide: 0 };
+const TEMPERATURAS = { quente: /quente|rmkt|remarketing|retarget|engaj|envolv|lal.*quente/i, frio: /frio|fria|cold|prospec|aberto|interesse|lookalike|\blal\b/i };
+const MIN_LEADS_RANKING = 3;
+
+// Recorte do tráfego (todas / quente / frio) com leads atribuídos a cada anúncio
+function calcTrafego(c) {
+  const casaTemp = a => traf.temp === 'todas' || TEMPERATURAS[traf.temp].test(`${a.campaign_name || ''} ${a.adset_name || ''}`);
+  const ads = c.ads.filter(casaTemp);
+
+  // Índice nome/ID do anúncio → ad_id, para ligar cada linha de UTM a um anúncio
+  const indice = {};
+  est.adDia.forEach(a => { if (norm(a.ad_name)) indice[norm(a.ad_name)] = a.ad_id; indice[norm(a.ad_id)] = a.ad_id; });
+  const idsNoRecorte = new Set(ads.map(a => a.ad_id));
+
+  const leadsAd = {};          // ad_id → leads do banco
+  const leadsDiaRecorte = {};  // dia → leads do banco ligados a anúncios do recorte
+  for (const r of c.utm) {
+    if (!r._pago) continue;
+    const id = indice[norm(r.utm_content)] || indice[norm(r.utm_term)];
+    if (!id) continue;
+    leadsAd[id] = (leadsAd[id] || 0) + Number(r.leads);
+    if (idsNoRecorte.has(id)) leadsDiaRecorte[r.data] = (leadsDiaRecorte[r.data] || 0) + Number(r.leads);
+  }
+
+  const vazio = () => ({ gasto: 0, impr: 0, cliques: 0, lpv: 0, leadsMeta: 0 });
+  const porDia = Object.fromEntries(c.dias.map(d => [d, vazio()]));
+  const t = vazio();
+  for (const a of ads) {
+    for (const [k, col] of [['gasto', 'gasto'], ['impr', 'impressoes'], ['cliques', 'cliques_link'], ['lpv', 'lpv'], ['leadsMeta', 'leads_meta']]) {
+      const v = Number(a[col] || 0);
+      t[k] += v;
+      if (porDia[a.data]) porDia[a.data][k] += v;
+    }
+  }
+  const usaBanco = c.usaBanco;
+  // Leads de tráfego: no recorte "todas", os mesmos das outras telas; num recorte, os ligados aos anúncios dele
+  const leadsDia = c.dias.map(d => !usaBanco ? porDia[d].leadsMeta
+    : traf.temp === 'todas' ? c.trafegoDia(d) : (leadsDiaRecorte[d] || 0));
+  const leads = leadsDia.reduce((s, n) => s + n, 0);
+  return { ads, porDia, t, leads, leadsDia, leadsAd, usaBanco };
+}
+
+function agregarNivel(tr, nivel) {
+  const chave = { campanha: a => a.campaign_name || '(sem campanha)', conjunto: a => a.adset_name || '(sem conjunto)', anuncio: a => a.ad_id }[nivel];
+  const m = {};
+  const contados = new Set();
+  for (const a of tr.ads) {
+    const k = chave(a);
+    const x = m[k] ||= { nome: nivel === 'anuncio' ? (a.ad_name || a.ad_id) : k, sub: nivel === 'anuncio' ? (a.adset_name || '') : nivel === 'conjunto' ? (a.campaign_name || '') : '', gasto: 0, impr: 0, cliques: 0, lpv: 0, leadsMeta: 0, leads: 0 };
+    x.gasto += Number(a.gasto || 0); x.impr += Number(a.impressoes || 0); x.cliques += Number(a.cliques_link || 0);
+    x.lpv += Number(a.lpv || 0); x.leadsMeta += Number(a.leads_meta || 0);
+    if (nivel === 'anuncio' && a.ad_name) x.nome = a.ad_name;
+    // leads do banco entram uma vez por anúncio em cada grupo
+    const marca = `${k}|${a.ad_id}`;
+    if (!contados.has(marca)) { contados.add(marca); x.leads += tr.leadsAd[a.ad_id] || 0; }
+  }
+  return Object.values(m).map(x => {
+    const l = tr.usaBanco ? x.leads : x.leadsMeta;
+    return { ...x, l, cpl: div(x.gasto, l), ctr: div(x.cliques, x.impr), connect: x.lpv ? div(x.lpv, x.cliques) : null };
+  });
+}
+
+function subTrafego(c) {
+  const tr = calcTrafego(c);
+  const t = tr.t;
+  const cplMedio = div(t.gasto, tr.leads);
+  const camadas = [
+    { v: moeda(div(t.gasto * 1000, t.impr)), r: 'CPM' },
+    { v: taxa(div(t.cliques, t.impr)), r: 'CTR' },
+    ...(t.lpv ? [{ v: taxa(div(t.lpv, t.cliques)), r: 'Connect rate' }] : []),
+    { v: t.lpv ? taxa(div(tr.leads, t.lpv)) : taxa(div(tr.leads, t.cliques)), r: 'Tx. conversão' },
+  ];
+  const macro = (rot, valor, icone, cor, sub) => `
+    <div class="card macro">
+      <div class="rotulo">${rot}</div>
+      <div class="macro-linha"><span class="k-ico" style="--c:${cor}">${ico(icone)}</span><span class="macro-valor">${valor}</span></div>
+      <div class="sub">${sub || '&nbsp;'}</div>
+    </div>`;
+  const pills = (grupo, atual, opcoes, cls = '') => `<div class="pills ${cls}" role="group">${opcoes.map(([v, txt]) =>
+    `<button class="pill${v === atual ? ' on' : ''}" aria-pressed="${v === atual}" onclick="traf.${grupo}='${v}'; ${grupo === 'temp' ? 'traf.slide=0; ' : ''}renderAba()">${txt}</button>`).join('')}</div>`;
+
+  // Principais criativos: os anúncios com mais leads (ou mais gasto, sem leads)
+  const anuncios = agregarNivel(tr, 'anuncio').filter(a => a.gasto > 0 || a.l > 0)
+    .sort((a, b) => (b.l - a.l) || (b.gasto - a.gasto)).slice(0, 5);
+  traf.slide = Math.min(traf.slide, Math.max(0, anuncios.length - 1));
+
+  $('conteudo').innerHTML = `
+    ${migalha('Tráfego')}
+    <div class="tr-grade">
+      <div class="card bloco tr-funil">
+        <div class="rotulo">Funil de tráfego</div>
+        ${t.impr ? funilSvg(camadas, 'grande') : '<div class="mini-vazio">Sem dados do Meta no período.</div>'}
+      </div>
+      <div class="tr-dir">
+        <div class="g3 sem-margem">
+          ${macro('Valor gasto', moeda(t.gasto), 'dinheiro', COR.gold, `${int.format(tr.ads.length ? new Set(tr.ads.map(a => a.ad_id)).size : 0)} anúncios veiculados`)}
+          ${macro('Total leads (tráfego)', int.format(tr.leads), 'pessoas', COR.purple, tr.usaBanco ? '' : 'Atribuição do Meta')}
+          ${macro('Custo por lead', moeda(cplMedio), 'alvo', COR.red, '')}
+        </div>
+        <div class="card bloco">
+          <div class="rotulo">Desempenho por dia</div>
+          <div class="grafico tr-grafico"><canvas id="gTrDesemp"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tr-base">
+      <div class="card bloco">
+        <div class="op-cab">
+          ${pills('foco', traf.foco, [['oportunidades', 'Melhores oportunidades'], ['menorcpl', 'Menor custo por lead'], ['qualidade', 'Melhor qualidade do lead']])}
+        </div>
+        <div class="sub-abas" role="tablist">
+          ${[['campanha', 'Campanhas'], ['conjunto', 'Conjuntos'], ['anuncio', 'Anúncios']].map(([v, txt]) =>
+            `<button class="sub-aba${traf.nivel === v ? ' on' : ''}" role="tab" aria-selected="${traf.nivel === v}" onclick="traf.nivel='${v}'; renderAba()">${txt}</button>`).join('')}
+        </div>
+        <div id="opConteudo"></div>
+      </div>
+
+      <div class="card bloco tr-criativos">
+        <div class="rotulo">Principais criativos</div>
+        ${anuncios.length ? `
+          <div class="carrossel">
+            ${anuncios.map((a, i) => `
+              <div class="slide${i === traf.slide ? ' on' : ''}" aria-hidden="${i !== traf.slide}">
+                <div class="slide-arte">${ico('imagem')}<span>#${i + 1} em leads</span></div>
+                <div class="slide-info">
+                  <div class="slide-nome">${esc(a.nome)}</div>
+                  <div class="slide-conj">${esc(a.sub)}</div>
+                  <div class="slide-chips">
+                    <span class="chip-dado">Gasto: ${moeda(a.gasto)}</span>
+                    <span class="chip-dado">Leads: ${int.format(a.l)}</span>
+                    <span class="chip-dado">CPL: ${moeda(a.cpl)}</span>
+                  </div>
+                </div>
+              </div>`).join('')}
+            <div class="carrossel-nav">
+              <button class="seta-car" aria-label="Anterior" onclick="traf.slide=(traf.slide+${anuncios.length}-1)%${anuncios.length}; mostrarSlide()">‹</button>
+              <div class="pontos">${anuncios.map((_, i) => `<button class="ponto${i === traf.slide ? ' on' : ''}" aria-label="Criativo ${i + 1}" onclick="traf.slide=${i}; mostrarSlide()"></button>`).join('')}</div>
+              <button class="seta-car" aria-label="Próximo" onclick="traf.slide=(traf.slide+1)%${anuncios.length}; mostrarSlide()">›</button>
+            </div>
+          </div>` : '<div class="mini-vazio">Nenhum anúncio no período.</div>'}
+      </div>
+    </div>
+    ${rodapeSub()}`;
+
+  $('subFiltro').innerHTML = pills('temp', traf.temp, [['todas', 'Todas'], ['quente', 'Quente'], ['frio', 'Frio']], 'pills-topo');
+
+  // Oportunidades
+  const linhas = agregarNivel(tr, traf.nivel);
+  let lista = [], vazio = '';
+  if (traf.foco === 'qualidade') {
+    vazio = 'Ainda não há um critério de qualidade definido para os leads. Quando houver, este ranking mostra quem traz os melhores.';
+  } else if (traf.foco === 'menorcpl') {
+    lista = linhas.filter(x => x.l >= MIN_LEADS_RANKING).sort((a, b) => a.cpl - b.cpl);
+    vazio = `Nenhum item com pelo menos ${MIN_LEADS_RANKING} leads no período.`;
+  } else {
+    // Melhores oportunidades: CPL abaixo da média e volume relevante, os que mais trazem leads primeiro
+    lista = linhas.filter(x => x.l >= MIN_LEADS_RANKING && cplMedio && x.cpl <= cplMedio).sort((a, b) => b.l - a.l);
+    vazio = 'Nenhum item com CPL abaixo da média e volume suficiente no período.';
+  }
+  lista = lista.slice(0, 10);
+  $('opConteudo').innerHTML = !lista.length ? `<div class="op-vazio">${vazio}</div>` : `
+    <div class="tabela-wrap"><table class="op-tabela">
+      <thead><tr><th>${{ campanha: 'Campanha', conjunto: 'Conjunto', anuncio: 'Anúncio' }[traf.nivel]}</th><th>Investido</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>CTR</th><th>Connect</th></tr></thead>
+      <tbody>${lista.map(x => {
+        const dif = cplMedio && x.cpl != null ? x.cpl / cplMedio - 1 : null;
+        return `<tr>
+          <td>${esc(x.nome)}${x.sub ? `<span class="fraco">${esc(x.sub)}</span>` : ''}</td>
+          <td>${moeda(x.gasto)}</td><td>${int.format(x.l)}</td><td>${moeda(x.cpl)}</td>
+          <td class="${dif == null || Math.abs(dif) < .005 ? '' : dif < 0 ? 'bom' : 'ruim'}">${dif == null ? '—' : Math.abs(dif) < .005 ? 'na média' : `${dif < 0 ? '−' : '+'}${pct(Math.abs(dif))}`}</td>
+          <td>${taxa(x.ctr)}</td><td>${taxa(x.connect)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>
+    <p class="op-nota">Mínimo de ${MIN_LEADS_RANKING} leads por item · CPL médio do recorte: ${moeda(cplMedio)}</p>`;
+
+  const gasto = c.dias.map(d => tr.porDia[d].gasto);
+  desenharDesempenho(c, {
+    id: 'gTrDesemp', leads: tr.leadsDia, gasto, trafego: tr.leadsDia, rotuloLeads: 'Leads', rodape: () => '',
+  });
+}
+
+function mostrarSlide() {
+  document.querySelectorAll('.slide').forEach((s, i) => { s.classList.toggle('on', i === traf.slide); s.setAttribute('aria-hidden', String(i !== traf.slide)); });
+  document.querySelectorAll('.ponto').forEach((p, i) => p.classList.toggle('on', i === traf.slide));
 }
 
 // ---------- Mídia paga ----------
