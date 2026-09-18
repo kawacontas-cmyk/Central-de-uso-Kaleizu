@@ -207,6 +207,49 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .aba.on{background:var(--surface);color:var(--gold-light);box-shadow:inset 0 0 0 1px rgba(205,160,76,.3)}
 .carregando{color:var(--muted);padding:40px 0;text-align:center}
 
+/* visão macro */
+.macro{padding:18px 20px}
+.macro-linha{display:flex;align-items:center;gap:12px;margin-top:10px}
+.macro-valor{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.macro .sub{font-size:12px;color:var(--muted);margin-top:8px}
+.grafico.alto{height:340px;margin-top:10px}
+.mini{padding:18px 20px;min-height:280px;display:flex;flex-direction:column;min-width:0}
+.mini-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px}
+.mini-sub{font-size:12px;color:var(--muted);margin:4px 0 14px}
+.mini-vazio{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:13px;padding:0 12px}
+.explorar{cursor:pointer;transition:border-color .15s}
+.explorar:hover,.explorar:focus-within{border-color:rgba(205,160,76,.45)}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid rgba(205,160,76,.4);color:var(--gold-light);
+  border-radius:99px;padding:5px 12px;font:inherit;font-size:12px;cursor:pointer;opacity:0;transform:translateY(-2px);transition:opacity .15s,transform .15s}
+.chip svg{width:13px;height:13px}
+.explorar:hover .chip,.explorar:focus-within .chip,.chip:focus-visible{opacity:1;transform:none}
+@media (hover:none){.chip{opacity:1;transform:none}}
+.barras-h{display:flex;flex-direction:column;gap:9px;max-height:190px;overflow-y:auto;padding-right:4px}
+.bh{display:grid;grid-template-columns:minmax(0,42%) 1fr auto;align-items:center;gap:10px;font-size:12px}
+.bh-rot{color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bh-trilho{height:12px;background:var(--surface);border-radius:3px;overflow:hidden}
+.bh-trilho span{display:block;height:100%;background:var(--green);border-radius:3px}
+.bh-num{font-family:'DM Mono',monospace;color:var(--text);min-width:28px;text-align:right}
+.funil-svg{width:100%;height:auto;max-height:210px;margin-top:auto}
+.funil-svg .fv{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;fill:#fff}
+.funil-svg .fr{font-family:'DM Sans',sans-serif;font-size:10px;fill:rgba(255,255,255,.8)}
+
+/* janela Explorar */
+#explorar{max-width:1200px;width:calc(100% - 32px);max-height:calc(100vh - 40px)}
+#explorar .modal-corpo{background:var(--bg);max-height:calc(100vh - 110px);overflow-y:auto}
+.exp-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.exp-b{margin-top:16px}
+.lista-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.lista-acoes{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lista-acoes input{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;min-width:240px}
+.lista-acoes input:focus{outline:none;border-color:var(--gold)}
+#tabOrg td.esq{text-align:left;font-family:'DM Sans',sans-serif}
+#tabOrg th:not(:first-child){text-align:left}
+#tabOrg td:last-child,#tabOrg th:last-child{text-align:right}
+.paginacao{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:12px;font-size:12px;color:var(--muted)}
+.paginacao:empty{display:none}
+@media (max-width:640px){#explorar{width:100%;max-width:none;max-height:100vh;border-radius:0}.lista-acoes input{min-width:0;width:100%}}
+
 /* respostas abertas */
 .abertas{list-style:none;display:flex;flex-direction:column;gap:8px}
 .abertas li{font-size:13px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;line-height:1.45}
@@ -291,6 +334,11 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 
 </div>
 <div class="aviso" id="aviso"></div>
+
+<dialog id="explorar" aria-labelledby="expTitulo">
+  <div class="modal-cab"><div><h2 id="expTitulo"></h2><div class="exp-sub" id="expSub"></div></div><button class="fechar" onclick="fecharExplorar()" aria-label="Fechar">×</button></div>
+  <div class="modal-corpo" id="expCorpo"></div>
+</dialog>
 
 <dialog id="modal" aria-labelledby="modalTitulo">
   <div class="modal-cab"><h2 id="modalTitulo"></h2><button class="fechar" onclick="fecharModal()" aria-label="Fechar">×</button></div>
@@ -512,6 +560,8 @@ const ICONES = {
   ramos: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
   bandeira: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
   prancheta: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+  alerta: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  lupa: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   relogio: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
 };
 const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n] || ''}</svg>`;
@@ -555,7 +605,7 @@ async function carregar(manual = false) {
     atualizarStatus();
     montarAbas();
     montarFiltro();
-    renderAba();
+    if (!$('explorar').open) renderAba();
     if (manual === true) aviso('Painel atualizado');
   } catch (e) {
     aviso('Erro ao carregar: ' + e.message, true);
@@ -668,7 +718,7 @@ function calcular(de, ate) {
   // Sem nenhum lead identificado como tráfego, usa a atribuição do Meta para as taxas.
   const trafego = t.pagos || t.leadsMeta;
   const trafegoDia = d => porDia[d].pagos || (t.pagos ? 0 : porDia[d].leadsMeta);
-  return { de, ate, dias, porDia, t, ads, utm, trafego, trafegoDia, usaBanco: t.pagos > 0 };
+  return { de, ate, dias, porDia, t, ads, utm, nomes, trafego, trafegoDia, usaBanco: t.pagos > 0 };
 }
 
 function renderAba() {
@@ -751,38 +801,244 @@ function desenhar(id, tipo, labels, series, { empilhar = false } = {}) {
   });
 }
 
-// ---------- Visão geral ----------
+// ---------- Visão geral (macro) ----------
+let alvoRender = 'conteudo'; // onde as abas de detalhe desenham (a aba ou a janela Explorar)
+
 function abaGeral(c) {
   const t = c.t, l = est.lanc, hoje = hojeSP();
   const hojeD = c.porDia[hoje];
   const vivo = situacao(l).classe === 'andamento' && hojeD;
-  const dg = diasComGasto(c);
-  $('conteudo').innerHTML = `
-    <div class="kgrid">
-      ${kcard('Leads', int.format(t.leads), vivo ? `Hoje: ${int.format(hojeD.leads)}` : `${ddmm(c.de)} — ${ddmm(c.ate)}`, 'pessoas', COR.purple)}
-      ${kcard('Investimento', moeda(t.gasto), l.verba ? `${pct(t.gasto / l.verba)} da verba` : (vivo ? `Hoje: ${moeda(hojeD.gasto)}` : (dg ? `Média de ${brl0.format(t.gasto / dg)} por dia` : '')), 'dinheiro', COR.gold)}
-      ${kcard('CPL médio', moeda(div(t.gasto, t.leads)), 'Investimento ÷ todos os leads', 'alvo', COR.red)}
-      ${kcard('CPM', moeda(div(t.gasto * 1000, t.impr)), 'Custo por mil impressões', 'velocimetro', COR.purple)}
-      ${kcard('CTR', taxa(div(t.cliques, t.impr)), `CPC ${moeda(div(t.gasto, t.cliques))}`, 'porcento', COR.amber)}
-      ${kcard('Impressões', int.format(t.impr), '', 'olho', COR.blue)}
-      ${kcard('Cliques no link', int.format(t.cliques), '', 'cursor', COR.pink)}
-      ${kcard('Visualizações da página', t.lpv ? int.format(t.lpv) : '—', t.lpv ? '' : 'Sem dados do pixel', 'tendencia', COR.green)}
-      ${kcard('Connect rate', t.lpv ? taxa(div(t.lpv, t.cliques)) : '—', 'Visualizações ÷ cliques', 'pulso', COR.teal)}
-      ${kcard('Conversão da página', t.lpv ? taxa(div(c.trafego, t.lpv)) : '—', c.usaBanco ? 'Leads de tráfego ÷ visualizações' : 'Leads (Meta) ÷ visualizações', 'alvo', COR.purple)}
-    </div>
-    ${secao('Evolução no período')}
-    <div class="g2">
-      ${bloco('Leads por dia', 'Tráfego e orgânico, pelos leads que chegaram no banco', 'gLeads')}
-      ${bloco('Investimento por dia', 'Verba aplicada no Meta', 'gGasto')}
+  const macro = (rot, valor, sub, icone, cor) => `
+    <div class="card macro">
+      <div class="rotulo">${rot}</div>
+      <div class="macro-linha"><span class="k-ico" style="--c:${cor}">${ico(icone)}</span><span class="macro-valor">${valor}</span></div>
+      <div class="sub">${sub || '&nbsp;'}</div>
     </div>`;
-  const rot = rotulosDias(c);
-  desenhar('gLeads', 'bar', rot, [
-    { label: 'Tráfego', data: c.dias.map(d => c.porDia[d].pagos), cor: COR.gold },
-    { label: 'Orgânico', data: c.dias.map(d => c.porDia[d].organicos), cor: COR.green },
-  ], { empilhar: true });
-  desenhar('gGasto', 'line', rot, [
-    { label: 'Investimento', data: c.dias.map(d => c.porDia[d].gasto), cor: COR.blue, fmt: 'moeda', area: true },
-  ]);
+
+  // Orgânico por canal, para o card
+  const canais = {};
+  c.utm.filter(r => !r._pago).forEach(r => {
+    const k = r.utm_source + (r.utm_medium ? ' / ' + r.utm_medium : '');
+    canais[k] = (canais[k] || 0) + Number(r.leads);
+  });
+  const listaOrg = Object.entries(canais).sort((a, b) => b[1] - a[1]);
+  const maxOrg = listaOrg[0]?.[1] || 1;
+
+  // Funil do tráfego, para o card
+  const camadas = [
+    { v: moeda(div(t.gasto * 1000, t.impr)), r: 'CPM' },
+    { v: taxa(div(t.cliques, t.impr)), r: 'CTR' },
+    ...(t.lpv ? [{ v: taxa(div(t.lpv, t.cliques)), r: 'Connect rate' }] : []),
+    { v: t.lpv ? taxa(div(c.trafego, t.lpv)) : taxa(div(c.trafego, t.cliques)), r: t.lpv ? 'Conversão da página' : 'Conversão (cliques)' },
+  ];
+
+  $('conteudo').innerHTML = `
+    <div class="g3">
+      ${macro('Valor gasto', moeda(t.gasto), l.verba ? `${pct(t.gasto / l.verba)} da verba` : (vivo ? `Hoje: ${moeda(hojeD.gasto)}` : `${ddmm(c.de)} — ${ddmm(c.ate)}`), 'dinheiro', COR.gold)}
+      ${macro('Leads', int.format(t.leads), vivo ? `Hoje: ${int.format(hojeD.leads)}` : `${int.format(t.pagos)} de tráfego · ${int.format(t.organicos)} orgânicos`, 'pessoas', COR.purple)}
+      ${macro('Custo por lead', moeda(div(t.gasto, t.leads)), `Só tráfego: ${moeda(div(t.gasto, c.trafego))}`, 'alvo', COR.red)}
+    </div>
+
+    <div class="card bloco largo">
+      <div class="rotulo">Desempenho por dia</div>
+      <div class="grafico alto"><canvas id="gDesemp"></canvas></div>
+    </div>
+
+    <div class="g3">
+      <div class="card mini">
+        <div class="mini-cab"><span class="rotulo">Qualidade</span><span class="k-ico" style="--c:${COR.amber}">${ico('alerta')}</span></div>
+        <div class="mini-vazio">Ainda não há um critério de qualidade definido para os leads.</div>
+      </div>
+
+      <div class="card mini explorar" onclick="explorar('organico')">
+        <div class="mini-cab"><span class="rotulo">Orgânico</span><button class="chip" onclick="event.stopPropagation(); explorar('organico')">${ico('lupa')}Explorar</button></div>
+        <div class="mini-sub">${int.format(t.organicos)} leads · ${pct(div(t.organicos, t.leads) || 0)} do total</div>
+        ${listaOrg.length ? `<div class="barras-h">${listaOrg.map(([k, n], i) => `
+          <div class="bh"><span class="bh-rot" title="${esc(k)}">${esc(k)}</span>
+            <span class="bh-trilho"><span style="width:${Math.max(2, n / maxOrg * 100)}%;opacity:${Math.max(.35, 1 - i * .12)}"></span></span>
+            <span class="bh-num">${int.format(n)}</span></div>`).join('')}</div>`
+          : '<div class="mini-vazio">Nenhum lead orgânico no período.</div>'}
+      </div>
+
+      <div class="card mini explorar" onclick="explorar('trafego')">
+        <div class="mini-cab"><span class="rotulo">Tráfego</span><button class="chip" onclick="event.stopPropagation(); explorar('trafego')">${ico('lupa')}Explorar</button></div>
+        <div class="mini-sub">${int.format(c.trafego)} leads${c.usaBanco ? '' : ' (atribuição Meta)'} · CPL ${moeda(div(t.gasto, c.trafego))}</div>
+        ${t.impr ? funilSvg(camadas) : '<div class="mini-vazio">Sem dados do Meta no período.</div>'}
+      </div>
+    </div>`;
+
+  desenharDesempenho(c);
+}
+
+function funilSvg(camadas) {
+  const W = 400, H = 44, gap = 4, n = camadas.length;
+  const larg = i => W - (W * 0.55) * (i / n);      // topo de cada camada
+  const cores = ['#6d4fd1', '#7f62dc', '#9277e4', '#a98bff'];
+  return `<svg class="funil-svg" viewBox="0 0 ${W} ${n * (H + gap)}" role="img" aria-label="Funil do tráfego">
+    ${camadas.map((c, i) => {
+      const t = larg(i), b = larg(i + 1), y = i * (H + gap);
+      const x1 = (W - t) / 2, x2 = (W + t) / 2, x3 = (W + b) / 2, x4 = (W - b) / 2;
+      return `<polygon points="${x1},${y} ${x2},${y} ${x3},${y + H} ${x4},${y + H}" fill="${cores[i % cores.length]}"/>
+        <text x="${W / 2}" y="${y + 19}" text-anchor="middle" class="fv">${esc(c.v)}</text>
+        <text x="${W / 2}" y="${y + 33}" text-anchor="middle" class="fr">${esc(c.r)}</text>`;
+    }).join('')}
+  </svg>`;
+}
+
+function desenharDesempenho(c) {
+  const P = d => c.porDia[d];
+  charts.gDesemp = new Chart($('gDesemp'), {
+    data: {
+      labels: rotulosDias(c),
+      datasets: [
+        { type: 'bar', label: 'Leads', data: c.dias.map(d => P(d).leads), fmt: 'int', yAxisID: 'yLeads', backgroundColor: COR.gold, borderRadius: 4, maxBarThickness: 18, order: 2 },
+        { type: 'bar', label: 'Gasto', data: c.dias.map(d => P(d).gasto), fmt: 'moeda', yAxisID: 'y', backgroundColor: COR.purple, borderRadius: 4, maxBarThickness: 18, order: 3 },
+        { type: 'line', label: 'CPL', data: c.dias.map(d => div(P(d).gasto, P(d).leads)), fmt: 'moeda', yAxisID: 'y1', borderColor: '#e8eaf6', backgroundColor: '#e8eaf6', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .4, spanGaps: true, order: 1 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, sort: (a, b) => a.datasetIndex - b.datasetIndex } },
+        tooltip: {
+          backgroundColor: '#0e1530', borderColor: 'rgba(205,160,76,.5)', borderWidth: 1, padding: 10,
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${formatar(ctx.raw, ctx.dataset.fmt)}` },
+        },
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.05)' }, title: { display: true, text: 'Gasto' }, ticks: { callback: v => formatarEixo(v, 'moeda') } },
+        yLeads: { beginAtZero: true, display: false },
+        y1: { beginAtZero: true, position: 'right', grid: { display: false }, title: { display: true, text: 'CPL' }, ticks: { callback: v => formatarEixo(v, 'moeda') } },
+      },
+    },
+  });
+}
+
+// ---------- Explorar (janela de detalhe) ----------
+const exp = { tipo: null, leads: null, filtrados: [], pagina: 1, busca: '' };
+
+function explorar(tipo) {
+  exp.tipo = tipo;
+  const c = calcular(est.de, est.ate);
+  $('expTitulo').textContent = tipo === 'organico' ? 'Orgânico' : 'Tráfego';
+  $('expSub').textContent = `${est.lanc.rotulo || est.lanc.id} · ${ddmm(c.de)} — ${ddmm(c.ate)}`;
+  $('expCorpo').innerHTML = '<div id="expA"></div><div id="expB" class="exp-b"></div>';
+  alvoRender = 'expA';
+  try {
+    if (tipo === 'trafego') {
+      abaMidia(c);
+      alvoRender = 'expB';
+      abaCriativos(c);
+    } else {
+      abaOrganico(c);
+      $('expB').innerHTML = `
+        <section class="card bloco">
+          <div class="lista-cab">
+            <div><h2>Leads orgânicos</h2><p class="desc" id="orgResumo">Carregando…</p></div>
+            <div class="lista-acoes">
+              <input type="search" id="orgBusca" placeholder="Buscar nome, e-mail, canal…" oninput="buscarOrganicos(this.value)">
+              <button class="btn" onclick="exportarOrganicos()">Exportar CSV</button>
+            </div>
+          </div>
+          <div class="tabela-wrap"><table id="tabOrg"></table></div>
+          <div class="paginacao" id="orgPag"></div>
+        </section>`;
+      carregarOrganicos(c);
+    }
+  } finally {
+    alvoRender = 'conteudo';
+  }
+  $('explorar').showModal();
+  $('expCorpo').scrollTop = 0;
+}
+
+function fecharExplorar() { $('explorar').close(); }
+
+// Dia do lead: DATA (dd/mm/aaaa ou aaaa-mm-dd) ou a hora de entrada
+function diaDoLead(dados, criado) {
+  const d = String(dados?.DATA || '');
+  let m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(d);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  m = /^(\d{4}-\d{2}-\d{2})/.exec(d);
+  if (m) return m[1];
+  return diaSP(criado);
+}
+
+async function carregarOrganicos(c) {
+  try {
+    if (!exp.leads || exp.leads.id !== est.lanc.id) {
+      const rows = [];
+      for (let de = 0; ; de += 1000) {
+        const { data, error } = await sb.from('leads').select('id, dados, criado_em')
+          .eq('lancamento_id', est.lanc.id).order('criado_em').order('id').range(de, de + 999);
+        if (error) throw error;
+        rows.push(...data);
+        if (data.length < 1000) break;
+      }
+      exp.leads = { id: est.lanc.id, rows };
+    }
+    const nomes = c.nomes;
+    exp.base = exp.leads.rows.map(r => {
+      const d = r.dados || {};
+      const u = {
+        utm_source: d.UTM_SOURCE || '(sem utm)', utm_medium: d.UTM_MEDIUM || '', utm_campaign: d.UTM_CAMPAIGN || '',
+        utm_content: d.UTM_CONTENT || '', utm_term: d.UTM_TERM || '',
+      };
+      return { ...u, dia: diaDoLead(d, r.criado_em), nome: d.NOME || '', email: d.EMAIL || '', tel: d.TELEFONE || '', pago: ehPago(u, nomes) };
+    }).filter(r => !r.pago && r.dia >= c.de && r.dia <= c.ate)
+      .sort((a, b) => b.dia.localeCompare(a.dia));
+    exp.pagina = 1; exp.busca = '';
+    filtrarOrganicos();
+  } catch (e) {
+    $('orgResumo').textContent = 'Erro ao carregar os leads: ' + e.message;
+  }
+}
+
+function buscarOrganicos(v) { exp.busca = norm(v); exp.pagina = 1; filtrarOrganicos(); }
+
+function filtrarOrganicos() {
+  const q = exp.busca;
+  exp.filtrados = !q ? exp.base : exp.base.filter(r =>
+    [r.nome, r.email, r.tel, r.utm_source, r.utm_medium, r.utm_campaign, r.utm_content].some(v => norm(v).includes(q)));
+  desenharOrganicos();
+}
+
+function desenharOrganicos() {
+  const POR = 50, total = exp.filtrados.length;
+  const pags = Math.max(1, Math.ceil(total / POR));
+  exp.pagina = Math.min(exp.pagina, pags);
+  const pagina = exp.filtrados.slice((exp.pagina - 1) * POR, exp.pagina * POR);
+  $('orgResumo').textContent = `${int.format(total)} ${total === 1 ? 'lead' : 'leads'}${exp.busca ? ' na busca' : ' no período'} · mais recentes primeiro`;
+  $('tabOrg').innerHTML = !total
+    ? '<tr><td class="vazio">Nenhum lead orgânico encontrado.</td></tr>'
+    : `<thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Canal</th><th>Campanha</th><th>Data</th></tr></thead><tbody>` +
+      pagina.map(r => `<tr>
+        <td>${esc(r.nome) || '<span class="fraco">—</span>'}</td>
+        <td class="esq">${esc(r.email)}</td>
+        <td>${esc(r.tel)}</td>
+        <td class="esq">${esc(r.utm_source)}${r.utm_medium ? ` / ${esc(r.utm_medium)}` : ''}</td>
+        <td class="esq">${esc(r.utm_campaign) || '—'}</td>
+        <td>${fmtData(r.dia)}</td>
+      </tr>`).join('') + '</tbody>';
+  $('orgPag').innerHTML = pags > 1 ? `
+    <button class="btn" ${exp.pagina <= 1 ? 'disabled' : ''} onclick="exp.pagina--; desenharOrganicos()">Anterior</button>
+    <span>${exp.pagina} de ${pags}</span>
+    <button class="btn" ${exp.pagina >= pags ? 'disabled' : ''} onclick="exp.pagina++; desenharOrganicos()">Próxima</button>` : '';
+}
+
+function exportarOrganicos() {
+  if (!exp.filtrados.length) { aviso('Nada para exportar', true); return; }
+  const cel = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const linhas = [['Nome', 'Email', 'Telefone', 'UTM_SOURCE', 'UTM_MEDIUM', 'UTM_CAMPAIGN', 'UTM_CONTENT', 'Data'].join(';'),
+    ...exp.filtrados.map(r => [r.nome, r.email, r.tel, r.utm_source, r.utm_medium, r.utm_campaign, r.utm_content, fmtData(r.dia)].map(cel).join(';'))];
+  const blob = new Blob(['\ufeff' + linhas.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${est.lanc.id}_organicos_${est.de}_${est.ate}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ---------- Mídia paga ----------
@@ -793,7 +1049,7 @@ function abaMidia(c) {
   const avisos = [];
   if (t.impr && !t.lpv) avisos.push('O Meta não registrou visualizações da página: o connect rate depende do pixel instalado na página de captura.');
   if (!c.usaBanco && t.leadsMeta) avisos.push('Nenhum lead do banco foi identificado como tráfego, então as taxas usam os leads que o Meta atribui.');
-  $('conteudo').innerHTML = `
+  $(alvoRender).innerHTML = `
     <section class="card funil">
       <div class="funil-cab"><div class="rotulo">Funil dos anúncios</div><div class="desc">Da impressão ao lead, com a taxa de passagem entre cada etapa.</div></div>
       <div class="funil-trilho">
@@ -829,7 +1085,7 @@ function abaMidia(c) {
 
 // ---------- Criativos ----------
 function abaCriativos(c) {
-  $('conteudo').innerHTML = `
+  $(alvoRender).innerHTML = `
     <section class="card bloco">
       <h2>Criativos</h2>
       <p class="desc">Leads do banco ligados ao anúncio pelo utm_content (ou utm_term). Clique no cabeçalho para ordenar.</p>
@@ -896,7 +1152,7 @@ function abaOrigem(c) {
 function abaOrganico(c) {
   const t = c.t, tot = t.leads || 1;
   const melhor = c.dias.reduce((m, d) => (c.porDia[d].organicos > (m ? c.porDia[m].organicos : 0) ? d : m), null);
-  $('conteudo').innerHTML = `
+  $(alvoRender).innerHTML = `
     <div class="faixa verde">
       <b>Como o orgânico é separado</b>
       <p>Conta como tráfego o lead ligado a um anúncio pela UTM, ou com utm_source meta/facebook ou utm_medium pago/cpc. Todo o resto é orgânico: bio, stories, WhatsApp, e-mail, direto e leads sem UTM. Orgânicos não entram no CPL de tráfego.</p>
@@ -1153,6 +1409,7 @@ function abrirModal(titulo, html) {
 }
 function fecharModal() { $('modal').close(); }
 $('modal').addEventListener('close', () => clearInterval(ckTimer));
+$('explorar').addEventListener('close', () => { if (atualId) renderAba(); });
 
 function sugerirCodigo() {
   const nums = lancamentos.map(l => +((/^L(\d+)KR$/.exec(l.id) || [])[1] || 0)).filter(n => n > 0);
