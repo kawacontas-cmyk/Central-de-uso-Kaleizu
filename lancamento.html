@@ -46,6 +46,26 @@ select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(
 .kpi .sub{font-size:12px;color:var(--muted);margin-top:4px}
 .kpi.destaque .valor{color:var(--gold-light)}
 
+/* funil */
+.funil{padding:20px;margin-bottom:16px}
+.funil-cab{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.funil-cab .desc{font-size:12px;color:var(--muted)}
+.funil-trilho{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;align-items:center;gap:8px}
+.etapa{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:0}
+.etapa .num{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;margin-top:6px;letter-spacing:-.02em}
+.etapa .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.taxa{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:92px}
+.taxa .pct{font-family:'DM Mono',monospace;font-size:15px;color:var(--gold-light);font-weight:500}
+.taxa .rotulo{font-size:9px}
+.taxa .seta{width:100%;height:1px;background:var(--border);position:relative;margin:4px 0}
+.taxa .seta::after{content:"";position:absolute;right:-1px;top:-3px;border:3.5px solid transparent;border-left:5px solid var(--hint)}
+.funil-aviso{font-size:12px;color:var(--muted);margin-top:12px}
+@media (max-width:980px){
+  .funil-trilho{grid-template-columns:1fr}
+  .taxa{flex-direction:row;justify-content:center;gap:10px;min-width:0}
+  .taxa .seta{display:none}
+}
+
 /* meta de leads */
 .meta{padding:16px 20px;margin-bottom:16px;display:none}
 .meta.on{display:block}
@@ -152,6 +172,23 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
     <div class="card kpi"><div class="rotulo">Leads</div><div class="valor" id="kLeads">—</div><div class="sub" id="kLeadsSub">&nbsp;</div></div>
     <div class="card kpi destaque"><div class="rotulo">CPL real</div><div class="valor" id="kCpl">—</div><div class="sub" id="kCplSub">&nbsp;</div></div>
     <div class="card kpi"><div class="rotulo">Hoje</div><div class="valor" id="kHoje">—</div><div class="sub" id="kHojeSub">&nbsp;</div></div>
+  </section>
+
+  <section class="card funil" aria-labelledby="funilTitulo">
+    <div class="funil-cab">
+      <div class="rotulo" id="funilTitulo">Funil dos anúncios</div>
+      <div class="desc">Da impressão ao lead, com a taxa de passagem entre cada etapa.</div>
+    </div>
+    <div class="funil-trilho">
+      <div class="etapa"><div class="rotulo">Impressões</div><div class="num" id="fImpr">—</div><div class="sub" id="fImprSub">&nbsp;</div></div>
+      <div class="taxa"><span class="rotulo">CTR</span><span class="seta"></span><span class="pct" id="fCtr">—</span></div>
+      <div class="etapa"><div class="rotulo">Cliques no link</div><div class="num" id="fClq">—</div><div class="sub" id="fClqSub">&nbsp;</div></div>
+      <div class="taxa"><span class="rotulo">Connect rate</span><span class="seta"></span><span class="pct" id="fCon">—</span></div>
+      <div class="etapa"><div class="rotulo">Visualizações da página</div><div class="num" id="fLpv">—</div><div class="sub" id="fLpvSub">&nbsp;</div></div>
+      <div class="taxa"><span class="rotulo">Conversão da página</span><span class="seta"></span><span class="pct" id="fConv">—</span></div>
+      <div class="etapa"><div class="rotulo" id="fLeadRot">Leads de anúncio</div><div class="num" id="fLead">—</div><div class="sub" id="fLeadSub">&nbsp;</div></div>
+    </div>
+    <p class="funil-aviso" id="fAviso" hidden></p>
   </section>
 
   <section class="card meta" id="blocoMeta">
@@ -310,6 +347,7 @@ function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
   const leadsMeta = metaDia.reduce((s, r) => s + Number(r.leads_meta), 0);
   const cliques = metaDia.reduce((s, r) => s + Number(r.cliques_link), 0);
   const impr = metaDia.reduce((s, r) => s + Number(r.impressoes), 0);
+  const lpv = metaDia.reduce((s, r) => s + Number(r.lpv || 0), 0);
   const leads = leadsDia.reduce((s, r) => s + Number(r.leads), 0);
   const leadsPagos = leadsUtm.filter(r => metaAd.some(a => casaLead(r, a))).reduce((s, r) => s + Number(r.leads), 0);
   const cpl = div(gasto, leads);
@@ -318,13 +356,18 @@ function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
   const lHoje = Number(leadsDia.find(r => r.data === hoje)?.leads || 0);
 
   $('kGasto').textContent = brl0.format(gasto);
-  $('kGastoSub').textContent = lanc.verba ? `${pct(gasto / lanc.verba)} da verba de ${brl0.format(lanc.verba)}` : `CTR ${impr ? pct(cliques / impr) : '—'} · CPM ${impr ? brl.format(gasto / impr * 1000) : '—'}`;
+  const diasComGasto = metaDia.filter(r => Number(r.gasto) > 0).length;
+  $('kGastoSub').textContent = lanc.verba
+    ? `${pct(gasto / lanc.verba)} da verba de ${brl0.format(lanc.verba)}`
+    : (diasComGasto ? `Média de ${brl0.format(gasto / diasComGasto)} por dia` : '\u00a0');
   $('kLeads').textContent = int.format(leads);
   $('kLeadsSub').textContent = `${int.format(leadsPagos)} vindos de anúncio · Meta atribui ${int.format(leadsMeta)}`;
   $('kCpl').textContent = cpl != null ? brl.format(cpl) : '—';
   $('kCplSub').textContent = leadsPagos ? `Só pagos: ${brl.format(gasto / leadsPagos)} · Meta diz ${leadsMeta ? brl.format(gasto / leadsMeta) : '—'}` : 'Aguardando leads com utm_content';
   $('kHoje').textContent = int.format(lHoje);
   $('kHojeSub').textContent = `${brl0.format(gHoje)} investidos · CPL ${lHoje ? brl.format(gHoje / lHoje) : '—'}`;
+
+  desenharFunil({ gasto, impr, cliques, lpv, leadsPagos, leadsMeta });
 
   // meta de leads
   if (lanc.meta_leads) {
@@ -354,6 +397,8 @@ function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
       cpl: div(Number(a.gasto), l),
       leads_meta: Number(a.leads_meta),
       ctr: div(Number(a.cliques_link), Number(a.impressoes)),
+      cpm: div(Number(a.gasto) * 1000, Number(a.impressoes)),
+      connect: Number(a.lpv || 0) > 0 ? div(Number(a.lpv), Number(a.cliques_link)) : null,
     };
   }).filter(c => c.gasto > 0 || c.leads > 0);
   desenharCriativos(cpl);
@@ -439,17 +484,47 @@ function desenharCanais(leadsUtm, total) {
     '</tbody>';
 }
 
+function desenharFunil({ gasto, impr, cliques, lpv, leadsPagos, leadsMeta }) {
+  const moeda = v => v != null ? brl.format(v) : '—';
+  const taxa = v => v != null ? pct(v) : '—';
+  // Leads de anúncio: os do banco ligados a um anúncio pela UTM; sem isso, os que o Meta atribui.
+  const usaBanco = leadsPagos > 0;
+  const leadsAd = usaBanco ? leadsPagos : leadsMeta;
+
+  $('fImpr').textContent = int.format(impr);
+  $('fImprSub').textContent = `CPM ${moeda(div(gasto * 1000, impr))}`;
+  $('fCtr').textContent = taxa(div(cliques, impr));
+  $('fClq').textContent = int.format(cliques);
+  $('fClqSub').textContent = `CPC ${moeda(div(gasto, cliques))}`;
+  $('fCon').textContent = lpv ? taxa(div(lpv, cliques)) : '—';
+  $('fLpv').textContent = lpv ? int.format(lpv) : '—';
+  $('fLpvSub').textContent = lpv ? `Custo por visualização ${moeda(div(gasto, lpv))}` : 'Sem dados do pixel';
+  $('fConv').textContent = lpv ? taxa(div(leadsAd, lpv)) : '—';
+  $('fLeadRot').textContent = usaBanco ? 'Leads de anúncio' : 'Leads (atribuição Meta)';
+  $('fLead').textContent = int.format(leadsAd);
+  $('fLeadSub').textContent = `CPL ${moeda(div(gasto, leadsAd))}`;
+
+  const avisos = [];
+  if (impr && !lpv) avisos.push('O Meta não registrou visualizações da página. O connect rate depende do pixel instalado na página de captura.');
+  if (!usaBanco && leadsMeta) avisos.push('Nenhum lead do banco casou com um anúncio pela UTM, então a última etapa usa os leads que o Meta atribui.');
+  $('fAviso').textContent = avisos.join(' ');
+  $('fAviso').hidden = !avisos.length;
+}
+
 const COLS_CRIATIVOS = [
   { id: 'nome', nome: 'Anúncio' },
   { id: 'gasto', nome: 'Investido' },
   { id: 'leads', nome: 'Leads' },
   { id: 'cpl', nome: 'CPL' },
-  { id: 'leads_meta', nome: 'Leads Meta' },
+  { id: 'cpm', nome: 'CPM' },
   { id: 'ctr', nome: 'CTR' },
+  { id: 'connect', nome: 'Connect' },
+  { id: 'leads_meta', nome: 'Leads Meta' },
 ];
 
 function ordenarCriativos(col) {
-  ordCriativos = { col, dir: ordCriativos.col === col ? -ordCriativos.dir : (col === 'cpl' || col === 'nome' ? 1 : -1) };
+  const menorMelhor = ['cpl', 'cpm', 'nome'].includes(col);
+  ordCriativos = { col, dir: ordCriativos.col === col ? -ordCriativos.dir : (menorMelhor ? 1 : -1) };
   desenharCriativos();
 }
 
@@ -476,8 +551,10 @@ function desenharCriativos(cpl) {
       <td>${brl.format(c.gasto)}</td>
       <td>${int.format(c.leads)}</td>
       <td class="${cor(c.cpl)}">${c.cpl != null ? brl.format(c.cpl) : '—'}</td>
-      <td>${int.format(c.leads_meta)}</td>
+      <td>${c.cpm != null ? brl.format(c.cpm) : '—'}</td>
       <td>${c.ctr != null ? pct(c.ctr) : '—'}</td>
+      <td>${c.connect != null ? pct(c.connect) : '—'}</td>
+      <td>${int.format(c.leads_meta)}</td>
     </tr>`).join('') + '</tbody>';
 }
 
