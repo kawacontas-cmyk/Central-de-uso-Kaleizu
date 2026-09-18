@@ -105,6 +105,16 @@ td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text);whit
 tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:rgba(201,168,76,.04)}
 td.nulo{color:var(--hint)}
+.col-sel{width:36px;padding-right:0}
+.col-sel input{accent-color:var(--gold);width:15px;height:15px;cursor:pointer;vertical-align:middle}
+tr.sel td{background:var(--gold-dim)}
+.selbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px;margin-bottom:10px;border:1px solid var(--gold);
+  border-radius:var(--r2);background:var(--gold-dim);font-size:13px}
+.selbar .qtd{font-weight:600;color:var(--gold-light)}
+.selbar .link{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline;padding:0}
+.selbar .link:hover{color:var(--text)}
+.selbar .sep{flex:1}
+.selbar[hidden]{display:none}
 .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;font-family:var(--mono);margin-right:4px}
 .badge-rep{background:rgba(232,201,122,.16);color:var(--amber)}
 .badge-rec{background:rgba(91,138,255,.16);color:var(--blue)}
@@ -194,7 +204,8 @@ let csvNomeArquivo = '';
 
 const det = {                   // estado da tela de detalhe
   lanc: null, leads: [], filtrados: [], pagina: 1,
-  soRepetidos: false, soRecorrentes: false
+  soRepetidos: false, soRecorrentes: false,
+  sel: new Set()                // ids (texto) dos leads marcados
 };
 
 /* ── utilidades ── */
@@ -258,7 +269,7 @@ async function fetchLeads(id) {
   let de = 0;
   while (true) {
     const { data, error } = await sb.from('leads')
-      .select('dados, email').eq('lancamento_id', id).order('id').range(de, de+999);
+      .select('id, dados, email').eq('lancamento_id', id).order('id').range(de, de+999);
     if (error) throw error;
     out.push(...data);
     if (data.length < 1000) break;
@@ -349,11 +360,11 @@ async function abrirDetalhe(id) {
 
   det.lanc = lanc;
   det.leads = leads.map(l => ({
-    dados: l.dados, email: l.email,
+    id: l.id, dados: l.dados, email: l.email,
     rep: !!(l.email && conta[l.email] > 1),
     rec: recorrentes[l.email] || null
   }));
-  det.pagina = 1; det.soRepetidos = false; det.soRecorrentes = false;
+  det.pagina = 1; det.soRepetidos = false; det.soRecorrentes = false; det.sel = new Set();
 
   renderDetalhe();
   aplicarFiltros();
@@ -396,10 +407,12 @@ function renderDetalhe() {
       <button class="chip" id="cRec" aria-pressed="false" onclick="toggleChip('rec')">Só recorrentes</button>
     </div>
 
+    ${isAdmin ? '<div class="selbar" id="selbar" hidden></div>' : ''}
+
     <div class="table-wrap">
       <div class="table-scroll">
         <table>
-          <thead><tr><th>Situação</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+          <thead><tr>${isAdmin ? '<th class="col-sel"><input type="checkbox" id="selPagina" onchange="selecionarPagina(this.checked)" aria-label="Selecionar os leads desta página"></th>' : ''}<th>Situação</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
@@ -441,6 +454,7 @@ function aplicarFiltros() {
     return true;
   });
   det.pagina = 1;
+  det.sel.clear();
   renderKPIs();
   renderTabela();
 }
@@ -469,20 +483,112 @@ function renderTabela() {
         const selos =
           (l.rep ? '<span class="badge badge-rep">repetido</span>' : '') +
           (l.rec ? `<span class="badge badge-rec" title="Mesmo e-mail em: ${esc(l.rec.join(', '))}">veio em ${esc(l.rec.join(', '))}</span>` : '');
-        return `<tr>${selos ? `<td>${selos}</td>` : '<td class="nulo">—</td>'}${cols.map(c=>cel(l.dados[c])).join('')}</tr>`;
+        const k = String(l.id);
+        const marcado = det.sel.has(k);
+        const caixa = isAdmin ? `<td class="col-sel"><input type="checkbox" data-id="${esc(k)}" ${marcado ? 'checked' : ''} onchange="marcarLead(this)" aria-label="Selecionar lead"></td>` : '';
+        return `<tr${marcado ? ' class="sel"' : ''}>${caixa}${selos ? `<td>${selos}</td>` : '<td class="nulo">—</td>'}${cols.map(c=>cel(l.dados[c])).join('')}</tr>`;
       }).join('')
-    : `<tr><td class="nulo" colspan="${cols.length+1}" style="text-align:center;padding:30px">Nenhum lead com esses filtros.</td></tr>`;
+    : `<tr><td class="nulo" colspan="${cols.length + (isAdmin ? 2 : 1)}" style="text-align:center;padding:30px">Nenhum lead com esses filtros.</td></tr>`;
 
   document.getElementById('pInfo').textContent =
     `${nf(det.filtrados.length)} de ${nf(det.leads.length)} · página ${det.pagina}/${totalPag}`;
   document.getElementById('pPrev').disabled = det.pagina <= 1;
   document.getElementById('pNext').disabled = det.pagina >= totalPag;
+  renderSelecao();
 }
 
 function mudarPagina(d) {
   det.pagina += d;
   renderTabela();
   document.querySelector('.table-scroll').scrollTop = 0;
+}
+
+/* ── seleção e exclusão de leads (admin) ── */
+function leadsDaPagina() {
+  const inicio = (det.pagina-1) * POR_PAGINA;
+  return det.filtrados.slice(inicio, inicio + POR_PAGINA);
+}
+function marcarLead(cx) {
+  if (cx.checked) det.sel.add(cx.dataset.id); else det.sel.delete(cx.dataset.id);
+  cx.closest('tr').classList.toggle('sel', cx.checked);
+  renderSelecao();
+}
+function selecionarPagina(marcar) {
+  leadsDaPagina().forEach(l => marcar ? det.sel.add(String(l.id)) : det.sel.delete(String(l.id)));
+  renderTabela();
+}
+function selecionarFiltrados() {
+  det.filtrados.forEach(l => det.sel.add(String(l.id)));
+  renderTabela();
+}
+function limparSelecao() {
+  det.sel.clear();
+  renderTabela();
+}
+function renderSelecao() {
+  if (!isAdmin) return;
+  const bar = document.getElementById('selbar');
+  const cab = document.getElementById('selPagina');
+  const pag = leadsDaPagina();
+  const naPag = pag.filter(l => det.sel.has(String(l.id))).length;
+  if (cab) {
+    cab.checked = pag.length > 0 && naPag === pag.length;
+    cab.indeterminate = naPag > 0 && naPag < pag.length;
+  }
+  const n = det.sel.size;
+  bar.hidden = n === 0;
+  if (!n) return;
+  const todosFiltrados = det.filtrados.every(l => det.sel.has(String(l.id)));
+  bar.innerHTML = `
+    <span class="qtd">${nf(n)} ${n === 1 ? 'lead selecionado' : 'leads selecionados'}</span>
+    ${!todosFiltrados ? `<button class="link" onclick="selecionarFiltrados()">Selecionar todos os ${nf(det.filtrados.length)} do filtro</button>` : ''}
+    <button class="link" onclick="limparSelecao()">Limpar seleção</button>
+    <span class="sep"></span>
+    <button class="btn btn-ghost btn-danger" onclick="openExcluirLeads()">Excluir selecionados</button>`;
+}
+function openExcluirLeads() {
+  const alvo = det.leads.filter(l => det.sel.has(String(l.id)));
+  if (!alvo.length) return;
+  const amostra = alvo.slice(0, 5).map(l => esc(l.dados.EMAIL || l.email || l.dados.NOME || '(sem e-mail)')).join('<br>');
+  openModal('Excluir leads',
+    `<p style="font-size:13px;margin-bottom:10px">Isso apaga <b>${nf(alvo.length)}</b> ${alvo.length === 1 ? 'lead' : 'leads'} de ${esc(det.lanc.rotulo || det.lanc.id)}. Não dá para desfazer.</p>
+     <p style="font-size:12px;color:var(--muted);font-family:var(--mono);line-height:1.7">${amostra}${alvo.length > 5 ? `<br>e mais ${nf(alvo.length - 5)}` : ''}</p>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn btn-ghost btn-danger" id="btnConfExcLeads" onclick="confirmExcluirLeads()">Excluir ${nf(alvo.length)}</button>`);
+}
+async function confirmExcluirLeads() {
+  const btn = document.getElementById('btnConfExcLeads');
+  btn.disabled = true; btn.textContent = 'Excluindo...';
+  const ids = det.leads.filter(l => det.sel.has(String(l.id))).map(l => l.id);
+  const lancId = det.lanc.id;
+  const apagados = new Set();
+  try {
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data, error } = await sb.from('leads').delete()
+        .eq('lancamento_id', lancId).in('id', ids.slice(i, i + 200)).select('id');
+      if (error) throw error;
+      (data || []).forEach(r => apagados.add(String(r.id)));
+    }
+  } catch (e) {
+    toast('Erro ao excluir: ' + e.message, 'error');
+  }
+  closeModal();
+  if (!apagados.size) { toast('Nenhum lead foi excluído. Confira se sua conta é admin.', 'error'); return; }
+
+  const { count } = await sb.from('leads').select('id', { count:'exact', head:true }).eq('lancamento_id', lancId);
+  if (typeof count === 'number') await sb.from('lead_lancamentos').update({ total: count }).eq('id', lancId);
+
+  // atualiza a tela sem recarregar tudo
+  det.leads = det.leads.filter(l => !apagados.has(String(l.id)));
+  const conta = {};
+  det.leads.forEach(l => { if (l.email) conta[l.email] = (conta[l.email]||0)+1; });
+  det.leads.forEach(l => { l.rep = !!(l.email && conta[l.email] > 1); });
+  det.sel.clear();
+  lancs = await fetchLancs();
+  renderDetalhe();
+  aplicarFiltros();
+  toast(`${nf(apagados.size)} ${apagados.size === 1 ? 'lead excluído' : 'leads excluídos'}.`,
+        apagados.size < ids.length ? 'error' : '');
 }
 
 /* ── exportar ── */
