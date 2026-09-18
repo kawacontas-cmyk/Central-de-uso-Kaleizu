@@ -234,21 +234,26 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .funil-svg .fv{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;fill:#fff}
 .funil-svg .fr{font-family:'DM Sans',sans-serif;font-size:10px;fill:rgba(255,255,255,.8)}
 
-/* janela Explorar */
-#explorar{max-width:1200px;width:calc(100% - 32px);max-height:calc(100vh - 40px)}
-#explorar .modal-corpo{background:var(--bg);max-height:calc(100vh - 110px);overflow-y:auto}
-.exp-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.exp-b{margin-top:16px}
-.lista-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-.lista-acoes{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.lista-acoes input{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;min-width:240px}
-.lista-acoes input:focus{outline:none;border-color:var(--gold)}
-#tabOrg td.esq{text-align:left;font-family:'DM Sans',sans-serif}
-#tabOrg th:not(:first-child){text-align:left}
-#tabOrg td:last-child,#tabOrg th:last-child{text-align:right}
-.paginacao{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:12px;font-size:12px;color:var(--muted)}
-.paginacao:empty{display:none}
-@media (max-width:640px){#explorar{width:100%;max-width:none;max-height:100vh;border-radius:0}.lista-acoes input{min-width:0;width:100%}}
+/* explorar em tela cheia */
+.sub-topo{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+.migalha{display:flex;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}
+.link-migalha{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--muted);font:inherit;cursor:pointer;padding:2px 0}
+.link-migalha svg{width:14px;height:14px}
+.link-migalha:hover{color:var(--gold-light)}
+.sep-migalha{color:var(--hint)}
+.migalha .atual{font-weight:600;color:var(--text)}
+.periodo-migalha{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:10px}
+.sel{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;cursor:pointer;min-width:150px;max-width:260px}
+.sel:focus{outline:none;border-color:var(--gold)}
+.bloco-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+.org-grade{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px;align-items:stretch}
+.org-esq{display:flex;flex-direction:column;gap:16px;min-width:0}
+.org-origem{flex:1}
+.org-barras{max-height:260px}
+.org-dir{display:flex;flex-direction:column;min-width:0}
+.org-grafico{flex:1;min-height:320px;height:auto}
+.sub-rodape{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:18px;font-size:12px;color:var(--muted)}
+@media (max-width:980px){.org-grade{grid-template-columns:1fr}.org-grafico{min-height:280px}}
 
 /* respostas abertas */
 .abertas{list-style:none;display:flex;flex-direction:column;gap:8px}
@@ -320,7 +325,7 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
   </section>
 
   <div id="telaPainel" hidden>
-    <section class="card filtro">
+    <section class="card filtro" id="filtroBox">
       <div class="f-tit"><span id="fIco"></span>Filtro de data <span class="f-rot" id="fRotulo"></span></div>
       <div class="f-campos">
         <label for="fDe">De</label><input type="date" id="fDe" onchange="mudarFiltro()">
@@ -334,11 +339,6 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 
 </div>
 <div class="aviso" id="aviso"></div>
-
-<dialog id="explorar" aria-labelledby="expTitulo">
-  <div class="modal-cab"><div><h2 id="expTitulo"></h2><div class="exp-sub" id="expSub"></div></div><button class="fechar" onclick="fecharExplorar()" aria-label="Fechar">×</button></div>
-  <div class="modal-corpo" id="expCorpo"></div>
-</dialog>
 
 <dialog id="modal" aria-labelledby="modalTitulo">
   <div class="modal-cab"><h2 id="modalTitulo"></h2><button class="fechar" onclick="fecharModal()" aria-label="Fechar">×</button></div>
@@ -418,13 +418,19 @@ async function iniciar(selecionar) {
 }
 
 function rotear() {
-  const id = new URLSearchParams(location.search).get('id');
-  if (id && lancamentos.some(l => l.id === id)) mostrarPainel(id);
-  else mostrarLista();
+  const q = new URLSearchParams(location.search);
+  const id = q.get('id');
+  est.sub = SUBS[q.get('ver')] ? q.get('ver') : null;
+  if (id && lancamentos.some(l => l.id === id)) {
+    // mesma tela de lançamento (ex.: voltar do Explorar): só redesenha
+    if (id === atualId && est.lanc?.id === id && !$('telaPainel').hidden) { renderAba(); return; }
+    mostrarPainel(id);
+  } else mostrarLista();
 }
 window.addEventListener('popstate', rotear);
 
 function abrirLancamento(id) {
+  est.sub = null;
   history.pushState(null, '', '?id=' + encodeURIComponent(id));
   mostrarPainel(id);
   window.scrollTo(0, 0);
@@ -435,6 +441,7 @@ async function sair() {
 }
 
 function voltarLista() {
+  est.sub = null;
   history.pushState(null, '', location.pathname);
   mostrarLista();
 }
@@ -539,7 +546,7 @@ const FONTES_PAGAS = ['meta', 'facebook', 'fb', 'fb_ads', 'facebook_ads', 'meta_
 const MEIOS_PAGOS = ['pago', 'paid', 'cpc', 'ppc', 'trafego', 'tráfego', 'paid_social'];
 const COR = { gold: '#CDA04C', green: '#5fcd8a', red: '#e05a5a', blue: '#5b8aff', purple: '#a98bff', amber: '#f0a94a', teal: '#54d6c2', pink: '#f07ab0' };
 
-const est = { lanc: null, adDia: [], utmDia: [], pesq: null, sync: null, de: null, ate: null, padraoDe: null, padraoAte: null, aba: 'geral', filtroMexido: false };
+const est = { lanc: null, adDia: [], utmDia: [], pesq: null, sync: null, de: null, ate: null, padraoDe: null, padraoAte: null, aba: 'geral', filtroMexido: false, sub: null, carregadoEm: null };
 const charts = {};
 
 const ICONES = {
@@ -561,6 +568,7 @@ const ICONES = {
   bandeira: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
   prancheta: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
   alerta: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  casa: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
   lupa: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   relogio: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
 };
@@ -596,7 +604,7 @@ async function carregar(manual = false) {
       sb.from('meta_insights').select('atualizado_em').order('atualizado_em', { ascending: false }).limit(1),
     ]);
     if (atualId !== lanc.id) return; // trocou de tela enquanto carregava
-    Object.assign(est, { lanc, adDia, utmDia, sync: sync.data?.[0]?.atualizado_em });
+    Object.assign(est, { lanc, adDia, utmDia, sync: sync.data?.[0]?.atualizado_em, carregadoEm: new Date() });
     if (trocou) { est.aba = 'geral'; est.filtroMexido = false; }
     est.pesq = null;
     if (est.aba === 'pesquisa') await carregarPesquisa();
@@ -605,7 +613,7 @@ async function carregar(manual = false) {
     atualizarStatus();
     montarAbas();
     montarFiltro();
-    if (!$('explorar').open) renderAba();
+    renderAba();
     if (manual === true) aviso('Painel atualizado');
   } catch (e) {
     aviso('Erro ao carregar: ' + e.message, true);
@@ -728,6 +736,9 @@ function renderAba() {
     b.classList.toggle('on', on);
     b.setAttribute('aria-selected', String(on));
   });
+  // Explorar abre em tela cheia: some o filtro e as abas
+  $('filtroBox').hidden = $('abas').hidden = !!est.sub;
+  if (est.sub) return renderSub();
   const inteiro = est.aba === 'metas' || est.aba === 'pesquisa';
   const c = inteiro ? calcular(est.padraoDe, est.padraoAte) : calcular(est.de, est.ate);
   ({ geral: abaGeral, midia: abaMidia, criativos: abaCriativos, origem: abaOrigem, organico: abaOrganico, pesquisa: abaPesquisa, metas: abaMetas })[est.aba](c);
@@ -855,7 +866,7 @@ function abaGeral(c) {
         <div class="mini-sub">${int.format(t.organicos)} leads · ${pct(div(t.organicos, t.leads) || 0)} do total</div>
         ${listaOrg.length ? `<div class="barras-h">${listaOrg.map(([k, n], i) => `
           <div class="bh"><span class="bh-rot" title="${esc(k)}">${esc(k)}</span>
-            <span class="bh-trilho"><span style="width:${Math.max(2, n / maxOrg * 100)}%;opacity:${Math.max(.35, 1 - i * .12)}"></span></span>
+            <span class="bh-trilho"><span style="width:${Math.max(2, n / maxOrg * 100)}%;background:${PALETA_ORG[Math.min(i, PALETA_ORG.length - 1)]}"></span></span>
             <span class="bh-num">${int.format(n)}</span></div>`).join('')}</div>`
           : '<div class="mini-vazio">Nenhum lead orgânico no período.</div>'}
       </div>
@@ -926,129 +937,135 @@ function desenharDesempenho(c) {
   });
 }
 
-// ---------- Explorar (janela de detalhe) ----------
-const exp = { tipo: null, leads: null, filtrados: [], pagina: 1, busca: '' };
+// ---------- Explorar: visões de tela cheia (Orgânico e Tráfego) ----------
+const SUBS = { organico: 'Orgânico', trafego: 'Tráfego' };
+const PALETA_ORG = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#e8eaf6', '#9ca3c7', '#7c7fa3', '#63668a', '#4f5274'];
+const org = { canal: 'todos', agrupar: 'canal', periodo: 'data' };
 
 function explorar(tipo) {
-  exp.tipo = tipo;
+  history.pushState(null, '', `?id=${encodeURIComponent(atualId)}&ver=${tipo}`);
+  est.sub = tipo;
+  if (tipo === 'organico') Object.assign(org, { canal: 'todos', agrupar: 'canal', periodo: 'data' });
+  renderAba();
+  window.scrollTo(0, 0);
+}
+
+function sairSub() {
+  history.pushState(null, '', `?id=${encodeURIComponent(atualId)}`);
+  est.sub = null;
+  renderAba();
+  window.scrollTo(0, 0);
+}
+
+function migalha(nome) {
+  return `
+    <div class="sub-topo">
+      <nav class="migalha" aria-label="Caminho">
+        <button class="link-migalha" onclick="sairSub()">${ico('casa')}Início</button>
+        <span class="sep-migalha">/</span><span class="atual">${nome}</span>
+        <span class="periodo-migalha">${ddmm(est.de)} — ${ddmm(est.ate)}</span>
+      </nav>
+      <div id="subFiltro"></div>
+    </div>`;
+}
+
+function rodapeSub() {
+  const hora = est.carregadoEm ? est.carregadoEm.toLocaleTimeString('pt-BR') : '—';
+  return `<div class="sub-rodape"><span>Atualizado: ${hora}</span><button class="btn primario" onclick="carregar(true)">Atualizar tudo</button></div>`;
+}
+
+function renderSub() {
   const c = calcular(est.de, est.ate);
-  $('expTitulo').textContent = tipo === 'organico' ? 'Orgânico' : 'Tráfego';
-  $('expSub').textContent = `${est.lanc.rotulo || est.lanc.id} · ${ddmm(c.de)} — ${ddmm(c.ate)}`;
-  $('expCorpo').innerHTML = '<div id="expA"></div><div id="expB" class="exp-b"></div>';
-  alvoRender = 'expA';
-  try {
-    if (tipo === 'trafego') {
-      abaMidia(c);
-      alvoRender = 'expB';
-      abaCriativos(c);
-    } else {
-      abaOrganico(c);
-      $('expB').innerHTML = `
-        <section class="card bloco">
-          <div class="lista-cab">
-            <div><h2>Leads orgânicos</h2><p class="desc" id="orgResumo">Carregando…</p></div>
-            <div class="lista-acoes">
-              <input type="search" id="orgBusca" placeholder="Buscar nome, e-mail, canal…" oninput="buscarOrganicos(this.value)">
-              <button class="btn" onclick="exportarOrganicos()">Exportar CSV</button>
-            </div>
+  if (est.sub === 'organico') return subOrganico(c);
+  // Tráfego: funil, métricas por dia e criativos, em tela cheia
+  $('conteudo').innerHTML = migalha('Tráfego') + '<div id="subA"></div><div id="subB" class="exp-b"></div>' + rodapeSub();
+  alvoRender = 'subA';
+  try { abaMidia(c); alvoRender = 'subB'; abaCriativos(c); } finally { alvoRender = 'conteudo'; }
+}
+
+const chaveOrg = {
+  canal: r => r.utm_source + (r.utm_medium ? ' / ' + r.utm_medium : ''),
+  campanha: r => r.utm_campaign || '(sem campanha)',
+  conteudo: r => r.utm_content || '(sem conteúdo)',
+};
+
+function subOrganico(c) {
+  const todos = c.utm.filter(r => !r._pago);
+  // lista de canais para o seletor do topo
+  const canais = {};
+  todos.forEach(r => { const k = chaveOrg.canal(r); canais[k] = (canais[k] || 0) + Number(r.leads); });
+  const listaCanais = Object.entries(canais).sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  if (org.canal !== 'todos' && !listaCanais.includes(org.canal)) org.canal = 'todos';
+  const rows = org.canal === 'todos' ? todos : todos.filter(r => chaveOrg.canal(r) === org.canal);
+  const total = rows.reduce((s, r) => s + Number(r.leads), 0);
+
+  // leads por origem, no agrupamento escolhido
+  const grupos = {};
+  rows.forEach(r => { const k = chaveOrg[org.agrupar](r); grupos[k] = (grupos[k] || 0) + Number(r.leads); });
+  const origem = Object.entries(grupos).sort((a, b) => b[1] - a[1]);
+  const max = origem[0]?.[1] || 1;
+
+  const sel = (id, valor, opcoes, onchange, rotulo) => `
+    <select class="sel" id="${id}" aria-label="${rotulo}" onchange="${onchange}">
+      ${opcoes.map(([v, t]) => `<option value="${esc(v)}"${v === valor ? ' selected' : ''}>${esc(t)}</option>`).join('')}
+    </select>`;
+
+  $('conteudo').innerHTML = `
+    ${migalha('Orgânico')}
+    <div class="org-grade">
+      <div class="org-esq">
+        <div class="card macro">
+          <div class="rotulo">Total leads (orgânico)</div>
+          <div class="macro-linha"><span class="k-ico" style="--c:${COR.purple}">${ico('pessoas')}</span><span class="macro-valor">${int.format(total)}</span></div>
+          <div class="sub">${pct(div(total, c.t.leads) || 0)} de todos os leads do período</div>
+        </div>
+        <div class="card bloco org-origem">
+          <div class="bloco-cab">
+            <div class="rotulo">Leads por origem</div>
+            ${sel('selAgrupar', org.agrupar, [['canal', 'Canais'], ['campanha', 'Campanhas'], ['conteudo', 'Conteúdo']], "org.agrupar=this.value; renderAba()", 'Agrupar por')}
           </div>
-          <div class="tabela-wrap"><table id="tabOrg"></table></div>
-          <div class="paginacao" id="orgPag"></div>
-        </section>`;
-      carregarOrganicos(c);
-    }
-  } finally {
-    alvoRender = 'conteudo';
+          ${origem.length ? `<div class="barras-h org-barras">${origem.map(([k, n], i) => `
+            <div class="bh"><span class="bh-rot" title="${esc(k)}">${esc(k)}</span>
+              <span class="bh-trilho"><span style="width:${Math.max(2, n / max * 100)}%;background:${PALETA_ORG[Math.min(i, PALETA_ORG.length - 1)]}"></span></span>
+              <span class="bh-num">${int.format(n)}</span></div>`).join('')}</div>`
+            : '<div class="mini-vazio">Nenhum lead orgânico no período.</div>'}
+        </div>
+      </div>
+      <div class="card bloco org-dir">
+        <div class="bloco-cab">
+          <div class="rotulo">Leads por dia (orgânico)</div>
+          ${sel('selPeriodo', org.periodo, [['data', 'Por data'], ['semana', 'Por semana'], ['diasemana', 'Por dia da semana']], "org.periodo=this.value; renderAba()", 'Agrupar datas')}
+        </div>
+        <div class="grafico org-grafico"><canvas id="gOrgDia"></canvas></div>
+      </div>
+    </div>
+    ${rodapeSub()}`;
+
+  $('subFiltro').innerHTML = sel('selCanal', org.canal, [['todos', 'Todos'], ...listaCanais.map(k => [k, k])], "org.canal=this.value; renderAba()", 'Canal');
+
+  // série do gráfico conforme o agrupamento de datas
+  const porDia = Object.fromEntries(c.dias.map(d => [d, 0]));
+  rows.forEach(r => { if (r.data in porDia) porDia[r.data] += Number(r.leads); });
+  let rotulos, dados;
+  if (org.periodo === 'semana') {
+    const semanas = {};
+    c.dias.forEach(d => {
+      const dt = new Date(d + 'T12:00:00Z');
+      dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7)); // segunda-feira
+      const k = dt.toISOString().slice(0, 10);
+      semanas[k] = (semanas[k] || 0) + porDia[d];
+    });
+    rotulos = Object.keys(semanas).map(k => `Sem. ${ddmm(k)}`);
+    dados = Object.values(semanas);
+  } else if (org.periodo === 'diasemana') {
+    const nomes = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    const soma = [0, 0, 0, 0, 0, 0, 0];
+    c.dias.forEach(d => { soma[(new Date(d + 'T12:00:00Z').getUTCDay() + 6) % 7] += porDia[d]; });
+    rotulos = nomes; dados = soma;
+  } else {
+    rotulos = c.dias.map(ddmm); dados = c.dias.map(d => porDia[d]);
   }
-  $('explorar').showModal();
-  $('expCorpo').scrollTop = 0;
-}
-
-function fecharExplorar() { $('explorar').close(); }
-
-// Dia do lead: DATA (dd/mm/aaaa ou aaaa-mm-dd) ou a hora de entrada
-function diaDoLead(dados, criado) {
-  const d = String(dados?.DATA || '');
-  let m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(d);
-  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-  m = /^(\d{4}-\d{2}-\d{2})/.exec(d);
-  if (m) return m[1];
-  return diaSP(criado);
-}
-
-async function carregarOrganicos(c) {
-  try {
-    if (!exp.leads || exp.leads.id !== est.lanc.id) {
-      const rows = [];
-      for (let de = 0; ; de += 1000) {
-        const { data, error } = await sb.from('leads').select('id, dados, criado_em')
-          .eq('lancamento_id', est.lanc.id).order('criado_em').order('id').range(de, de + 999);
-        if (error) throw error;
-        rows.push(...data);
-        if (data.length < 1000) break;
-      }
-      exp.leads = { id: est.lanc.id, rows };
-    }
-    const nomes = c.nomes;
-    exp.base = exp.leads.rows.map(r => {
-      const d = r.dados || {};
-      const u = {
-        utm_source: d.UTM_SOURCE || '(sem utm)', utm_medium: d.UTM_MEDIUM || '', utm_campaign: d.UTM_CAMPAIGN || '',
-        utm_content: d.UTM_CONTENT || '', utm_term: d.UTM_TERM || '',
-      };
-      return { ...u, dia: diaDoLead(d, r.criado_em), nome: d.NOME || '', email: d.EMAIL || '', tel: d.TELEFONE || '', pago: ehPago(u, nomes) };
-    }).filter(r => !r.pago && r.dia >= c.de && r.dia <= c.ate)
-      .sort((a, b) => b.dia.localeCompare(a.dia));
-    exp.pagina = 1; exp.busca = '';
-    filtrarOrganicos();
-  } catch (e) {
-    $('orgResumo').textContent = 'Erro ao carregar os leads: ' + e.message;
-  }
-}
-
-function buscarOrganicos(v) { exp.busca = norm(v); exp.pagina = 1; filtrarOrganicos(); }
-
-function filtrarOrganicos() {
-  const q = exp.busca;
-  exp.filtrados = !q ? exp.base : exp.base.filter(r =>
-    [r.nome, r.email, r.tel, r.utm_source, r.utm_medium, r.utm_campaign, r.utm_content].some(v => norm(v).includes(q)));
-  desenharOrganicos();
-}
-
-function desenharOrganicos() {
-  const POR = 50, total = exp.filtrados.length;
-  const pags = Math.max(1, Math.ceil(total / POR));
-  exp.pagina = Math.min(exp.pagina, pags);
-  const pagina = exp.filtrados.slice((exp.pagina - 1) * POR, exp.pagina * POR);
-  $('orgResumo').textContent = `${int.format(total)} ${total === 1 ? 'lead' : 'leads'}${exp.busca ? ' na busca' : ' no período'} · mais recentes primeiro`;
-  $('tabOrg').innerHTML = !total
-    ? '<tr><td class="vazio">Nenhum lead orgânico encontrado.</td></tr>'
-    : `<thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Canal</th><th>Campanha</th><th>Data</th></tr></thead><tbody>` +
-      pagina.map(r => `<tr>
-        <td>${esc(r.nome) || '<span class="fraco">—</span>'}</td>
-        <td class="esq">${esc(r.email)}</td>
-        <td>${esc(r.tel)}</td>
-        <td class="esq">${esc(r.utm_source)}${r.utm_medium ? ` / ${esc(r.utm_medium)}` : ''}</td>
-        <td class="esq">${esc(r.utm_campaign) || '—'}</td>
-        <td>${fmtData(r.dia)}</td>
-      </tr>`).join('') + '</tbody>';
-  $('orgPag').innerHTML = pags > 1 ? `
-    <button class="btn" ${exp.pagina <= 1 ? 'disabled' : ''} onclick="exp.pagina--; desenharOrganicos()">Anterior</button>
-    <span>${exp.pagina} de ${pags}</span>
-    <button class="btn" ${exp.pagina >= pags ? 'disabled' : ''} onclick="exp.pagina++; desenharOrganicos()">Próxima</button>` : '';
-}
-
-function exportarOrganicos() {
-  if (!exp.filtrados.length) { aviso('Nada para exportar', true); return; }
-  const cel = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const linhas = [['Nome', 'Email', 'Telefone', 'UTM_SOURCE', 'UTM_MEDIUM', 'UTM_CAMPAIGN', 'UTM_CONTENT', 'Data'].join(';'),
-    ...exp.filtrados.map(r => [r.nome, r.email, r.tel, r.utm_source, r.utm_medium, r.utm_campaign, r.utm_content, fmtData(r.dia)].map(cel).join(';'))];
-  const blob = new Blob(['\ufeff' + linhas.join('\n')], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${est.lanc.id}_organicos_${est.de}_${est.ate}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  desenhar('gOrgDia', 'bar', rotulos, [{ label: 'Leads orgânicos', data: dados, cor: '#8b5cf6' }]);
 }
 
 // ---------- Mídia paga ----------
@@ -1419,7 +1436,6 @@ function abrirModal(titulo, html) {
 }
 function fecharModal() { $('modal').close(); }
 $('modal').addEventListener('close', () => clearInterval(ckTimer));
-$('explorar').addEventListener('close', () => { if (atualId) renderAba(); });
 
 function sugerirCodigo() {
   const nums = lancamentos.map(l => +((/^L(\d+)KR$/.exec(l.id) || [])[1] || 0)).filter(n => n > 0);
