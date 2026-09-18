@@ -212,7 +212,7 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .macro-linha{display:flex;align-items:center;gap:12px;margin-top:10px}
 .macro-valor{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .macro .sub{font-size:12px;color:var(--muted);margin-top:8px}
-.grafico.alto{height:340px;margin-top:10px}
+.grafico.alto{height:290px;margin-top:10px}
 .mini{padding:18px 20px;min-height:280px;display:flex;flex-direction:column;min-width:0}
 .mini-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px}
 .mini-sub{font-size:12px;color:var(--muted);margin:4px 0 14px}
@@ -891,10 +891,10 @@ function desenharDesempenho(c) {
     data: {
       labels: rotulosDias(c),
       datasets: [
-        // Leads não desenham nada: aparecem só no tooltip e na legenda
-        { type: 'line', label: 'Leads', data: c.dias.map(d => P(d).leads), fmt: 'int', yAxisID: 'yLeads', borderColor: COR.gold, backgroundColor: COR.gold, showLine: false, pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0 },
-        { type: 'bar', label: 'Gasto', data: c.dias.map(d => P(d).gasto), fmt: 'moeda', yAxisID: 'y', backgroundColor: COR.purple, hoverBackgroundColor: '#c2adff', borderRadius: 4, maxBarThickness: 26, order: 2 },
-        { type: 'line', label: 'CPL', data: c.dias.map(d => div(P(d).gasto, P(d).leads)), fmt: 'moeda', yAxisID: 'y1', borderColor: '#e8eaf6', backgroundColor: '#e8eaf6', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .4, spanGaps: true, order: 1 },
+        // Leads e gasto lado a lado, no mesmo eixo (os leads ficam baixinhos, como referência)
+        { type: 'bar', label: 'Leads de tráfego', data: c.dias.map(d => c.trafegoDia(d)), fmt: 'int', yAxisID: 'y', backgroundColor: '#6d4fd1', hoverBackgroundColor: '#8a6ff0', borderRadius: 3, maxBarThickness: 12, barPercentage: 1, categoryPercentage: .45, order: 2 },
+        { type: 'bar', label: 'Gasto', data: c.dias.map(d => P(d).gasto), fmt: 'moeda', yAxisID: 'y', backgroundColor: COR.purple, hoverBackgroundColor: '#c2adff', borderRadius: 3, maxBarThickness: 12, barPercentage: 1, categoryPercentage: .45, order: 2 },
+        { type: 'line', label: 'CPL de tráfego', data: c.dias.map(d => div(P(d).gasto, c.trafegoDia(d))), fmt: 'moeda', yAxisID: 'y1', borderColor: '#e8eaf6', backgroundColor: '#e8eaf6', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .4, spanGaps: true, order: 1 },
       ],
     },
     options: {
@@ -905,17 +905,20 @@ function desenharDesempenho(c) {
         tooltip: {
           backgroundColor: 'rgba(14,21,48,.96)', borderColor: 'rgba(169,139,255,.45)', borderWidth: 1, padding: 12,
           usePointStyle: true, boxPadding: 6, itemSort: (a, b) => a.datasetIndex - b.datasetIndex,
-          titleFont: { size: 13, weight: '600' }, bodySpacing: 6,
+          titleFont: { size: 13, weight: '600' }, bodySpacing: 6, footerColor: '#8b93b8', footerFont: { size: 11, weight: '400' }, footerMarginTop: 8,
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${formatar(ctx.raw, ctx.dataset.fmt)}`,
             labelPointStyle: () => ({ pointStyle: 'circle', rotation: 0 }),
+            footer: items => {
+              const o = P(c.dias[items[0].dataIndex]).organicos;
+              return o ? `+ ${int.format(o)} orgânico${o === 1 ? '' : 's'} (fora do CPL)` : '';
+            },
           },
         },
       },
       scales: {
         x: { grid: { display: false } },
-        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.05)' }, title: { display: true, text: 'Gasto' }, ticks: { callback: v => formatarEixo(v, 'moeda') } },
-        yLeads: { beginAtZero: true, display: false },
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.05)' }, title: { display: true, text: 'Valor / Leads' }, ticks: { callback: v => int.format(v) } },
         y1: { beginAtZero: true, position: 'right', grid: { display: false }, title: { display: true, text: 'CPL' }, ticks: { callback: v => formatarEixo(v, 'moeda') } },
       },
     },
