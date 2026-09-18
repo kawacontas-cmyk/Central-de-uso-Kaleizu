@@ -82,8 +82,55 @@ tr:last-child td{border-bottom:none}
 .aviso.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .aviso.erro{border-color:var(--red)}
 
+[hidden]{display:none!important}
+.btn.primario{background:var(--gold);border-color:var(--gold);color:#060B1F;font-weight:600}
+.btn.primario:hover{background:var(--gold-light);color:#060B1F}
+.btn:disabled{opacity:.5;cursor:wait}
+
+/* modal */
+dialog{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:0;width:calc(100% - 32px);max-width:640px;max-height:calc(100vh - 48px);margin:auto}
+dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
+.modal-cab{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:1}
+.modal-cab h2{font-size:17px;font-weight:600}
+.fechar{background:none;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;border-radius:6px}
+.fechar:hover{color:var(--text)}
+.modal-corpo{padding:22px}
+
+/* formulário */
+.form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500}
+.form label.largo{grid-column:1/-1}
+.form input{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font:inherit;font-weight:400}
+.form input:focus{outline:none;border-color:var(--gold)}
+.form input[readonly]{opacity:.6}
+.form small{font-size:12px;color:var(--muted);font-weight:400}
+.form .opc{color:var(--hint);font-weight:400}
+.form .erro{grid-column:1/-1;color:var(--red);font-size:13px}
+.acoes{grid-column:1/-1;display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+
+/* checklist */
+.check{list-style:none;display:flex;flex-direction:column;gap:4px;counter-reset:passo}
+.check>li{display:grid;grid-template-columns:28px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);counter-increment:passo}
+.check>li:last-child{border-bottom:none}
+.check .st{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--hint);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)}
+.check .st::before{content:counter(passo)}
+.check li.ok .st{background:var(--green);border-color:var(--green);color:#060B1F}
+.check li.ok .st::before{content:"✓";font-weight:700}
+.check li.manual .st{border-color:var(--gold);color:var(--gold)}
+.check b{font-size:14px;font-weight:600}
+.check p{font-size:13px;color:var(--muted);margin-top:4px}
+.check code{font-family:'DM Mono',monospace;font-size:12px;color:var(--gold-light)}
+.check .vivo{color:var(--text)}
+.check li.ok .vivo{color:var(--green)}
+.check details{margin-top:10px;font-size:13px}
+.check summary{cursor:pointer;color:var(--muted)}
+.check summary:hover{color:var(--gold-light)}
+.copia{display:flex;gap:8px;align-items:stretch;margin-top:10px}
+.copia code{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;overflow-x:auto;white-space:nowrap;display:block}
+.nota{font-size:12px;color:var(--hint);margin-top:14px}
+
 @media (max-width:980px){.kpis{grid-template-columns:repeat(2,1fr)}.grade{grid-template-columns:1fr}}
-@media (max-width:520px){.wrap{padding:16px}.kpis{grid-template-columns:1fr}.kpi .valor{font-size:26px}}
+@media (max-width:520px){.form{grid-template-columns:1fr}.wrap{padding:16px}.kpis{grid-template-columns:1fr}.kpi .valor{font-size:26px}}
 </style>
 </head>
 <body>
@@ -95,6 +142,9 @@ tr:last-child td{border-bottom:none}
     <select id="selLanc" aria-label="Lançamento"></select>
     <div class="status"><span class="pulso" id="pulso"></span><span id="txtStatus">carregando</span></div>
     <button class="btn" onclick="carregar(true)">Atualizar</button>
+    <button class="btn" id="btnChecklist" hidden onclick="abrirChecklist()">Checklist</button>
+    <button class="btn" id="btnEditar" hidden onclick="abrirForm(true)">Editar</button>
+    <button class="btn primario" id="btnNovo" hidden onclick="abrirForm()">Novo lançamento</button>
   </header>
 
   <section class="kpis">
@@ -134,6 +184,11 @@ tr:last-child td{border-bottom:none}
 </div>
 <div class="aviso" id="aviso"></div>
 
+<dialog id="modal" aria-labelledby="modalTitulo">
+  <div class="modal-cab"><h2 id="modalTitulo"></h2><button class="fechar" onclick="fecharModal()" aria-label="Fechar">×</button></div>
+  <div class="modal-corpo" id="modalCorpo"></div>
+</dialog>
+
 <script>
 const sb = supabase.createClient(
   "https://iabugpuqlcfftwabuxsj.supabase.co",
@@ -152,6 +207,8 @@ let grafico = null;
 let timer = null;
 let criativos = [];
 let ordCriativos = { col: 'leads', dir: -1 };
+let ehAdmin = false;
+let ckTimer = null;
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -184,22 +241,33 @@ function tempoAtras(iso) {
   return `há ${h} h`;
 }
 
-async function iniciar() {
+async function checarAdmin() {
+  const { data } = await sb.auth.getUser();
+  ehAdmin = data?.user?.user_metadata?.role === 'admin';
+}
+
+async function iniciar(selecionar) {
+  await checarAdmin();
   const { data, error } = await sb.from('painel_lancamentos').select('*').order('inicio', { ascending: false });
   if (error) { aviso('Não foi possível ler os lançamentos: ' + error.message, true); return; }
   lancamentos = data || [];
-  if (!lancamentos.length) {
-    $('txtStatus').textContent = 'nenhum lançamento cadastrado em painel_lancamentos';
+  const tem = lancamentos.length > 0;
+  $('btnNovo').hidden = !ehAdmin;
+  $('btnEditar').hidden = $('btnChecklist').hidden = !(ehAdmin && tem);
+  if (!tem) {
+    $('selLanc').innerHTML = '';
+    $('txtStatus').textContent = ehAdmin ? 'Nenhum lançamento ainda. Cadastre o primeiro em "Novo lançamento".' : 'Nenhum lançamento cadastrado ainda.';
     return;
   }
-  const doUrl = new URLSearchParams(location.search).get('id');
+  const alvo = selecionar || new URLSearchParams(location.search).get('id');
   $('selLanc').innerHTML = lancamentos.map(l => `<option value="${esc(l.id)}">${esc(l.rotulo || l.id)}</option>`).join('');
-  if (doUrl && lancamentos.some(l => l.id === doUrl)) $('selLanc').value = doUrl;
+  if (alvo && lancamentos.some(l => l.id === alvo)) $('selLanc').value = alvo;
+  history.replaceState(null, '', '?id=' + encodeURIComponent($('selLanc').value));
   $('selLanc').onchange = () => {
     history.replaceState(null, '', '?id=' + encodeURIComponent($('selLanc').value));
     carregar(true);
   };
-  carregar(true);
+  carregar();
 }
 
 async function carregar(manual = false) {
@@ -407,6 +475,212 @@ function desenharCriativos(cpl) {
       <td>${int.format(c.leads_meta)}</td>
       <td>${c.ctr != null ? pct(c.ctr) : '—'}</td>
     </tr>`).join('') + '</tbody>';
+}
+
+// ============================================================
+// Cadastro de lançamento (só admin; o banco confere de novo)
+// ============================================================
+const WEBHOOK_BASE = 'https://iabugpuqlcfftwabuxsj.supabase.co/functions/v1/lead-webhook';
+const UTM_ANUNCIOS = 'utm_source=meta&utm_medium=pago&utm_campaign={{campaign.name}}&utm_content={{ad.name}}';
+
+function abrirModal(titulo, html) {
+  $('modalTitulo').textContent = titulo;
+  $('modalCorpo').innerHTML = html;
+  if (!$('modal').open) $('modal').showModal();
+}
+function fecharModal() { $('modal').close(); }
+$('modal').addEventListener('close', () => clearInterval(ckTimer));
+
+function sugerirCodigo() {
+  const nums = lancamentos.map(l => +((/^L(\d+)KR$/.exec(l.id) || [])[1] || 0)).filter(n => n > 0);
+  return nums.length ? `L${Math.max(...nums) + 1}KR` : '';
+}
+const fmtData = iso => iso ? iso.split('-').reverse().join('/') : '';
+
+function abrirForm(editar = false) {
+  const l = editar ? lancamentos.find(x => x.id === $('selLanc').value) : null;
+  if (editar && !l) return;
+  const cod = l?.id || sugerirCodigo();
+  const rot = l?.rotulo || cod.replace(/KR$/, '');
+  abrirModal(editar ? `Editar ${l.rotulo || l.id}` : 'Novo lançamento', `
+    <form id="formLanc" class="form" novalidate>
+      <label>Código
+        <input name="codigo" value="${esc(cod)}" ${editar ? 'readonly' : ''} placeholder="L24KR" autocomplete="off">
+        <small>O mesmo da Central de Leads.</small>
+      </label>
+      <label>Nome de exibição
+        <input name="rotulo" value="${esc(rot)}" placeholder="L24" autocomplete="off">
+      </label>
+      <label class="largo">Trecho no nome das campanhas do Meta
+        <input name="filtro" value="${esc(l?.filtro_campanha || rot)}" placeholder="L24" autocomplete="off">
+        <small>Toda campanha com esse trecho no nome entra no painel. Use um trecho que não apareça em outros lançamentos: "L2" também pegaria o L23 e o L24.</small>
+      </label>
+      <label>Início dos anúncios
+        <input type="date" name="inicio" value="${esc(l?.inicio || hojeSP())}">
+      </label>
+      <label>Fim <span class="opc">opcional</span>
+        <input type="date" name="fim" value="${esc(l?.fim || '')}">
+      </label>
+      <label>Meta de leads <span class="opc">opcional</span>
+        <input type="number" name="meta" min="0" step="1" inputmode="numeric" value="${l?.meta_leads ?? ''}">
+      </label>
+      <label>Verba em reais <span class="opc">opcional</span>
+        <input type="number" name="verba" min="0" step="0.01" inputmode="decimal" value="${l?.verba ?? ''}">
+      </label>
+      <p class="erro" id="formErro" hidden></p>
+      <div class="acoes">
+        <button type="button" class="btn" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn primario">${editar ? 'Salvar alterações' : 'Cadastrar lançamento'}</button>
+      </div>
+    </form>`);
+
+  const f = $('formLanc');
+  const campo = n => f.elements.namedItem(n);
+  let rotuloMexido = editar, filtroMexido = editar;
+  campo('codigo').oninput = () => {
+    campo('codigo').value = campo('codigo').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!rotuloMexido) campo('rotulo').value = campo('codigo').value.replace(/KR$/, '');
+    if (!filtroMexido) campo('filtro').value = campo('rotulo').value;
+  };
+  campo('rotulo').oninput = () => { rotuloMexido = true; if (!filtroMexido) campo('filtro').value = campo('rotulo').value; };
+  campo('filtro').oninput = () => { filtroMexido = true; };
+
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const v = Object.fromEntries(new FormData(f));
+    const erro = msg => { $('formErro').textContent = msg; $('formErro').hidden = false; };
+    if (!v.codigo) return erro('Informe o código do lançamento.');
+    if (!editar && lancamentos.some(x => x.id === v.codigo)) return erro(`O ${v.codigo} já tem painel. Selecione-o e use "Editar".`);
+    if (!v.filtro.trim()) return erro('Informe o trecho do nome das campanhas.');
+    if (!v.inicio) return erro('Informe a data de início dos anúncios.');
+    if (v.fim && v.fim < v.inicio) return erro('A data de fim é anterior à de início.');
+
+    const btn = f.querySelector('.primario');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const { data: token, error } = await sb.rpc('salvar_lancamento', {
+      p_id: v.codigo,
+      p_rotulo: v.rotulo.trim() || v.codigo,
+      p_filtro: v.filtro.trim(),
+      p_inicio: v.inicio,
+      p_fim: v.fim || null,
+      p_meta: v.meta ? parseInt(v.meta, 10) : null,
+      p_verba: v.verba ? Number(v.verba) : null,
+    });
+    if (error) {
+      btn.disabled = false; btn.textContent = editar ? 'Salvar alterações' : 'Cadastrar lançamento';
+      return erro(error.message);
+    }
+    await iniciar(v.codigo);
+    if (editar) { fecharModal(); aviso('Alterações salvas'); }
+    else abrirChecklist(v.codigo, token);
+  };
+}
+
+const copiavel = txt => `<div class="copia"><code>${esc(txt)}</code><button type="button" class="btn" onclick="copiar(this)">Copiar</button></div>`;
+async function copiar(btn) {
+  try {
+    await navigator.clipboard.writeText(btn.previousElementSibling.textContent);
+    btn.textContent = 'Copiado';
+    setTimeout(() => btn.textContent = 'Copiar', 1800);
+  } catch { aviso('Não foi possível copiar. Selecione o texto e copie manualmente.', true); }
+}
+
+async function abrirChecklist(id = $('selLanc').value, token = null) {
+  const l = lancamentos.find(x => x.id === id);
+  if (!l) return;
+  if (!token) {
+    const r = await sb.rpc('webhook_do_lancamento', { p_id: id });
+    if (r.error) { aviso(r.error.message, true); return; }
+    token = r.data;
+  }
+  const url = origem => `${WEBHOOK_BASE}?token=${token}&lanc=${encodeURIComponent(id)}&origem=${origem}`;
+  const nome = esc(l.rotulo || l.id);
+
+  abrirModal(`Checklist do ${l.rotulo || l.id}`, `
+    <ol class="check">
+      <li class="ok"><div class="st"></div><div>
+        <b>Cadastro no painel e na Central de Leads</b>
+        <p>Feito. O ${nome} já aparece nas duas ferramentas.</p>
+      </div></li>
+
+      <li id="ckMeta"><div class="st"></div><div>
+        <b>Nome das campanhas no Meta</b>
+        <p>Toda campanha do ${nome} precisa ter <code>${esc(l.filtro_campanha)}</code> no nome. O gasto entra sozinho, a cada 15 minutos.</p>
+        <p class="vivo" id="ckMetaTxt">Verificando…</p>
+      </div></li>
+
+      <li class="manual"><div class="st"></div><div>
+        <b>Parâmetros de URL nos anúncios</b>
+        <p>Em cada anúncio, Rastreamento > Parâmetros de URL. Dá para aplicar em todos de uma vez: selecione os anúncios no Gerenciador e clique em Editar. É isso que liga cada lead ao criativo.</p>
+        ${copiavel(UTM_ANUNCIOS)}
+      </div></li>
+
+      <li class="manual"><div class="st"></div><div>
+        <b>Webhook no formulário de captura</b>
+        <p>No Elementor: formulário > Ações após o envio > adicionar Webhook > colar a URL abaixo. Deixe "Dados avançados" desligado e clique em Atualizar.</p>
+        ${copiavel(url('wordpress'))}
+        <details>
+          <summary>Vai captar pelo ActiveCampaign?</summary>
+          <p>Na automação de entrada do lançamento, adicione a ação Webhook com esta URL. As UTMs precisam existir como campos do contato.</p>
+          ${copiavel(url('activecampaign'))}
+        </details>
+      </div></li>
+
+      <li id="ckLead"><div class="st"></div><div>
+        <b>Lead de teste</b>
+        <p>Abra a página de captura com <code>?utm_source=teste&amp;utm_content=teste</code> no fim da URL e faça um cadastro.</p>
+        <p class="vivo" id="ckLeadTxt">Verificando…</p>
+        <p><button type="button" class="btn" id="btnApagarTeste" hidden onclick="apagarTestes('${esc(id)}')">Apagar leads de teste</button></p>
+      </div></li>
+    </ol>
+    <p class="nota">Os passos 2 e 5 se conferem sozinhos a cada 20 segundos enquanto esta janela estiver aberta.</p>
+    <div class="acoes"><button type="button" class="btn primario" onclick="fecharModal()">Concluir</button></div>`);
+
+  verificarChecklist(l);
+  clearInterval(ckTimer);
+  ckTimer = setInterval(() => verificarChecklist(l), 20000);
+}
+
+function marcar(id, ok, texto) {
+  const li = $(id);
+  if (!li) return;
+  li.classList.toggle('ok', ok);
+  $(id + 'Txt').textContent = texto;
+}
+
+async function verificarChecklist(l) {
+  const [ads, utm] = await Promise.all([
+    sb.from('painel_meta_anuncios').select('campaign_name').eq('lancamento_id', l.id),
+    sb.from('painel_leads_utm').select('utm_source, leads').eq('lancamento_id', l.id),
+  ]);
+  if (!$('ckMeta')) return;
+
+  const camps = [...new Set((ads.data || []).map(a => a.campaign_name).filter(Boolean))];
+  marcar('ckMeta', camps.length > 0, camps.length
+    ? `${camps.length} campanha(s) encontrada(s): ${camps.slice(0, 4).join(', ')}${camps.length > 4 ? '…' : ''}. Se aparecer alguma de outro lançamento, ajuste o trecho em Editar.`
+    : `Nenhuma campanha com "${l.filtro_campanha}" no nome veiculando desde ${fmtData(l.inicio)} ainda.`);
+
+  const linhas = utm.data || [];
+  const total = linhas.reduce((s, r) => s + Number(r.leads), 0);
+  const comUtm = linhas.filter(r => r.utm_source !== '(sem utm)').reduce((s, r) => s + Number(r.leads), 0);
+  const testes = linhas.filter(r => r.utm_source.toLowerCase() === 'teste').reduce((s, r) => s + Number(r.leads), 0);
+  marcar('ckLead', total > 0, total
+    ? `${int.format(total)} lead(s) recebido(s), ${int.format(comUtm)} com UTM.` + (comUtm < total ? ' Leads sem UTM não entram no ranking de criativos: confira se a página mantém os parâmetros da URL.' : '')
+    : 'Nenhum lead recebido ainda.');
+  $('btnApagarTeste').hidden = testes === 0;
+  if (testes) $('btnApagarTeste').textContent = `Apagar ${testes} lead(s) de teste`;
+}
+
+async function apagarTestes(id) {
+  const btn = $('btnApagarTeste');
+  btn.disabled = true;
+  const { data, error } = await sb.rpc('apagar_leads_teste', { p_id: id });
+  btn.disabled = false;
+  if (error) { aviso(error.message, true); return; }
+  aviso(`${data} lead(s) de teste apagado(s)`);
+  const l = lancamentos.find(x => x.id === id);
+  if (l) verificarChecklist(l);
+  carregar();
 }
 
 document.addEventListener('visibilitychange', () => { if (!document.hidden) carregar(); });
