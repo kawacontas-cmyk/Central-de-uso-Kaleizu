@@ -188,6 +188,56 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .copia code{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;overflow-x:auto;white-space:nowrap;display:block}
 .nota{font-size:12px;color:var(--hint);margin-top:14px}
 
+/* filtro de data e abas */
+.filtro{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;margin-bottom:14px}
+.filtro::before{display:none}
+.f-tit{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;flex-wrap:wrap}
+.f-tit svg{width:16px;height:16px;color:var(--gold);display:block}
+.f-rot{font-size:12px;font-weight:400;color:var(--muted)}
+.f-campos{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.f-campos input[type=date]{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;color-scheme:dark}
+.f-campos input[type=date]:focus{outline:none;border-color:var(--gold)}
+.link-btn{background:none;border:none;color:var(--gold);font:inherit;font-size:12px;cursor:pointer;padding:4px 6px}
+.link-btn:hover{color:var(--gold-light)}
+.abas{display:flex;gap:4px;padding:5px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:22px;overflow-x:auto}
+.aba{display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;font-weight:500;padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.aba svg{width:15px;height:15px}
+.aba:hover{color:var(--text)}
+.aba.on{background:var(--surface);color:var(--gold-light);box-shadow:inset 0 0 0 1px rgba(205,160,76,.3)}
+.carregando{color:var(--muted);padding:40px 0;text-align:center}
+
+/* cards das abas */
+.kgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:26px}
+.k{padding:18px;min-width:0}
+.k-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.k-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent)}
+.k-ico svg{width:16px;height:16px}
+.k .valor{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;margin-top:10px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k .valor .de{font-size:13px;color:var(--muted);margin-left:6px;letter-spacing:0}
+.k .sub{font-size:12px;color:var(--muted);margin-top:4px;min-height:18px}
+.secao{display:flex;align-items:center;gap:14px;margin:6px 0 14px;font-family:'DM Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
+.secao::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(205,160,76,.35),transparent)}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:26px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:26px}
+.bloco.largo{margin-bottom:16px}
+.faixa{padding:14px 18px;margin-bottom:22px;border-radius:12px;border:1px solid rgba(205,160,76,.3);background:rgba(205,160,76,.06);font-size:13px}
+.faixa b{font-weight:600}
+.faixa p{color:var(--muted);margin-top:3px;font-size:12px}
+.faixa.verde{border-color:rgba(95,205,138,.3);background:rgba(95,205,138,.06)}
+.faixa .btn{margin-top:10px}
+.prog{height:8px;background:var(--surface);border-radius:4px;overflow:hidden;margin-top:14px}
+.prog span{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--gold-light))}
+.selinho{display:inline-block;font-size:11px;padding:3px 9px;border-radius:99px;margin-top:10px;font-family:'DM Mono',monospace}
+.selinho.bom{background:rgba(95,205,138,.14);color:var(--green)}
+.selinho.ruim{background:rgba(224,90,90,.14);color:var(--red)}
+.tag{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:99px;margin-left:8px;vertical-align:middle}
+.tag.pago{background:rgba(205,160,76,.14);color:var(--gold-light)}
+.tag.org{background:rgba(95,205,138,.14);color:var(--green)}
+@media (max-width:1150px){.kgrid{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:980px){.g2,.g3{grid-template-columns:1fr}}
+@media (max-width:640px){.kgrid,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.f-campos{margin-left:0}.k .valor{font-size:20px}}
+
 @media (max-width:980px){.kpis{grid-template-columns:repeat(2,1fr)}.grade{grid-template-columns:1fr}}
 @media (max-width:520px){.form{grid-template-columns:1fr}.wrap{padding:16px}.kpis{grid-template-columns:1fr}.kpi .valor{font-size:26px}}
 </style>
@@ -222,56 +272,16 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
   </section>
 
   <div id="telaPainel" hidden>
-  <section class="kpis">
-    <div class="card kpi"><div class="rotulo">Investimento</div><div class="valor" id="kGasto">—</div><div class="sub" id="kGastoSub">&nbsp;</div></div>
-    <div class="card kpi"><div class="rotulo">Leads</div><div class="valor" id="kLeads">—</div><div class="sub" id="kLeadsSub">&nbsp;</div></div>
-    <div class="card kpi destaque"><div class="rotulo">CPL real</div><div class="valor" id="kCpl">—</div><div class="sub" id="kCplSub">&nbsp;</div></div>
-    <div class="card kpi"><div class="rotulo" id="kHojeRot">Hoje</div><div class="valor" id="kHoje">—</div><div class="sub" id="kHojeSub">&nbsp;</div></div>
-  </section>
-
-  <section class="card funil" aria-labelledby="funilTitulo">
-    <div class="funil-cab">
-      <div class="rotulo" id="funilTitulo">Funil dos anúncios</div>
-      <div class="desc">Da impressão ao lead, com a taxa de passagem entre cada etapa.</div>
-    </div>
-    <div class="funil-trilho">
-      <div class="etapa"><div class="rotulo">Impressões</div><div class="num" id="fImpr">—</div><div class="sub" id="fImprSub">&nbsp;</div></div>
-      <div class="taxa"><span class="rotulo">CTR</span><span class="seta"></span><span class="pct" id="fCtr">—</span></div>
-      <div class="etapa"><div class="rotulo">Cliques no link</div><div class="num" id="fClq">—</div><div class="sub" id="fClqSub">&nbsp;</div></div>
-      <div class="taxa"><span class="rotulo">Connect rate</span><span class="seta"></span><span class="pct" id="fCon">—</span></div>
-      <div class="etapa"><div class="rotulo">Visualizações da página</div><div class="num" id="fLpv">—</div><div class="sub" id="fLpvSub">&nbsp;</div></div>
-      <div class="taxa"><span class="rotulo">Conversão da página</span><span class="seta"></span><span class="pct" id="fConv">—</span></div>
-      <div class="etapa"><div class="rotulo" id="fLeadRot">Leads de anúncio</div><div class="num" id="fLead">—</div><div class="sub" id="fLeadSub">&nbsp;</div></div>
-    </div>
-    <p class="funil-aviso" id="fAviso" hidden></p>
-  </section>
-
-  <section class="card meta" id="blocoMeta">
-    <div class="linha">
-      <div class="rotulo">Meta de leads</div>
-      <div class="num" id="metaNum"></div>
-    </div>
-    <div class="barra"><div class="cheio" id="metaCheio" style="width:0"></div><div class="ritmo" id="metaRitmo" title="Onde deveria estar hoje, no ritmo linear"></div></div>
-  </section>
-
-  <section class="grade">
-    <div class="card bloco">
-      <h2>Leads e CPL por dia</h2>
-      <p class="desc">Barras são leads que chegaram no banco; a linha é o CPL real do dia.</p>
-      <div class="grafico"><canvas id="grafDia"></canvas></div>
-    </div>
-    <div class="card bloco">
-      <h2>Leads por canal</h2>
-      <p class="desc">Pela utm_source de cada lead, pago e orgânico.</p>
-      <div class="tabela-wrap"><table id="tabCanais"></table></div>
-    </div>
-  </section>
-
-  <section class="card bloco">
-    <h2>Criativos</h2>
-    <p class="desc">Leads do banco casados pelo utm_content com o nome (ou ID) do anúncio. Clique no cabeçalho para ordenar.</p>
-    <div class="tabela-wrap"><table id="tabCriativos"></table></div>
-  </section>
+    <section class="card filtro">
+      <div class="f-tit"><span id="fIco"></span>Filtro de data <span class="f-rot" id="fRotulo"></span></div>
+      <div class="f-campos">
+        <label for="fDe">De</label><input type="date" id="fDe" onchange="mudarFiltro()">
+        <label for="fAte">até</label><input type="date" id="fAte" onchange="mudarFiltro()">
+        <button class="link-btn" id="fLimpar" hidden onclick="limparFiltro()">Limpar</button>
+      </div>
+    </section>
+    <nav class="abas" id="abas" role="tablist" aria-label="Seções do painel"></nav>
+    <div id="conteudo"></div>
   </div>
 
 </div>
@@ -289,6 +299,9 @@ const sb = supabase.createClient(
 );
 
 const TZ = 'America/Sao_Paulo';
+Chart.defaults.color = '#8b93b8';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
 const INTERVALO = 60000;
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const brl0 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -296,7 +309,6 @@ const int = new Intl.NumberFormat('pt-BR');
 const pct = v => (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
 
 let lancamentos = [];
-let grafico = null;
 let timer = null;
 let criativos = [];
 let ordCriativos = { col: 'leads', dir: -1 };
@@ -399,6 +411,7 @@ function mostrarPainel(id) {
   $('btnChecklist').hidden = $('btnEditar').hidden = !ehAdmin;
   $('btnNovo').hidden = true;
   document.title = `${l.rotulo || l.id} · Painel do Lançamento`;
+  if (est.lanc?.id !== id) { $('conteudo').innerHTML = '<p class="carregando">Carregando…</p>'; $('abas').innerHTML = ''; }
   carregar();
 }
 
@@ -455,112 +468,150 @@ async function mostrarLista() {
   }).join('') + (ehAdmin ? '<button class="lanc-novo" onclick="abrirForm()"><span class="mais">+</span>Novo lançamento</button>' : '');
 }
 
+// ============================================================
+// Painel: dados, filtro de data e abas
+// ============================================================
+const ABAS = [
+  { id: 'geral',     nome: 'Visão geral',  ico: 'grafico' },
+  { id: 'midia',     nome: 'Mídia paga',   ico: 'megafone' },
+  { id: 'criativos', nome: 'Criativos',    ico: 'imagem' },
+  { id: 'origem',    nome: 'Origem (UTM)', ico: 'ramos' },
+  { id: 'organico',  nome: 'Orgânico',     ico: 'folha' },
+  { id: 'metas',     nome: 'Metas',        ico: 'bandeira' },
+];
+// Lead de tráfego: casou com um anúncio pela UTM, ou veio com fonte/meio pago.
+const FONTES_PAGAS = ['meta', 'facebook', 'fb', 'fb_ads', 'facebook_ads', 'meta_ads', 'instagram_ads', 'ig_ads'];
+const MEIOS_PAGOS = ['pago', 'paid', 'cpc', 'ppc', 'trafego', 'tráfego', 'paid_social'];
+const COR = { gold: '#CDA04C', green: '#5fcd8a', red: '#e05a5a', blue: '#5b8aff', purple: '#a98bff', amber: '#f0a94a', teal: '#54d6c2', pink: '#f07ab0' };
+
+const est = { lanc: null, adDia: [], utmDia: [], sync: null, de: null, ate: null, padraoDe: null, padraoAte: null, aba: 'geral', filtroMexido: false };
+const charts = {};
+
+const ICONES = {
+  pessoas: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  dinheiro: '<line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  alvo: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  velocimetro: '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+  porcento: '<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  olho: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  cursor: '<path d="m9 9 5 12 1.8-5.2L21 14Z"/><path d="M7.2 2.2 8 5.1"/><path d="m5.1 8-2.9-.8"/><path d="M14 4.1 12 6"/><path d="m6 12-1.9 2"/>',
+  tendencia: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+  pulso: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  calendario: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  folha: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
+  megafone: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+  grafico: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  imagem: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+  ramos: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
+  bandeira: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+  relogio: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+};
+const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n] || ''}</svg>`;
+
+const moeda = v => v != null && isFinite(v) ? brl.format(v) : '—';
+const taxa = v => v != null && isFinite(v) ? pct(v) : '—';
+const ddmm = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '';
+
+// PostgREST devolve no máximo 1000 linhas por chamada: pagina até acabar.
+async function buscarTudo(tabela, id, ordem) {
+  const out = [];
+  for (let de = 0; ; de += 1000) {
+    let q = sb.from(tabela).select('*').eq('lancamento_id', id);
+    for (const col of ordem) q = q.order(col);
+    const { data, error } = await q.range(de, de + 999);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < 1000) break;
+  }
+  return out;
+}
+
 async function carregar(manual = false) {
   clearTimeout(timer);
   const lanc = lancamentos.find(l => l.id === atualId);
   if (!lanc) return;
-
-  const [mDia, mAd, lDia, lUtm, sync] = await Promise.all([
-    sb.from('painel_meta_diario').select('*').eq('lancamento_id', lanc.id),
-    sb.from('painel_meta_anuncios').select('*').eq('lancamento_id', lanc.id),
-    sb.from('painel_leads_diario').select('*').eq('lancamento_id', lanc.id),
-    sb.from('painel_leads_utm').select('*').eq('lancamento_id', lanc.id),
-    sb.from('meta_insights').select('atualizado_em').order('atualizado_em', { ascending: false }).limit(1),
-  ]);
-
-  const erro = [mDia, mAd, lDia, lUtm, sync].find(r => r.error);
-  if (erro) {
-    aviso('Erro ao carregar: ' + erro.error.message, true);
+  const trocou = est.lanc?.id !== lanc.id;
+  try {
+    const [adDia, utmDia, sync] = await Promise.all([
+      buscarTudo('painel_meta_ad_dia', lanc.id, ['data', 'ad_id']),
+      buscarTudo('painel_leads_utm_dia', lanc.id, ['data', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']),
+      sb.from('meta_insights').select('atualizado_em').order('atualizado_em', { ascending: false }).limit(1),
+    ]);
+    if (atualId !== lanc.id) return; // trocou de tela enquanto carregava
+    Object.assign(est, { lanc, adDia, utmDia, sync: sync.data?.[0]?.atualizado_em });
+    if (trocou) { est.aba = 'geral'; est.filtroMexido = false; }
+    definirPeriodoPadrao();
+    if (!est.filtroMexido) { est.de = est.padraoDe; est.ate = est.padraoAte; }
+    atualizarStatus();
+    montarAbas();
+    montarFiltro();
+    renderAba();
+    if (manual === true) aviso('Painel atualizado');
+  } catch (e) {
+    aviso('Erro ao carregar: ' + e.message, true);
     $('pulso').classList.add('parado');
     $('txtStatus').textContent = 'erro ao carregar';
-  } else {
-    render(lanc, mDia.data, mAd.data, lDia.data, lUtm.data, sync.data?.[0]?.atualizado_em);
-    if (manual === true) aviso('Painel atualizado');
   }
   timer = setTimeout(carregar, INTERVALO);
 }
 
-function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
-  const hoje = hojeSP();
-  const fim = lanc.fim && lanc.fim < hoje ? lanc.fim : hoje;
-
-  // status
-  const atras = tempoAtras(ultimoSync);
-  const velho = !ultimoSync || (Date.now() - new Date(ultimoSync).getTime()) > 40 * 60000;
+function atualizarStatus() {
+  const atras = tempoAtras(est.sync);
+  const velho = !est.sync || (Date.now() - new Date(est.sync).getTime()) > 40 * 60000;
   $('pulso').classList.toggle('parado', velho);
   $('txtStatus').textContent = atras ? `Meta atualizado ${atras} · leads ao vivo` : 'Meta ainda sem dados · leads ao vivo';
+}
 
-  // totais
-  const gasto = metaDia.reduce((s, r) => s + Number(r.gasto), 0);
-  const leadsMeta = metaDia.reduce((s, r) => s + Number(r.leads_meta), 0);
-  const cliques = metaDia.reduce((s, r) => s + Number(r.cliques_link), 0);
-  const impr = metaDia.reduce((s, r) => s + Number(r.impressoes), 0);
-  const lpv = metaDia.reduce((s, r) => s + Number(r.lpv || 0), 0);
-  const leads = leadsDia.reduce((s, r) => s + Number(r.leads), 0);
-  const leadsPagos = leadsUtm.filter(r => metaAd.some(a => casaLead(r, a))).reduce((s, r) => s + Number(r.leads), 0);
-  const cpl = div(gasto, leads);
-
-  const gHoje = Number(metaDia.find(r => r.data === hoje)?.gasto || 0);
-  const lHoje = Number(leadsDia.find(r => r.data === hoje)?.leads || 0);
-
-  $('kGasto').textContent = brl0.format(gasto);
-  const diasComGasto = metaDia.filter(r => Number(r.gasto) > 0).length;
-  $('kGastoSub').textContent = lanc.verba
-    ? `${pct(gasto / lanc.verba)} da verba de ${brl0.format(lanc.verba)}`
-    : (diasComGasto ? `Média de ${brl0.format(gasto / diasComGasto)} por dia` : '\u00a0');
-  $('kLeads').textContent = int.format(leads);
-  $('kLeadsSub').textContent = `${int.format(leadsPagos)} vindos de anúncio · Meta atribui ${int.format(leadsMeta)}`;
-  $('kCpl').textContent = cpl != null ? brl.format(cpl) : '—';
-  $('kCplSub').textContent = leadsPagos ? `Só pagos: ${brl.format(gasto / leadsPagos)} · Meta diz ${leadsMeta ? brl.format(gasto / leadsMeta) : '—'}` : 'Aguardando leads com utm_content';
-  if (situacao(lanc).classe === 'encerrado') {
-    // Lançamento encerrado: "hoje" não diz nada; mostra o dia com mais leads.
-    const melhor = [...leadsDia].sort((a, b) => Number(b.leads) - Number(a.leads))[0];
-    const gM = Number(metaDia.find(r => r.data === melhor?.data)?.gasto || 0);
-    const lM = Number(melhor?.leads || 0);
-    $('kHojeRot').textContent = 'Melhor dia';
-    $('kHoje').textContent = melhor ? fmtData(melhor.data).slice(0, 5) : '—';
-    $('kHojeSub').textContent = melhor ? `${int.format(lM)} leads · CPL ${lM && gM ? brl.format(gM / lM) : '—'}` : '\u00a0';
-  } else {
-    $('kHojeRot').textContent = 'Hoje';
-    $('kHoje').textContent = int.format(lHoje);
-    $('kHojeSub').textContent = `${brl0.format(gHoje)} investidos · CPL ${lHoje ? brl.format(gHoje / lHoje) : '—'}`;
+// Período padrão: do começo dos anúncios (ou do primeiro lead, se veio antes)
+// até o fim (ou o último lead, se veio depois), nunca além de hoje.
+function definirPeriodoPadrao() {
+  const l = est.lanc, hoje = hojeSP();
+  const datas = est.utmDia.map(r => r.data).filter(Boolean).sort();
+  let de = l.inicio, ate = l.fim && l.fim < hoje ? l.fim : hoje;
+  if (datas.length) {
+    if (datas[0] < de) de = datas[0];
+    if (datas[datas.length - 1] > ate) ate = datas[datas.length - 1];
   }
+  if (ate > hoje) ate = hoje;
+  if (de > ate) de = ate;
+  est.padraoDe = de; est.padraoAte = ate;
+}
 
-  desenharFunil({ gasto, impr, cliques, lpv, leadsPagos, leadsMeta });
+function montarAbas() {
+  $('abas').innerHTML = ABAS.map(a =>
+    `<button class="aba" role="tab" data-aba="${a.id}" onclick="trocarAba('${a.id}')">${ico(a.ico)}${a.nome}</button>`).join('');
+}
 
-  // meta de leads
-  if (lanc.meta_leads) {
-    const dias = diasEntre(lanc.inicio, lanc.fim || fim);
-    const passados = diasEntre(lanc.inicio, fim).length;
-    const ritmo = lanc.fim ? Math.min(1, passados / dias.length) : null;
-    $('blocoMeta').classList.add('on');
-    $('metaCheio').style.width = Math.min(100, leads / lanc.meta_leads * 100) + '%';
-    $('metaNum').textContent = `${int.format(leads)} de ${int.format(lanc.meta_leads)} · ${pct(leads / lanc.meta_leads)}` +
-      (ritmo != null ? ` · ritmo esperado ${pct(ritmo)}` : '');
-    $('metaRitmo').style.display = ritmo != null ? 'block' : 'none';
-    if (ritmo != null) $('metaRitmo').style.left = (ritmo * 100) + '%';
-  } else {
-    $('blocoMeta').classList.remove('on');
-  }
+function montarFiltro() {
+  $('fIco').innerHTML = ico('calendario');
+  $('fDe').value = est.de; $('fAte').value = est.ate;
+  $('fDe').min = $('fAte').min = est.padraoDe;
+  $('fDe').max = $('fAte').max = hojeSP();
+  $('fRotulo').textContent = est.aba === 'metas'
+    ? '· a aba Metas considera o lançamento inteiro'
+    : `· ${ddmm(est.de)} — ${ddmm(est.ate)}`;
+  $('fLimpar').hidden = !est.filtroMexido;
+}
 
-  desenharGrafico(lanc, fim, metaDia, leadsDia);
-  desenharCanais(leadsUtm, leads);
+function mudarFiltro() {
+  let de = $('fDe').value, ate = $('fAte').value;
+  if (!de || !ate) return;
+  if (de > ate) [de, ate] = [ate, de];
+  Object.assign(est, { de, ate, filtroMexido: true });
+  montarFiltro();
+  renderAba();
+}
 
-  criativos = metaAd.map(a => {
-    const l = leadsUtm.filter(r => casaLead(r, a)).reduce((s, r) => s + Number(r.leads), 0);
-    return {
-      nome: a.ad_name || a.ad_id,
-      conjunto: a.adset_name || '',
-      gasto: Number(a.gasto),
-      leads: l,
-      cpl: div(Number(a.gasto), l),
-      leads_meta: Number(a.leads_meta),
-      ctr: div(Number(a.cliques_link), Number(a.impressoes)),
-      cpm: div(Number(a.gasto) * 1000, Number(a.impressoes)),
-      connect: Number(a.lpv || 0) > 0 ? div(Number(a.lpv), Number(a.cliques_link)) : null,
-    };
-  }).filter(c => c.gasto > 0 || c.leads > 0);
-  desenharCriativos(cpl);
+function limparFiltro() {
+  Object.assign(est, { de: est.padraoDe, ate: est.padraoAte, filtroMexido: false });
+  montarFiltro();
+  renderAba();
+}
+
+function trocarAba(id) {
+  est.aba = id;
+  montarFiltro();
+  renderAba();
 }
 
 // O lead casa com o anúncio pelo utm_content (padrão novo, {{ad.name}});
@@ -568,106 +619,358 @@ function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
 function casaLead(r, anuncio) {
   return casa(r.utm_content, anuncio) || casa(r.utm_term, anuncio);
 }
-function casa(utmContent, anuncio) {
-  const u = norm(utmContent);
+function casa(valor, anuncio) {
+  const u = norm(valor);
   return !!u && (u === norm(anuncio.ad_name) || u === norm(anuncio.ad_id));
 }
+function ehPago(r, nomesAnuncio) {
+  const c = norm(r.utm_content), t = norm(r.utm_term);
+  return (c && nomesAnuncio.has(c)) || (t && nomesAnuncio.has(t)) ||
+    FONTES_PAGAS.includes(norm(r.utm_source)) || MEIOS_PAGOS.includes(norm(r.utm_medium));
+}
 
-function desenharGrafico(lanc, fim, metaDia, leadsDia) {
-  const dias = diasEntre(lanc.inicio, fim);
-  const g = Object.fromEntries(metaDia.map(r => [r.data, Number(r.gasto)]));
-  const l = Object.fromEntries(leadsDia.map(r => [r.data, Number(r.leads)]));
-  const rotulos = dias.map(d => d.slice(8, 10) + '/' + d.slice(5, 7));
-  const serieLeads = dias.map(d => l[d] || 0);
-  const serieCpl = dias.map(d => (l[d] ? +(g[d] || 0) / l[d] : null));
-  const serieGasto = dias.map(d => g[d] || 0);
+function calcular(de, ate) {
+  const dentro = d => d >= de && d <= ate;
+  const ads = est.adDia.filter(a => dentro(a.data));
+  const utm = est.utmDia.filter(r => dentro(r.data));
+  const nomes = new Set();
+  est.adDia.forEach(a => { if (norm(a.ad_name)) nomes.add(norm(a.ad_name)); nomes.add(norm(a.ad_id)); });
 
-  if (grafico) {
-    grafico.data.labels = rotulos;
-    grafico.data.datasets[0].data = serieLeads;
-    grafico.data.datasets[1].data = serieCpl;
-    grafico.$gasto = serieGasto;
-    grafico.update('none');
-    return;
+  const vazio = () => ({ gasto: 0, impr: 0, cliques: 0, lpv: 0, leadsMeta: 0, leads: 0, pagos: 0, organicos: 0 });
+  const dias = diasEntre(de, ate);
+  const porDia = Object.fromEntries(dias.map(d => [d, vazio()]));
+  const t = vazio();
+  const campos = [['gasto', 'gasto'], ['impr', 'impressoes'], ['cliques', 'cliques_link'], ['lpv', 'lpv'], ['leadsMeta', 'leads_meta']];
+  for (const a of ads) {
+    for (const [k, c] of campos) {
+      const v = Number(a[c] || 0);
+      t[k] += v;
+      if (porDia[a.data]) porDia[a.data][k] += v;
+    }
   }
-  Chart.defaults.color = '#8b93b8';
-  Chart.defaults.font.family = "'DM Mono', monospace";
-  Chart.defaults.font.size = 11;
-  grafico = new Chart($('grafDia'), {
+  for (const r of utm) {
+    const n = Number(r.leads);
+    r._pago = ehPago(r, nomes);
+    const k = r._pago ? 'pagos' : 'organicos';
+    t.leads += n; t[k] += n;
+    if (porDia[r.data]) { porDia[r.data].leads += n; porDia[r.data][k] += n; }
+  }
+  // Sem nenhum lead identificado como tráfego, usa a atribuição do Meta para as taxas.
+  const trafego = t.pagos || t.leadsMeta;
+  const trafegoDia = d => porDia[d].pagos || (t.pagos ? 0 : porDia[d].leadsMeta);
+  return { de, ate, dias, porDia, t, ads, utm, trafego, trafegoDia, usaBanco: t.pagos > 0 };
+}
+
+function renderAba() {
+  for (const k in charts) { charts[k].destroy(); delete charts[k]; }
+  document.querySelectorAll('.aba').forEach(b => {
+    const on = b.dataset.aba === est.aba;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  const c = est.aba === 'metas' ? calcular(est.padraoDe, est.padraoAte) : calcular(est.de, est.ate);
+  ({ geral: abaGeral, midia: abaMidia, criativos: abaCriativos, origem: abaOrigem, organico: abaOrganico, metas: abaMetas })[est.aba](c);
+}
+
+// ---------- peças de interface ----------
+const kcard = (rot, valor, sub, icone, cor) => `
+  <div class="card k">
+    <div class="k-cab"><span class="rotulo">${rot}</span><span class="k-ico" style="--c:${cor}">${ico(icone)}</span></div>
+    <div class="valor">${valor}</div>
+    <div class="sub">${sub || '&nbsp;'}</div>
+  </div>`;
+const secao = txt => `<div class="secao">${txt}</div>`;
+const bloco = (titulo, desc, id, largo = false) => `
+  <div class="card bloco${largo ? ' largo' : ''}">
+    <h2>${titulo}</h2><p class="desc">${desc}</p>
+    <div class="grafico"><canvas id="${id}"></canvas></div>
+  </div>`;
+const rotulosDias = c => c.dias.map(ddmm);
+const diasComGasto = c => c.dias.filter(d => c.porDia[d].gasto > 0).length;
+
+function formatar(v, fmt) {
+  if (v == null || !isFinite(v)) return '—';
+  return fmt === 'moeda' ? brl.format(v) : fmt === 'pct' ? pct(v) : int.format(v);
+}
+function formatarEixo(v, fmt) {
+  if (fmt === 'moeda') return 'R$ ' + int.format(v);
+  if (fmt === 'pct') return (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+  return int.format(v);
+}
+
+function desenhar(id, tipo, labels, series, { empilhar = false } = {}) {
+  const fmtEixo = eixo => (series.find(s => (s.eixo || 'y') === eixo) || {}).fmt || 'int';
+  const usaY1 = series.some(s => s.eixo === 'y1');
+  const escala = (eixo, extra) => ({
+    beginAtZero: true,
+    ticks: { callback: v => formatarEixo(v, fmtEixo(eixo)), ...(fmtEixo(eixo) === 'int' ? { precision: 0 } : {}) },
+    ...extra,
+  });
+  charts[id] = new Chart($(id), {
+    type: tipo,
     data: {
-      labels: rotulos,
-      datasets: [
-        { type: 'bar', label: 'Leads', data: serieLeads, backgroundColor: 'rgba(205,160,76,.75)', hoverBackgroundColor: '#e8c97a', borderRadius: 4, yAxisID: 'y', order: 2 },
-        { type: 'line', label: 'CPL', data: serieCpl, borderColor: '#5b8aff', backgroundColor: '#5b8aff', pointRadius: 3, tension: .3, spanGaps: true, yAxisID: 'y1', order: 1 },
-      ],
+      labels,
+      datasets: series.map(s => {
+        const t = s.tipo || tipo;
+        return {
+          type: t, label: s.label, data: s.data, fmt: s.fmt || 'int', yAxisID: s.eixo || 'y',
+          backgroundColor: s.area ? s.cor + '2e' : s.cor, borderColor: s.cor, fill: !!s.area,
+          borderWidth: t === 'line' ? 2 : 0, borderRadius: 4, maxBarThickness: 34,
+          pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: s.cor, tension: .3, spanGaps: true,
+          stack: empilhar ? 'pilha' : undefined,
+        };
+      }),
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { labels: { boxWidth: 10, boxHeight: 10 } },
+        legend: { display: series.length > 1, labels: { boxWidth: 10, boxHeight: 10 } },
         tooltip: {
           backgroundColor: '#0e1530', borderColor: 'rgba(205,160,76,.5)', borderWidth: 1, padding: 10,
-          callbacks: {
-            label: c => c.dataset.label === 'CPL'
-              ? ` CPL ${c.raw != null ? brl.format(c.raw) : '—'}`
-              : ` ${int.format(c.raw)} leads`,
-            afterBody: items => `  Investido ${brl0.format(grafico.$gasto[items[0].dataIndex] || 0)}`,
-          },
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${formatar(ctx.raw, ctx.dataset.fmt)}` },
         },
       },
       scales: {
-        x: { grid: { display: false } },
-        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { precision: 0 } },
-        y1: { beginAtZero: true, position: 'right', grid: { display: false }, ticks: { callback: v => 'R$ ' + v } },
+        x: { stacked: empilhar, grid: { display: false } },
+        y: escala('y', { stacked: empilhar, grid: { color: 'rgba(255,255,255,.05)' } }),
+        ...(usaY1 ? { y1: escala('y1', { position: 'right', grid: { display: false } }) } : {}),
       },
     },
   });
-  grafico.$gasto = serieGasto;
 }
 
-function desenharCanais(leadsUtm, total) {
-  const porCanal = {};
-  for (const r of leadsUtm) {
-    const k = r.utm_source + (r.utm_medium ? ' / ' + r.utm_medium : '');
-    porCanal[k] = (porCanal[k] || 0) + Number(r.leads);
+// ---------- Visão geral ----------
+function abaGeral(c) {
+  const t = c.t, l = est.lanc, hoje = hojeSP();
+  const hojeD = c.porDia[hoje];
+  const vivo = situacao(l).classe === 'andamento' && hojeD;
+  const dg = diasComGasto(c);
+  $('conteudo').innerHTML = `
+    <div class="kgrid">
+      ${kcard('Leads', int.format(t.leads), vivo ? `Hoje: ${int.format(hojeD.leads)}` : `${ddmm(c.de)} — ${ddmm(c.ate)}`, 'pessoas', COR.purple)}
+      ${kcard('Investimento', moeda(t.gasto), l.verba ? `${pct(t.gasto / l.verba)} da verba` : (vivo ? `Hoje: ${moeda(hojeD.gasto)}` : (dg ? `Média de ${brl0.format(t.gasto / dg)} por dia` : '')), 'dinheiro', COR.gold)}
+      ${kcard('CPL médio', moeda(div(t.gasto, t.leads)), 'Investimento ÷ todos os leads', 'alvo', COR.red)}
+      ${kcard('CPM', moeda(div(t.gasto * 1000, t.impr)), 'Custo por mil impressões', 'velocimetro', COR.purple)}
+      ${kcard('CTR', taxa(div(t.cliques, t.impr)), `CPC ${moeda(div(t.gasto, t.cliques))}`, 'porcento', COR.amber)}
+      ${kcard('Impressões', int.format(t.impr), '', 'olho', COR.blue)}
+      ${kcard('Cliques no link', int.format(t.cliques), '', 'cursor', COR.pink)}
+      ${kcard('Visualizações da página', t.lpv ? int.format(t.lpv) : '—', t.lpv ? '' : 'Sem dados do pixel', 'tendencia', COR.green)}
+      ${kcard('Connect rate', t.lpv ? taxa(div(t.lpv, t.cliques)) : '—', 'Visualizações ÷ cliques', 'pulso', COR.teal)}
+      ${kcard('Conversão da página', t.lpv ? taxa(div(c.trafego, t.lpv)) : '—', c.usaBanco ? 'Leads de tráfego ÷ visualizações' : 'Leads (Meta) ÷ visualizações', 'alvo', COR.purple)}
+    </div>
+    ${secao('Evolução no período')}
+    <div class="g2">
+      ${bloco('Leads por dia', 'Tráfego e orgânico, pelos leads que chegaram no banco', 'gLeads')}
+      ${bloco('Investimento por dia', 'Verba aplicada no Meta', 'gGasto')}
+    </div>`;
+  const rot = rotulosDias(c);
+  desenhar('gLeads', 'bar', rot, [
+    { label: 'Tráfego', data: c.dias.map(d => c.porDia[d].pagos), cor: COR.gold },
+    { label: 'Orgânico', data: c.dias.map(d => c.porDia[d].organicos), cor: COR.green },
+  ], { empilhar: true });
+  desenhar('gGasto', 'line', rot, [
+    { label: 'Investimento', data: c.dias.map(d => c.porDia[d].gasto), cor: COR.blue, fmt: 'moeda', area: true },
+  ]);
+}
+
+// ---------- Mídia paga ----------
+function abaMidia(c) {
+  const t = c.t;
+  const etapa = (rot, num, sub) => `<div class="etapa"><div class="rotulo">${rot}</div><div class="num">${num}</div><div class="sub">${sub}</div></div>`;
+  const passo = (rot, v) => `<div class="taxa"><span class="rotulo">${rot}</span><span class="seta"></span><span class="pct">${v}</span></div>`;
+  const avisos = [];
+  if (t.impr && !t.lpv) avisos.push('O Meta não registrou visualizações da página: o connect rate depende do pixel instalado na página de captura.');
+  if (!c.usaBanco && t.leadsMeta) avisos.push('Nenhum lead do banco foi identificado como tráfego, então as taxas usam os leads que o Meta atribui.');
+  $('conteudo').innerHTML = `
+    <section class="card funil">
+      <div class="funil-cab"><div class="rotulo">Funil dos anúncios</div><div class="desc">Da impressão ao lead, com a taxa de passagem entre cada etapa.</div></div>
+      <div class="funil-trilho">
+        ${etapa('Impressões', int.format(t.impr), `CPM ${moeda(div(t.gasto * 1000, t.impr))}`)}
+        ${passo('CTR', taxa(div(t.cliques, t.impr)))}
+        ${etapa('Cliques no link', int.format(t.cliques), `CPC ${moeda(div(t.gasto, t.cliques))}`)}
+        ${passo('Connect rate', t.lpv ? taxa(div(t.lpv, t.cliques)) : '—')}
+        ${etapa('Visualizações da página', t.lpv ? int.format(t.lpv) : '—', t.lpv ? `Custo por visualização ${moeda(div(t.gasto, t.lpv))}` : 'Sem dados do pixel')}
+        ${passo('Conversão da página', t.lpv ? taxa(div(c.trafego, t.lpv)) : '—')}
+        ${etapa(c.usaBanco ? 'Leads de tráfego' : 'Leads (atribuição Meta)', int.format(c.trafego), `CPL ${moeda(div(t.gasto, c.trafego))}`)}
+      </div>
+      ${avisos.length ? `<p class="funil-aviso">${avisos.join(' ')}</p>` : ''}
+    </section>
+    ${secao('Métricas por dia')}
+    <div class="g2">
+      ${bloco('CPL de tráfego por dia', 'Investimento ÷ leads de tráfego do dia', 'gCpl')}
+      ${bloco('Connect rate e conversão por dia', 'Eficiência da página de captura', 'gTaxas')}
+    </div>
+    ${bloco('CPM e CTR por dia', 'Custo por mil impressões e taxa de cliques no link', 'gCpmCtr', true)}`;
+  const rot = rotulosDias(c), P = d => c.porDia[d];
+  desenhar('gCpl', 'line', rot, [
+    { label: 'CPL', data: c.dias.map(d => div(P(d).gasto, c.trafegoDia(d))), cor: COR.red, fmt: 'moeda' },
+  ]);
+  desenhar('gTaxas', 'line', rot, [
+    { label: 'Connect rate', data: c.dias.map(d => P(d).lpv ? div(P(d).lpv, P(d).cliques) : null), cor: COR.blue, fmt: 'pct' },
+    { label: 'Conversão', data: c.dias.map(d => P(d).lpv ? div(c.trafegoDia(d), P(d).lpv) : null), cor: COR.green, fmt: 'pct' },
+  ]);
+  desenhar('gCpmCtr', 'line', rot, [
+    { label: 'CPM', data: c.dias.map(d => div(P(d).gasto * 1000, P(d).impr)), cor: COR.purple, fmt: 'moeda' },
+    { label: 'CTR', data: c.dias.map(d => div(P(d).cliques, P(d).impr)), cor: COR.amber, fmt: 'pct', eixo: 'y1' },
+  ]);
+}
+
+// ---------- Criativos ----------
+function abaCriativos(c) {
+  $('conteudo').innerHTML = `
+    <section class="card bloco">
+      <h2>Criativos</h2>
+      <p class="desc">Leads do banco ligados ao anúncio pelo utm_content (ou utm_term). Clique no cabeçalho para ordenar.</p>
+      <div class="tabela-wrap"><table id="tabCriativos"></table></div>
+    </section>`;
+  const porAd = {};
+  for (const a of c.ads) {
+    const x = porAd[a.ad_id] ||= { ad_id: a.ad_id, ad_name: a.ad_name, adset_name: a.adset_name, gasto: 0, impressoes: 0, cliques_link: 0, leads_meta: 0, lpv: 0 };
+    x.gasto += Number(a.gasto || 0); x.impressoes += Number(a.impressoes || 0);
+    x.cliques_link += Number(a.cliques_link || 0); x.leads_meta += Number(a.leads_meta || 0); x.lpv += Number(a.lpv || 0);
+    if (a.ad_name) x.ad_name = a.ad_name;
   }
-  const linhas = Object.entries(porCanal).sort((a, b) => b[1] - a[1]);
-  if (!linhas.length) {
-    $('tabCanais').innerHTML = '<tr><td class="vazio" colspan="3">Os leads aparecem aqui assim que o webhook receber o primeiro.</td></tr>';
+  criativos = Object.values(porAd).map(a => {
+    const l = c.utm.filter(r => casaLead(r, a)).reduce((s, r) => s + Number(r.leads), 0);
+    return {
+      nome: a.ad_name || a.ad_id, conjunto: a.adset_name || '', gasto: a.gasto, leads: l,
+      cpl: div(a.gasto, l), leads_meta: a.leads_meta,
+      ctr: div(a.cliques_link, a.impressoes), cpm: div(a.gasto * 1000, a.impressoes),
+      connect: a.lpv > 0 ? div(a.lpv, a.cliques_link) : null,
+    };
+  }).filter(x => x.gasto > 0 || x.leads > 0);
+  desenharCriativos(div(c.t.gasto, c.t.pagos));
+}
+
+// ---------- Origem (UTM) ----------
+function tabelaGrupo(titulo, desc, linhas, total) {
+  const ord = linhas.sort((a, b) => b.n - a.n);
+  const topo = ord.slice(0, 12);
+  const resto = ord.slice(12).reduce((s, r) => s + r.n, 0);
+  if (resto) topo.push({ nome: `Outros (${ord.length - 12})`, n: resto });
+  const max = topo[0]?.n || 1;
+  return `
+    <div class="card bloco">
+      <h2>${titulo}</h2><p class="desc">${desc}</p>
+      <div class="tabela-wrap"><table>
+        ${topo.length ? `<thead><tr><th>${titulo.replace('Por ', '')}</th><th>Leads</th><th>%</th></tr></thead><tbody>` +
+          topo.map(r => `<tr><td>${esc(r.nome)}${r.tag ? `<span class="tag ${r.tag}">${r.tag === 'pago' ? 'tráfego' : 'orgânico'}</span>` : ''}</td>
+            <td>${int.format(r.n)}<span class="barrinha" style="width:${Math.round(r.n / max * 48)}px"></span></td>
+            <td>${pct(r.n / total)}</td></tr>`).join('') + '</tbody>'
+          : '<tr><td class="vazio">Nenhum lead no período.</td></tr>'}
+      </table></div>
+    </div>`;
+}
+function agrupar(rows, chave, comTag) {
+  const m = {};
+  for (const r of rows) {
+    const k = chave(r) || '(vazio)';
+    const x = m[k] ||= { nome: k, n: 0, pagos: 0 };
+    x.n += Number(r.leads); if (r._pago) x.pagos += Number(r.leads);
+  }
+  return Object.values(m).map(x => ({ ...x, tag: comTag ? (x.pagos > x.n / 2 ? 'pago' : 'org') : '' }));
+}
+function abaOrigem(c) {
+  const total = c.t.leads || 1;
+  $('conteudo').innerHTML = `
+    <div class="g2">
+      ${tabelaGrupo('Por canal', 'utm_source / utm_medium de cada lead', agrupar(c.utm, r => r.utm_source + (r.utm_medium ? ' / ' + r.utm_medium : ''), true), total)}
+      ${tabelaGrupo('Por campanha', 'utm_campaign', agrupar(c.utm, r => r.utm_campaign), total)}
+    </div>
+    ${tabelaGrupo('Por conteúdo', 'utm_content: nos anúncios, o nome do criativo', agrupar(c.utm, r => r.utm_content), total)}`;
+}
+
+// ---------- Orgânico ----------
+function abaOrganico(c) {
+  const t = c.t, tot = t.leads || 1;
+  const melhor = c.dias.reduce((m, d) => (c.porDia[d].organicos > (m ? c.porDia[m].organicos : 0) ? d : m), null);
+  $('conteudo').innerHTML = `
+    <div class="faixa verde">
+      <b>Como o orgânico é separado</b>
+      <p>Conta como tráfego o lead ligado a um anúncio pela UTM, ou com utm_source meta/facebook ou utm_medium pago/cpc. Todo o resto é orgânico: bio, stories, WhatsApp, e-mail, direto e leads sem UTM. Orgânicos não entram no CPL de tráfego.</p>
+    </div>
+    <div class="g4">
+      ${kcard('Leads orgânicos', int.format(t.organicos), `${pct(t.organicos / tot)} do total`, 'folha', COR.green)}
+      ${kcard('Leads de tráfego', int.format(t.pagos), `${pct(t.pagos / tot)} do total`, 'megafone', COR.gold)}
+      ${kcard('Total de leads', int.format(t.leads), 'Orgânico + tráfego', 'pessoas', COR.purple)}
+      ${kcard('Melhor dia orgânico', melhor ? int.format(c.porDia[melhor].organicos) : '—', melhor ? `Pico em ${ddmm(melhor)}` : 'Sem leads orgânicos', 'tendencia', COR.teal)}
+    </div>
+    ${secao('Orgânico por dia')}
+    ${bloco('Leads orgânicos por dia', 'Cadastros que não vieram de anúncio', 'gOrg', true)}
+    ${tabelaGrupo('Por canal', 'De onde vieram os orgânicos', agrupar(c.utm.filter(r => !r._pago), r => r.utm_source + (r.utm_medium ? ' / ' + r.utm_medium : '')), t.organicos || 1)}`;
+  desenhar('gOrg', 'bar', rotulosDias(c), [
+    { label: 'Orgânicos', data: c.dias.map(d => c.porDia[d].organicos), cor: COR.green },
+  ]);
+}
+
+// ---------- Metas ----------
+function abaMetas(c) {
+  const l = est.lanc, t = c.t, hoje = hojeSP(), st = situacao(l).classe;
+  if (!l.meta_leads && !l.verba) {
+    $('conteudo').innerHTML = `<div class="faixa"><b>Sem metas cadastradas</b>
+      <p>Informe a meta de leads e a verba do lançamento para ver o progresso, o ritmo necessário e a projeção.</p>
+      ${ehAdmin ? '<button class="btn primario" onclick="abrirForm(true)">Cadastrar metas</button>' : ''}</div>`;
     return;
   }
-  const max = linhas[0][1];
-  $('tabCanais').innerHTML = '<thead><tr><th>Canal</th><th>Leads</th><th>%</th></tr></thead><tbody>' +
-    linhas.map(([k, n]) => `<tr><td>${esc(k)}</td><td>${int.format(n)}<span class="barrinha" style="width:${Math.round(n / max * 48)}px"></span></td><td>${pct(n / total)}</td></tr>`).join('') +
-    '</tbody>';
-}
+  const cplAlvo = l.meta_leads && l.verba ? l.verba / l.meta_leads : null;
+  const cplAtual = div(t.gasto, t.leads);
+  const prog = (rot, atual, alvo, fmt, icone, cor) => `
+    <div class="card k">
+      <div class="k-cab"><span class="rotulo">${rot}</span><span class="k-ico" style="--c:${cor}">${ico(icone)}</span></div>
+      <div class="valor">${formatar(atual, fmt)}${alvo ? `<span class="de">/ ${formatar(alvo, fmt)}</span>` : ''}</div>
+      ${alvo ? `<div class="prog"><span style="width:${Math.min(100, atual / alvo * 100)}%"></span></div><div class="sub">${pct(atual / alvo)} da meta</div>` : '<div class="sub">Sem meta cadastrada</div>'}
+    </div>`;
+  const dif = cplAlvo && cplAtual ? cplAtual / cplAlvo - 1 : null;
 
-function desenharFunil({ gasto, impr, cliques, lpv, leadsPagos, leadsMeta }) {
-  const moeda = v => v != null ? brl.format(v) : '—';
-  const taxa = v => v != null ? pct(v) : '—';
-  // Leads de anúncio: os do banco ligados a um anúncio pela UTM; sem isso, os que o Meta atribui.
-  const usaBanco = leadsPagos > 0;
-  const leadsAd = usaBanco ? leadsPagos : leadsMeta;
+  let ritmo = '';
+  if (!l.fim) {
+    ritmo = `<div class="faixa"><b>Ritmo e projeção</b><p>Cadastre a data de fim em Editar para ver o ritmo necessário e a projeção.</p></div>`;
+  } else if (st === 'agendado') {
+    ritmo = `<div class="faixa"><b>Lançamento agendado</b><p>O ritmo e a projeção aparecem quando os anúncios começarem, em ${fmtData(l.inicio)}.</p></div>`;
+  } else if (st === 'andamento') {
+    const total = diasEntre(l.inicio, l.fim).length;
+    const passados = diasEntre(l.inicio, hoje).length;
+    const restantes = Math.max(0, total - passados);
+    const base = Math.max(restantes, 1);
+    const faltamLeads = l.meta_leads ? Math.max(0, l.meta_leads - t.leads) : null;
+    const faltaVerba = l.verba ? Math.max(0, l.verba - t.gasto) : null;
+    const mediaLeads = t.leads / passados, mediaGasto = t.gasto / passados;
+    const projLeads = t.leads + mediaLeads * restantes, projGasto = t.gasto + mediaGasto * restantes;
+    ritmo = `
+      ${secao(`Ritmo necessário até ${fmtData(l.fim)}`)}
+      <div class="g4">
+        ${kcard('Dias restantes', int.format(restantes), `${passados} de ${total} dias decorridos`, 'relogio', COR.blue)}
+        ${kcard('Leads por dia necessários', faltamLeads != null ? int.format(Math.ceil(faltamLeads / base)) : '—', faltamLeads != null ? `Faltam ${int.format(faltamLeads)} leads` : 'Sem meta de leads', 'pessoas', COR.purple)}
+        ${kcard('Investir por dia', faltaVerba != null ? moeda(faltaVerba / base) : '—', faltaVerba != null ? `Faltam ${moeda(faltaVerba)}` : 'Sem verba cadastrada', 'dinheiro', COR.gold)}
+        ${kcard('CPL necessário no restante', faltamLeads && faltaVerba != null ? moeda(faltaVerba / faltamLeads) : '—', cplAlvo ? `CPL alvo ${moeda(cplAlvo)}` : '', 'alvo', COR.green)}
+      </div>
+      ${secao('Projeção no ritmo atual')}
+      <div class="g3">
+        ${kcard('Leads projetados', int.format(Math.round(projLeads)), l.meta_leads ? `${pct(projLeads / l.meta_leads)} da meta` : `Média de ${int.format(Math.round(mediaLeads))} por dia`, 'tendencia', COR.purple)}
+        ${kcard('Investimento projetado', moeda(projGasto), l.verba ? `${pct(projGasto / l.verba)} da verba` : `Média de ${brl0.format(mediaGasto)} por dia`, 'dinheiro', COR.gold)}
+        ${kcard('CPL projetado', moeda(div(projGasto, projLeads)), cplAlvo ? `CPL alvo ${moeda(cplAlvo)}` : '', 'alvo', COR.red)}
+      </div>`;
+  } else {
+    ritmo = `<div class="faixa"><b>Lançamento encerrado</b><p>O progresso acima é o resultado final do período de ${fmtData(l.inicio)} a ${fmtData(l.fim)}.</p></div>`;
+  }
 
-  $('fImpr').textContent = int.format(impr);
-  $('fImprSub').textContent = `CPM ${moeda(div(gasto * 1000, impr))}`;
-  $('fCtr').textContent = taxa(div(cliques, impr));
-  $('fClq').textContent = int.format(cliques);
-  $('fClqSub').textContent = `CPC ${moeda(div(gasto, cliques))}`;
-  $('fCon').textContent = lpv ? taxa(div(lpv, cliques)) : '—';
-  $('fLpv').textContent = lpv ? int.format(lpv) : '—';
-  $('fLpvSub').textContent = lpv ? `Custo por visualização ${moeda(div(gasto, lpv))}` : 'Sem dados do pixel';
-  $('fConv').textContent = lpv ? taxa(div(leadsAd, lpv)) : '—';
-  $('fLeadRot').textContent = usaBanco ? 'Leads de anúncio' : 'Leads (atribuição Meta)';
-  $('fLead').textContent = int.format(leadsAd);
-  $('fLeadSub').textContent = `CPL ${moeda(div(gasto, leadsAd))}`;
-
-  const avisos = [];
-  if (impr && !lpv) avisos.push('O Meta não registrou visualizações da página. O connect rate depende do pixel instalado na página de captura.');
-  if (!usaBanco && leadsMeta) avisos.push('Nenhum lead do banco casou com um anúncio pela UTM, então a última etapa usa os leads que o Meta atribui.');
-  $('fAviso').textContent = avisos.join(' ');
-  $('fAviso').hidden = !avisos.length;
+  $('conteudo').innerHTML = `
+    <div class="faixa">
+      <b>Planejamento da captação</b>
+      <p>Meta: ${l.meta_leads ? `<b>${int.format(l.meta_leads)} leads</b>` : 'sem meta de leads'} · ${l.verba ? `<b>${moeda(l.verba)}</b> de investimento` : 'sem verba cadastrada'}${cplAlvo ? ` · CPL alvo <b>${moeda(cplAlvo)}</b>` : ''} · janela ${fmtData(l.inicio)} a ${l.fim ? fmtData(l.fim) : 'sem data de fim'}</p>
+    </div>
+    ${secao('Progresso das metas')}
+    <div class="g3">
+      ${prog('Leads', t.leads, l.meta_leads, 'int', 'pessoas', COR.purple)}
+      ${prog('Investimento', t.gasto, l.verba, 'moeda', 'dinheiro', COR.gold)}
+      <div class="card k">
+        <div class="k-cab"><span class="rotulo">CPL atual vs meta</span><span class="k-ico" style="--c:${COR.red}">${ico('alvo')}</span></div>
+        <div class="valor">${moeda(cplAtual)}${cplAlvo ? `<span class="de">/ meta ${moeda(cplAlvo)}</span>` : ''}</div>
+        ${dif != null ? `<span class="selinho ${dif > 0 ? 'ruim' : 'bom'}">${pct(Math.abs(dif))} ${dif > 0 ? 'acima' : 'abaixo'} da meta</span>` : '<div class="sub">Precisa de meta de leads e verba</div>'}
+      </div>
+    </div>
+    ${ritmo}`;
 }
 
 const COLS_CRIATIVOS = [
@@ -691,7 +994,7 @@ let cplGeral = null;
 function desenharCriativos(cpl) {
   if (cpl !== undefined) cplGeral = cpl;
   if (!criativos.length) {
-    $('tabCriativos').innerHTML = '<tr><td class="vazio">Nenhum anúncio com "' + esc(lancamentos.find(l => l.id === atualId)?.filtro_campanha || '') + '" no nome veiculando ainda. O Meta sincroniza a cada 15 minutos.</td></tr>';
+    $('tabCriativos').innerHTML = '<tr><td class="vazio">Nenhum anúncio com "' + esc(est.lanc?.filtro_campanha || '') + '" no nome veiculando no período.</td></tr>';
     return;
   }
   const { col, dir } = ordCriativos;
@@ -709,10 +1012,10 @@ function desenharCriativos(cpl) {
       <td>${esc(c.nome)}<span class="fraco">${esc(c.conjunto)}</span></td>
       <td>${brl.format(c.gasto)}</td>
       <td>${int.format(c.leads)}</td>
-      <td class="${cor(c.cpl)}">${c.cpl != null ? brl.format(c.cpl) : '—'}</td>
-      <td>${c.cpm != null ? brl.format(c.cpm) : '—'}</td>
-      <td>${c.ctr != null ? pct(c.ctr) : '—'}</td>
-      <td>${c.connect != null ? pct(c.connect) : '—'}</td>
+      <td class="${cor(c.cpl)}">${moeda(c.cpl)}</td>
+      <td>${moeda(c.cpm)}</td>
+      <td>${taxa(c.ctr)}</td>
+      <td>${taxa(c.connect)}</td>
       <td>${int.format(c.leads_meta)}</td>
     </tr>`).join('') + '</tbody>';
 }
