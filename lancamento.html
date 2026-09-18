@@ -169,8 +169,9 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 
 /* checklist */
 .check{list-style:none;display:flex;flex-direction:column;gap:4px;counter-reset:passo}
-.check>li{display:grid;grid-template-columns:28px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);counter-increment:passo}
+.check>li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:14px;padding:14px 0;border-bottom:1px solid var(--border);counter-increment:passo}
 .check>li:last-child{border-bottom:none}
+.check>li>div{min-width:0}
 .check .st{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--hint);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)}
 .check .st::before{content:counter(passo)}
 .check li.ok .st{background:var(--green);border-color:var(--green);color:#060B1F}
@@ -205,6 +206,10 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .aba:hover{color:var(--text)}
 .aba.on{background:var(--surface);color:var(--gold-light);box-shadow:inset 0 0 0 1px rgba(205,160,76,.3)}
 .carregando{color:var(--muted);padding:40px 0;text-align:center}
+
+/* respostas abertas */
+.abertas{list-style:none;display:flex;flex-direction:column;gap:8px}
+.abertas li{font-size:13px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;line-height:1.45}
 
 /* cards das abas */
 .kgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:26px}
@@ -302,6 +307,7 @@ const TZ = 'America/Sao_Paulo';
 Chart.defaults.color = '#8b93b8';
 Chart.defaults.font.family = "'DM Mono', monospace";
 Chart.defaults.font.size = 11;
+Chart.defaults.locale = 'pt-BR';
 const INTERVALO = 60000;
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const brl0 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -477,6 +483,7 @@ const ABAS = [
   { id: 'criativos', nome: 'Criativos',    ico: 'imagem' },
   { id: 'origem',    nome: 'Origem (UTM)', ico: 'ramos' },
   { id: 'organico',  nome: 'Orgânico',     ico: 'folha' },
+  { id: 'pesquisa',  nome: 'Pesquisa',     ico: 'prancheta' },
   { id: 'metas',     nome: 'Metas',        ico: 'bandeira' },
 ];
 // Lead de tráfego: casou com um anúncio pela UTM, ou veio com fonte/meio pago.
@@ -484,7 +491,7 @@ const FONTES_PAGAS = ['meta', 'facebook', 'fb', 'fb_ads', 'facebook_ads', 'meta_
 const MEIOS_PAGOS = ['pago', 'paid', 'cpc', 'ppc', 'trafego', 'tráfego', 'paid_social'];
 const COR = { gold: '#CDA04C', green: '#5fcd8a', red: '#e05a5a', blue: '#5b8aff', purple: '#a98bff', amber: '#f0a94a', teal: '#54d6c2', pink: '#f07ab0' };
 
-const est = { lanc: null, adDia: [], utmDia: [], sync: null, de: null, ate: null, padraoDe: null, padraoAte: null, aba: 'geral', filtroMexido: false };
+const est = { lanc: null, adDia: [], utmDia: [], pesq: null, sync: null, de: null, ate: null, padraoDe: null, padraoAte: null, aba: 'geral', filtroMexido: false };
 const charts = {};
 
 const ICONES = {
@@ -504,6 +511,7 @@ const ICONES = {
   imagem: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
   ramos: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
   bandeira: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+  prancheta: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
   relogio: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
 };
 const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n] || ''}</svg>`;
@@ -540,6 +548,8 @@ async function carregar(manual = false) {
     if (atualId !== lanc.id) return; // trocou de tela enquanto carregava
     Object.assign(est, { lanc, adDia, utmDia, sync: sync.data?.[0]?.atualizado_em });
     if (trocou) { est.aba = 'geral'; est.filtroMexido = false; }
+    est.pesq = null;
+    if (est.aba === 'pesquisa') await carregarPesquisa();
     definirPeriodoPadrao();
     if (!est.filtroMexido) { est.de = est.padraoDe; est.ate = est.padraoAte; }
     atualizarStatus();
@@ -587,8 +597,8 @@ function montarFiltro() {
   $('fDe').value = est.de; $('fAte').value = est.ate;
   $('fDe').min = $('fAte').min = est.padraoDe;
   $('fDe').max = $('fAte').max = hojeSP();
-  $('fRotulo').textContent = est.aba === 'metas'
-    ? '· a aba Metas considera o lançamento inteiro'
+  $('fRotulo').textContent = est.aba === 'metas' ? '· a aba Metas considera o lançamento inteiro'
+    : est.aba === 'pesquisa' ? '· a aba Pesquisa considera todas as respostas'
     : `· ${ddmm(est.de)} — ${ddmm(est.ate)}`;
   $('fLimpar').hidden = !est.filtroMexido;
 }
@@ -668,8 +678,9 @@ function renderAba() {
     b.classList.toggle('on', on);
     b.setAttribute('aria-selected', String(on));
   });
-  const c = est.aba === 'metas' ? calcular(est.padraoDe, est.padraoAte) : calcular(est.de, est.ate);
-  ({ geral: abaGeral, midia: abaMidia, criativos: abaCriativos, origem: abaOrigem, organico: abaOrganico, metas: abaMetas })[est.aba](c);
+  const inteiro = est.aba === 'metas' || est.aba === 'pesquisa';
+  const c = inteiro ? calcular(est.padraoDe, est.padraoAte) : calcular(est.de, est.ate);
+  ({ geral: abaGeral, midia: abaMidia, criativos: abaCriativos, origem: abaOrigem, organico: abaOrganico, pesquisa: abaPesquisa, metas: abaMetas })[est.aba](c);
 }
 
 // ---------- peças de interface ----------
@@ -902,6 +913,115 @@ function abaOrganico(c) {
   desenhar('gOrg', 'bar', rotulosDias(c), [
     { label: 'Orgânicos', data: c.dias.map(d => c.porDia[d].organicos), cor: COR.green },
   ]);
+}
+
+// ---------- Pesquisa ----------
+const pesquisaId = l => l.pesquisa_id || `${l.id} - Captação`;
+const diaSP = iso => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(iso));
+const CAMPOS_CONTATO = /^(email|e-mail|telefone|nome|whatsapp|celular)$/i;
+
+async function carregarPesquisa() {
+  const id = pesquisaId(est.lanc);
+  const rows = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await sb.from('respostas').select('dados, criado_em')
+      .eq('lancamento_id', id).order('criado_em').order('id').range(de, de + 999);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < 1000) break;
+  }
+  const { data: card } = await sb.from('lancamentos').select('id, cols, total').eq('id', id).maybeSingle();
+  est.pesq = { id, card, rows };
+}
+
+function abaPesquisa(c) {
+  if (!est.pesq) {
+    $('conteudo').innerHTML = '<p class="carregando">Carregando respostas…</p>';
+    carregarPesquisa()
+      .then(() => { if (est.aba === 'pesquisa') renderAba(); })
+      .catch(e => { $('conteudo').innerHTML = `<div class="faixa"><b>Não foi possível ler a pesquisa</b><p>${esc(e.message)}</p></div>`; });
+    return;
+  }
+  const { id, card, rows } = est.pesq;
+  if (!rows.length) {
+    $('conteudo').innerHTML = `<div class="faixa"><b>Nenhuma resposta ainda</b>
+      <p>As respostas chegam no card <b>${esc(id)}</b> da Central de Pesquisas pelo webhook da pesquisa. A URL pronta está no Checklist.</p>
+      ${ehAdmin ? '<button class="btn" onclick="abrirChecklist()">Abrir checklist</button>' : ''}</div>`;
+    return;
+  }
+  const hoje = hojeSP();
+  const n = rows.length, leads = c.t.leads;
+  const hojeN = rows.filter(r => diaSP(r.criado_em) === hoje).length;
+  const ultima = rows[rows.length - 1].criado_em;
+  const cols = (card?.cols?.length ? card.cols : [...new Set(rows.flatMap(r => Object.keys(r.dados || {})))])
+    .filter(k => !k.startsWith('_'));
+  const perguntas = cols.filter(k => !CAMPOS_CONTATO.test(k));
+  const vivo = situacao(est.lanc).classe === 'andamento';
+
+  const dias = diasEntre(diaSP(rows[0].criado_em), vivo ? hoje : diaSP(ultima));
+  const porDia = Object.fromEntries(dias.map(d => [d, 0]));
+  rows.forEach(r => { const d = diaSP(r.criado_em); if (d in porDia) porDia[d]++; });
+
+  const blocos = perguntas.map((q, i) => {
+    const vals = rows.map(r => String(r.dados?.[q] ?? '').trim()).filter(Boolean);
+    const freq = {};
+    vals.forEach(v => { freq[v] = (freq[v] || 0) + 1; });
+    const opcoes = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+    if (!vals.length) return { html: '' };
+    if (opcoes.length <= 12) {
+      return {
+        html: `<div class="card bloco"><h2>${esc(q)}</h2><p class="desc">${int.format(vals.length)} respostas · ${opcoes.length} opções</p>
+          <div class="grafico" style="height:${Math.max(150, opcoes.length * 30 + 30)}px"><canvas id="gq${i}"></canvas></div></div>`,
+        desenhar: () => desenharOpcoes(`gq${i}`, opcoes, vals.length),
+      };
+    }
+    const recentes = rows.slice().reverse().map(r => String(r.dados?.[q] ?? '').trim()).filter(Boolean).slice(0, 6);
+    return {
+      html: `<div class="card bloco"><h2>${esc(q)}</h2><p class="desc">Pergunta aberta · ${int.format(vals.length)} respostas · as mais recentes:</p>
+        <ul class="abertas">${recentes.map(v => `<li>${esc(v)}</li>`).join('')}</ul></div>`,
+    };
+  }).filter(b => b.html);
+
+  $('conteudo').innerHTML = `
+    <div class="g4">
+      ${kcard('Respostas', int.format(n), esc(id), 'prancheta', COR.purple)}
+      ${kcard('Taxa de resposta', leads ? taxa(n / leads) : '—', `${int.format(n)} de ${int.format(leads)} leads`, 'porcento', COR.gold)}
+      ${vivo ? kcard('Hoje', int.format(hojeN), 'Respostas no dia', 'relogio', COR.blue)
+             : kcard('Última resposta', fmtData(diaSP(ultima)), '', 'relogio', COR.blue)}
+      ${kcard('Perguntas', int.format(perguntas.length), 'Sem contar nome, e-mail e telefone', 'bandeira', COR.teal)}
+    </div>
+    ${secao('Respostas por dia')}
+    ${bloco('Respostas por dia', 'Quando cada resposta chegou', 'gResp', true)}
+    ${secao('Respostas por pergunta')}
+    <div class="g2">${blocos.map(b => b.html).join('')}</div>`;
+
+  desenhar('gResp', 'bar', dias.map(ddmm), [{ label: 'Respostas', data: dias.map(d => porDia[d]), cor: COR.purple }]);
+  blocos.forEach(b => b.desenhar && b.desenhar());
+}
+
+function desenharOpcoes(id, opcoes, total) {
+  const curto = t => t.length > 34 ? t.slice(0, 33) + '…' : t;
+  charts[id] = new Chart($(id), {
+    type: 'bar',
+    data: {
+      labels: opcoes.map(o => o[0]),
+      datasets: [{ data: opcoes.map(o => o[1]), backgroundColor: COR.gold, borderRadius: 4, maxBarThickness: 20 }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0e1530', borderColor: 'rgba(205,160,76,.5)', borderWidth: 1, padding: 10,
+          callbacks: { title: ctx => ctx[0].label, label: ctx => ` ${int.format(ctx.raw)} · ${pct(ctx.raw / total)}` },
+        },
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { callback: function (v) { return curto(this.getLabelForValue(v)); } } },
+      },
+    },
+  });
 }
 
 // ---------- Metas ----------
@@ -1137,6 +1257,7 @@ async function abrirChecklist(id = atualId, token = null) {
     token = r.data;
   }
   const url = origem => `${WEBHOOK_BASE}?token=${token}&lanc=${encodeURIComponent(id)}&origem=${origem}`;
+  const urlPesq = `${WEBHOOK_BASE.replace('lead-webhook', 'pesquisa-webhook')}?token=${token}&lanc=${encodeURIComponent(id)}`;
   const nome = esc(l.rotulo || l.id);
 
   abrirModal(`Checklist do ${l.rotulo || l.id}`, `
@@ -1169,6 +1290,13 @@ async function abrirChecklist(id = atualId, token = null) {
         </details>
       </div></li>
 
+      <li id="ckPesq"><div class="st"></div><div>
+        <b>Webhook da pesquisa</b>
+        <p>No formulário da pesquisa, adicione a ação Webhook com a URL abaixo. As respostas entram no card <code>${esc(pesquisaId(l))}</code> da Central de Pesquisas, e cada pergunta vira uma coluna.</p>
+        ${copiavel(urlPesq)}
+        <p class="vivo" id="ckPesqTxt">Verificando…</p>
+      </div></li>
+
       <li id="ckLead"><div class="st"></div><div>
         <b>Lead de teste</b>
         <p>Abra a página de captura com <code>?utm_source=teste&amp;utm_content=teste</code> no fim da URL e faça um cadastro.</p>
@@ -1176,7 +1304,7 @@ async function abrirChecklist(id = atualId, token = null) {
         <p><button type="button" class="btn" id="btnApagarTeste" hidden onclick="apagarTestes('${esc(id)}')">Apagar leads de teste</button></p>
       </div></li>
     </ol>
-    <p class="nota">Os passos 2 e 5 se conferem sozinhos a cada 20 segundos enquanto esta janela estiver aberta.</p>
+    <p class="nota">Os passos 2, 5 e 6 se conferem sozinhos a cada 20 segundos enquanto esta janela estiver aberta.</p>
     <div class="acoes"><button type="button" class="btn primario" onclick="fecharModal()">Concluir</button></div>`);
 
   verificarChecklist(l);
@@ -1192,9 +1320,10 @@ function marcar(id, ok, texto) {
 }
 
 async function verificarChecklist(l) {
-  const [ads, utm] = await Promise.all([
+  const [ads, utm, pesq] = await Promise.all([
     sb.from('painel_meta_anuncios').select('campaign_name').eq('lancamento_id', l.id),
     sb.from('painel_leads_utm').select('utm_source, leads').eq('lancamento_id', l.id),
+    sb.from('respostas').select('id', { count: 'exact', head: true }).eq('lancamento_id', pesquisaId(l)),
   ]);
   if (!$('ckMeta')) return;
 
@@ -1211,6 +1340,8 @@ async function verificarChecklist(l) {
     ? `${int.format(total)} lead(s) recebido(s), ${int.format(comUtm)} com UTM.` + (comUtm < total ? ' Leads sem UTM não entram no ranking de criativos: confira se a página mantém os parâmetros da URL.' : '')
     : 'Nenhum lead recebido ainda.');
   $('btnApagarTeste').hidden = testes === 0;
+  const nPesq = pesq.count || 0;
+  marcar('ckPesq', nPesq > 0, nPesq ? `${int.format(nPesq)} resposta(s) recebida(s).` : 'Nenhuma resposta recebida ainda.');
   if (testes) $('btnApagarTeste').textContent = `Apagar ${testes} lead(s) de teste`;
 }
 
