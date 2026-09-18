@@ -31,7 +31,7 @@
 @media (max-width:520px){.topbar-count{display:none}}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
 .mono{font-family:'DM Mono',monospace}
-.wrap{max-width:1280px;margin:0 auto;padding:24px}
+.wrap{max-width:1600px;margin:0 auto;padding:24px}
 
 /* topo */
 .topo{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
@@ -212,7 +212,7 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .macro-linha{display:flex;align-items:center;gap:12px;margin-top:10px}
 .macro-valor{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .macro .sub{font-size:12px;color:var(--muted);margin-top:8px}
-.grafico.alto{height:290px;margin-top:10px}
+.grafico.alto{height:330px;margin-top:10px}
 .mini{padding:18px 20px;min-height:280px;display:flex;flex-direction:column;min-width:0}
 .mini-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px}
 .mini-sub{font-size:12px;color:var(--muted);margin:4px 0 14px}
@@ -836,7 +836,7 @@ function abaGeral(c) {
     <div class="g3">
       ${macro('Valor gasto', moeda(t.gasto), l.verba ? `${pct(t.gasto / l.verba)} da verba` : (vivo ? `Hoje: ${moeda(hojeD.gasto)}` : `${ddmm(c.de)} — ${ddmm(c.ate)}`), 'dinheiro', COR.gold)}
       ${macro('Leads', int.format(t.leads), vivo ? `Hoje: ${int.format(hojeD.leads)}` : `${int.format(t.pagos)} de tráfego · ${int.format(t.organicos)} orgânicos`, 'pessoas', COR.purple)}
-      ${macro('Custo por lead', moeda(div(t.gasto, t.leads)), `Só tráfego: ${moeda(div(t.gasto, c.trafego))}`, 'alvo', COR.red)}
+      ${macro('Custo por lead', moeda(div(t.gasto, c.trafego)), `Sobre ${int.format(c.trafego)} leads de tráfego`, 'alvo', COR.red)}
     </div>
 
     <div class="card bloco largo">
@@ -892,9 +892,9 @@ function desenharDesempenho(c) {
       labels: rotulosDias(c),
       datasets: [
         // Leads e gasto lado a lado, no mesmo eixo (os leads ficam baixinhos, como referência)
-        { type: 'bar', label: 'Leads de tráfego', data: c.dias.map(d => c.trafegoDia(d)), fmt: 'int', yAxisID: 'y', backgroundColor: '#6d4fd1', hoverBackgroundColor: '#8a6ff0', borderRadius: 3, maxBarThickness: 12, barPercentage: 1, categoryPercentage: .45, order: 2 },
-        { type: 'bar', label: 'Gasto', data: c.dias.map(d => P(d).gasto), fmt: 'moeda', yAxisID: 'y', backgroundColor: COR.purple, hoverBackgroundColor: '#c2adff', borderRadius: 3, maxBarThickness: 12, barPercentage: 1, categoryPercentage: .45, order: 2 },
-        { type: 'line', label: 'CPL de tráfego', data: c.dias.map(d => div(P(d).gasto, c.trafegoDia(d))), fmt: 'moeda', yAxisID: 'y1', borderColor: '#e8eaf6', backgroundColor: '#e8eaf6', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .4, spanGaps: true, order: 1 },
+        { type: 'bar', label: 'Leads', data: c.dias.map(d => P(d).leads), fmt: 'int', yAxisID: 'y', backgroundColor: '#6d4fd1', hoverBackgroundColor: '#8a6ff0', borderRadius: 3, maxBarThickness: 16, barPercentage: 1, categoryPercentage: .5, order: 2 },
+        { type: 'bar', label: 'Gasto', data: c.dias.map(d => P(d).gasto), fmt: 'moeda', yAxisID: 'y', backgroundColor: COR.purple, hoverBackgroundColor: '#c2adff', borderRadius: 3, maxBarThickness: 16, barPercentage: 1, categoryPercentage: .5, order: 2 },
+        { type: 'line', label: 'CPL', data: c.dias.map(d => div(P(d).gasto, c.trafegoDia(d))), fmt: 'moeda', yAxisID: 'y1', borderColor: '#e8eaf6', backgroundColor: '#e8eaf6', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .4, spanGaps: true, order: 1 },
       ],
     },
     options: {
@@ -910,8 +910,9 @@ function desenharDesempenho(c) {
             label: ctx => `${ctx.dataset.label}: ${formatar(ctx.raw, ctx.dataset.fmt)}`,
             labelPointStyle: () => ({ pointStyle: 'circle', rotation: 0 }),
             footer: items => {
-              const o = P(c.dias[items[0].dataIndex]).organicos;
-              return o ? `+ ${int.format(o)} orgânico${o === 1 ? '' : 's'} (fora do CPL)` : '';
+              // O CPL é só do tráfego; quando há orgânicos no dia, deixa claro sobre quantos leads ele foi calculado
+              const d = c.dias[items[0].dataIndex];
+              return P(d).organicos ? `CPL sobre ${int.format(c.trafegoDia(d))} leads de tráfego` : '';
             },
           },
         },
