@@ -891,8 +891,9 @@ function desenharDesempenho(c) {
     data: {
       labels: rotulosDias(c),
       datasets: [
-        { type: 'bar', label: 'Leads', data: c.dias.map(d => P(d).leads), fmt: 'int', yAxisID: 'yLeads', backgroundColor: COR.gold, borderRadius: 4, maxBarThickness: 18, order: 2 },
-        { type: 'bar', label: 'Gasto', data: c.dias.map(d => P(d).gasto), fmt: 'moeda', yAxisID: 'y', backgroundColor: COR.purple, borderRadius: 4, maxBarThickness: 18, order: 3 },
+        // Leads não desenham nada: aparecem só no tooltip e na legenda
+        { type: 'line', label: 'Leads', data: c.dias.map(d => P(d).leads), fmt: 'int', yAxisID: 'yLeads', borderColor: COR.gold, backgroundColor: COR.gold, showLine: false, pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0 },
+        { type: 'bar', label: 'Gasto', data: c.dias.map(d => P(d).gasto), fmt: 'moeda', yAxisID: 'y', backgroundColor: COR.purple, hoverBackgroundColor: '#c2adff', borderRadius: 4, maxBarThickness: 26, order: 2 },
         { type: 'line', label: 'CPL', data: c.dias.map(d => div(P(d).gasto, P(d).leads)), fmt: 'moeda', yAxisID: 'y1', borderColor: '#e8eaf6', backgroundColor: '#e8eaf6', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .4, spanGaps: true, order: 1 },
       ],
     },
@@ -902,8 +903,13 @@ function desenharDesempenho(c) {
       plugins: {
         legend: { labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, sort: (a, b) => a.datasetIndex - b.datasetIndex } },
         tooltip: {
-          backgroundColor: '#0e1530', borderColor: 'rgba(205,160,76,.5)', borderWidth: 1, padding: 10,
-          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${formatar(ctx.raw, ctx.dataset.fmt)}` },
+          backgroundColor: 'rgba(14,21,48,.96)', borderColor: 'rgba(169,139,255,.45)', borderWidth: 1, padding: 12,
+          usePointStyle: true, boxPadding: 6, itemSort: (a, b) => a.datasetIndex - b.datasetIndex,
+          titleFont: { size: 13, weight: '600' }, bodySpacing: 6,
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${formatar(ctx.raw, ctx.dataset.fmt)}`,
+            labelPointStyle: () => ({ pointStyle: 'circle', rotation: 0 }),
+          },
         },
       },
       scales: {
