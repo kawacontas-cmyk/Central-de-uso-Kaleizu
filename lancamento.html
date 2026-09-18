@@ -25,7 +25,34 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .topo{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
 .voltar{color:var(--muted);text-decoration:none;font-size:13px}
 .voltar:hover{color:var(--gold-light)}
-.topo h1{font-size:20px;font-weight:600;margin-right:auto}
+.titulo{margin-right:auto;min-width:0}
+.titulo h1{font-size:20px;font-weight:600}
+.subtitulo{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* lista de lançamentos */
+.lanc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.lanc-card{display:flex;flex-direction:column;gap:14px;text-align:left;padding:20px;cursor:pointer;color:var(--text);font:inherit;
+  transition:border-color .15s,transform .15s}
+.lanc-card:hover{border-color:rgba(205,160,76,.45);transform:translateY(-2px)}
+.lanc-card:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.lc-topo{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.lc-nome{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.lc-periodo{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-top:-8px}
+.selo{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:3px 9px;border-radius:99px;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.selo.andamento{background:rgba(95,205,138,.14);color:var(--green)}
+.selo.andamento::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green)}
+.selo.agendado{background:rgba(91,138,255,.14);color:var(--blue)}
+.selo.encerrado{background:rgba(139,147,184,.12);color:var(--muted)}
+.lc-nums{display:flex;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid var(--border)}
+.lc-nums b{display:block;font-family:'DM Mono',monospace;font-size:16px;font-weight:500;margin-top:4px}
+.lc-meta{height:4px;background:var(--surface);border-radius:2px;overflow:hidden}
+.lc-meta span{display:block;height:100%;background:var(--gold);border-radius:2px}
+.lanc-novo{border:1px dashed rgba(205,160,76,.35);background:transparent;border-radius:12px;color:var(--muted);font:inherit;
+  min-height:190px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.lanc-novo:hover{border-color:var(--gold);color:var(--gold-light)}
+.lanc-novo .mais{font-size:26px;line-height:1;color:var(--gold)}
+.lista-vazia{color:var(--muted);padding:48px 0;text-align:center}
 select{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
 select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .status{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
@@ -157,21 +184,25 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 <div class="wrap">
 
   <header class="topo">
-    <a class="voltar" href="/">← Painel</a>
-    <h1>Painel do Lançamento</h1>
-    <select id="selLanc" aria-label="Lançamento"></select>
-    <div class="status"><span class="pulso" id="pulso"></span><span id="txtStatus">carregando</span></div>
-    <button class="btn" onclick="carregar(true)">Atualizar</button>
+    <a class="voltar" id="lnkVoltar" href="/">← Painel</a>
+    <div class="titulo"><h1 id="titulo">Painel do Lançamento</h1><div class="subtitulo" id="subtitulo">carregando</div></div>
+    <div class="status" id="boxStatus" hidden><span class="pulso" id="pulso"></span><span id="txtStatus"></span></div>
+    <button class="btn" id="btnAtualizar" hidden onclick="carregar(true)">Atualizar</button>
     <button class="btn" id="btnChecklist" hidden onclick="abrirChecklist()">Checklist</button>
     <button class="btn" id="btnEditar" hidden onclick="abrirForm(true)">Editar</button>
     <button class="btn primario" id="btnNovo" hidden onclick="abrirForm()">Novo lançamento</button>
   </header>
 
+  <section id="telaLista" hidden>
+    <div class="lanc-grid" id="gradeLanc"></div>
+  </section>
+
+  <div id="telaPainel" hidden>
   <section class="kpis">
     <div class="card kpi"><div class="rotulo">Investimento</div><div class="valor" id="kGasto">—</div><div class="sub" id="kGastoSub">&nbsp;</div></div>
     <div class="card kpi"><div class="rotulo">Leads</div><div class="valor" id="kLeads">—</div><div class="sub" id="kLeadsSub">&nbsp;</div></div>
     <div class="card kpi destaque"><div class="rotulo">CPL real</div><div class="valor" id="kCpl">—</div><div class="sub" id="kCplSub">&nbsp;</div></div>
-    <div class="card kpi"><div class="rotulo">Hoje</div><div class="valor" id="kHoje">—</div><div class="sub" id="kHojeSub">&nbsp;</div></div>
+    <div class="card kpi"><div class="rotulo" id="kHojeRot">Hoje</div><div class="valor" id="kHoje">—</div><div class="sub" id="kHojeSub">&nbsp;</div></div>
   </section>
 
   <section class="card funil" aria-labelledby="funilTitulo">
@@ -217,6 +248,7 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
     <p class="desc">Leads do banco casados pelo utm_content com o nome (ou ID) do anúncio. Clique no cabeçalho para ordenar.</p>
     <div class="tabela-wrap"><table id="tabCriativos"></table></div>
   </section>
+  </div>
 
 </div>
 <div class="aviso" id="aviso"></div>
@@ -283,33 +315,124 @@ async function checarAdmin() {
   ehAdmin = data?.user?.user_metadata?.role === 'admin';
 }
 
+let atualId = null;
+
 async function iniciar(selecionar) {
   await checarAdmin();
   const { data, error } = await sb.from('painel_lancamentos').select('*').order('inicio', { ascending: false });
   if (error) { aviso('Não foi possível ler os lançamentos: ' + error.message, true); return; }
   lancamentos = data || [];
-  const tem = lancamentos.length > 0;
+  if (selecionar) history.replaceState(null, '', '?id=' + encodeURIComponent(selecionar));
+  rotear();
+}
+
+function rotear() {
+  const id = new URLSearchParams(location.search).get('id');
+  if (id && lancamentos.some(l => l.id === id)) mostrarPainel(id);
+  else mostrarLista();
+}
+window.addEventListener('popstate', rotear);
+
+function abrirLancamento(id) {
+  history.pushState(null, '', '?id=' + encodeURIComponent(id));
+  mostrarPainel(id);
+  window.scrollTo(0, 0);
+}
+function voltarLista(e) {
+  if (e) e.preventDefault();
+  history.pushState(null, '', location.pathname);
+  mostrarLista();
+}
+
+function situacao(l) {
+  const hoje = hojeSP();
+  if (l.inicio > hoje) return { classe: 'agendado', txt: 'Agendado', ordem: 1 };
+  if (l.fim && l.fim < hoje) return { classe: 'encerrado', txt: 'Encerrado', ordem: 2 };
+  return { classe: 'andamento', txt: 'Em andamento', ordem: 0 };
+}
+function periodo(l) {
+  const ini = fmtData(l.inicio);
+  if (l.fim) return `${ini.slice(0, 5)} a ${fmtData(l.fim)}`;
+  return l.inicio > hojeSP() ? `começa em ${ini}` : `desde ${ini}`;
+}
+
+function mostrarPainel(id) {
+  const l = lancamentos.find(x => x.id === id);
+  if (!l) return mostrarLista();
+  atualId = id;
+  $('telaLista').hidden = true;
+  $('telaPainel').hidden = false;
+  $('titulo').textContent = l.rotulo || l.id;
+  $('subtitulo').textContent = `${periodo(l)} · ${situacao(l).txt}`;
+  $('lnkVoltar').textContent = '← Lançamentos';
+  $('lnkVoltar').href = location.pathname;
+  $('lnkVoltar').onclick = voltarLista;
+  $('boxStatus').hidden = false;
+  $('btnAtualizar').hidden = false;
+  $('btnChecklist').hidden = $('btnEditar').hidden = !ehAdmin;
+  $('btnNovo').hidden = true;
+  document.title = `${l.rotulo || l.id} · Painel do Lançamento`;
+  carregar();
+}
+
+async function mostrarLista() {
+  clearTimeout(timer);
+  atualId = null;
+  $('telaPainel').hidden = true;
+  $('telaLista').hidden = false;
+  $('titulo').textContent = 'Painel do Lançamento';
+  $('subtitulo').textContent = 'Escolha um lançamento para analisar';
+  $('lnkVoltar').textContent = '← Painel';
+  $('lnkVoltar').href = '/';
+  $('lnkVoltar').onclick = null;
+  $('boxStatus').hidden = true;
+  $('btnAtualizar').hidden = $('btnChecklist').hidden = $('btnEditar').hidden = true;
   $('btnNovo').hidden = !ehAdmin;
-  $('btnEditar').hidden = $('btnChecklist').hidden = !(ehAdmin && tem);
-  if (!tem) {
-    $('selLanc').innerHTML = '';
-    $('txtStatus').textContent = ehAdmin ? 'Nenhum lançamento ainda. Cadastre o primeiro em "Novo lançamento".' : 'Nenhum lançamento cadastrado ainda.';
+  document.title = 'Painel do Lançamento · Instituto Kaleizu';
+
+  if (!lancamentos.length) {
+    $('gradeLanc').innerHTML = ehAdmin
+      ? '<button class="lanc-novo" onclick="abrirForm()"><span class="mais">+</span>Cadastrar o primeiro lançamento</button>'
+      : '<p class="lista-vazia">Nenhum lançamento cadastrado ainda.</p>';
     return;
   }
-  const alvo = selecionar || new URLSearchParams(location.search).get('id');
-  $('selLanc').innerHTML = lancamentos.map(l => `<option value="${esc(l.id)}">${esc(l.rotulo || l.id)}</option>`).join('');
-  if (alvo && lancamentos.some(l => l.id === alvo)) $('selLanc').value = alvo;
-  history.replaceState(null, '', '?id=' + encodeURIComponent($('selLanc').value));
-  $('selLanc').onchange = () => {
-    history.replaceState(null, '', '?id=' + encodeURIComponent($('selLanc').value));
-    carregar(true);
-  };
-  carregar();
+
+  const [meta, lds] = await Promise.all([
+    sb.from('painel_meta_diario').select('lancamento_id, gasto'),
+    sb.from('painel_leads_diario').select('lancamento_id, leads'),
+  ]);
+  if (atualId) return; // o usuário já abriu um lançamento enquanto carregava
+  const soma = (linhas, campo) => (linhas || []).reduce((m, r) => {
+    m[r.lancamento_id] = (m[r.lancamento_id] || 0) + Number(r[campo]); return m;
+  }, {});
+  const gastos = soma(meta.data, 'gasto');
+  const leads = soma(lds.data, 'leads');
+
+  const ordenados = [...lancamentos].sort((a, b) =>
+    situacao(a).ordem - situacao(b).ordem || b.inicio.localeCompare(a.inicio));
+
+  $('gradeLanc').innerHTML = ordenados.map(l => {
+    const st = situacao(l);
+    const g = gastos[l.id] || 0, n = leads[l.id] || 0;
+    const barra = l.meta_leads
+      ? `<div class="lc-meta" title="${int.format(n)} de ${int.format(l.meta_leads)} leads"><span style="width:${Math.min(100, n / l.meta_leads * 100)}%"></span></div>`
+      : '';
+    return `<button class="card lanc-card" onclick="abrirLancamento('${esc(l.id)}')">
+      <div class="lc-topo"><span class="lc-nome">${esc(l.rotulo || l.id)}</span><span class="selo ${st.classe}">${st.txt}</span></div>
+      <div class="lc-periodo">${esc(periodo(l))}</div>
+      <div class="lc-nums">
+        <div><span class="rotulo">Investido</span><b>${brl0.format(g)}</b></div>
+        <div><span class="rotulo">Leads</span><b>${int.format(n)}</b></div>
+        <div><span class="rotulo">CPL</span><b>${n && g ? brl.format(g / n) : '—'}</b></div>
+      </div>
+      ${barra}
+    </button>`;
+  }).join('') + (ehAdmin ? '<button class="lanc-novo" onclick="abrirForm()"><span class="mais">+</span>Novo lançamento</button>' : '');
 }
 
 async function carregar(manual = false) {
   clearTimeout(timer);
-  const lanc = lancamentos.find(l => l.id === $('selLanc').value);
+  const lanc = lancamentos.find(l => l.id === atualId);
   if (!lanc) return;
 
   const [mDia, mAd, lDia, lUtm, sync] = await Promise.all([
@@ -364,8 +487,19 @@ function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
   $('kLeadsSub').textContent = `${int.format(leadsPagos)} vindos de anúncio · Meta atribui ${int.format(leadsMeta)}`;
   $('kCpl').textContent = cpl != null ? brl.format(cpl) : '—';
   $('kCplSub').textContent = leadsPagos ? `Só pagos: ${brl.format(gasto / leadsPagos)} · Meta diz ${leadsMeta ? brl.format(gasto / leadsMeta) : '—'}` : 'Aguardando leads com utm_content';
-  $('kHoje').textContent = int.format(lHoje);
-  $('kHojeSub').textContent = `${brl0.format(gHoje)} investidos · CPL ${lHoje ? brl.format(gHoje / lHoje) : '—'}`;
+  if (situacao(lanc).classe === 'encerrado') {
+    // Lançamento encerrado: "hoje" não diz nada; mostra o dia com mais leads.
+    const melhor = [...leadsDia].sort((a, b) => Number(b.leads) - Number(a.leads))[0];
+    const gM = Number(metaDia.find(r => r.data === melhor?.data)?.gasto || 0);
+    const lM = Number(melhor?.leads || 0);
+    $('kHojeRot').textContent = 'Melhor dia';
+    $('kHoje').textContent = melhor ? fmtData(melhor.data).slice(0, 5) : '—';
+    $('kHojeSub').textContent = melhor ? `${int.format(lM)} leads · CPL ${lM && gM ? brl.format(gM / lM) : '—'}` : '\u00a0';
+  } else {
+    $('kHojeRot').textContent = 'Hoje';
+    $('kHoje').textContent = int.format(lHoje);
+    $('kHojeSub').textContent = `${brl0.format(gHoje)} investidos · CPL ${lHoje ? brl.format(gHoje / lHoje) : '—'}`;
+  }
 
   desenharFunil({ gasto, impr, cliques, lpv, leadsPagos, leadsMeta });
 
@@ -532,7 +666,7 @@ let cplGeral = null;
 function desenharCriativos(cpl) {
   if (cpl !== undefined) cplGeral = cpl;
   if (!criativos.length) {
-    $('tabCriativos').innerHTML = '<tr><td class="vazio">Nenhum anúncio com "' + esc($('selLanc').value) + '" veiculando ainda. O Meta sincroniza a cada 15 minutos.</td></tr>';
+    $('tabCriativos').innerHTML = '<tr><td class="vazio">Nenhum anúncio com "' + esc(lancamentos.find(l => l.id === atualId)?.filtro_campanha || '') + '" no nome veiculando ainda. O Meta sincroniza a cada 15 minutos.</td></tr>';
     return;
   }
   const { col, dir } = ordCriativos;
@@ -579,7 +713,7 @@ function sugerirCodigo() {
 const fmtData = iso => iso ? iso.split('-').reverse().join('/') : '';
 
 function abrirForm(editar = false) {
-  const l = editar ? lancamentos.find(x => x.id === $('selLanc').value) : null;
+  const l = editar ? lancamentos.find(x => x.id === atualId) : null;
   if (editar && !l) return;
   const cod = l?.id || sugerirCodigo();
   const rot = l?.rotulo || cod.replace(/KR$/, '');
@@ -666,7 +800,7 @@ async function copiar(btn) {
   } catch { aviso('Não foi possível copiar. Selecione o texto e copie manualmente.', true); }
 }
 
-async function abrirChecklist(id = $('selLanc').value, token = null) {
+async function abrirChecklist(id = atualId, token = null) {
   const l = lancamentos.find(x => x.id === id);
   if (!l) return;
   if (!token) {
@@ -764,7 +898,7 @@ async function apagarTestes(id) {
   carregar();
 }
 
-document.addEventListener('visibilitychange', () => { if (!document.hidden) carregar(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && atualId) carregar(); });
 iniciar();
 </script>
 </body>
