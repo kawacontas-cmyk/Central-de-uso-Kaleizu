@@ -311,7 +311,7 @@ function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
   const cliques = metaDia.reduce((s, r) => s + Number(r.cliques_link), 0);
   const impr = metaDia.reduce((s, r) => s + Number(r.impressoes), 0);
   const leads = leadsDia.reduce((s, r) => s + Number(r.leads), 0);
-  const leadsPagos = leadsUtm.filter(r => r.utm_content && metaAd.some(a => casa(r.utm_content, a))).reduce((s, r) => s + Number(r.leads), 0);
+  const leadsPagos = leadsUtm.filter(r => metaAd.some(a => casaLead(r, a))).reduce((s, r) => s + Number(r.leads), 0);
   const cpl = div(gasto, leads);
 
   const gHoje = Number(metaDia.find(r => r.data === hoje)?.gasto || 0);
@@ -345,7 +345,7 @@ function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
   desenharCanais(leadsUtm, leads);
 
   criativos = metaAd.map(a => {
-    const l = leadsUtm.filter(r => casa(r.utm_content, a)).reduce((s, r) => s + Number(r.leads), 0);
+    const l = leadsUtm.filter(r => casaLead(r, a)).reduce((s, r) => s + Number(r.leads), 0);
     return {
       nome: a.ad_name || a.ad_id,
       conjunto: a.adset_name || '',
@@ -359,7 +359,11 @@ function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
   desenharCriativos(cpl);
 }
 
-// utm_content casa com o anúncio pelo nome ou pelo ID
+// O lead casa com o anúncio pelo utm_content (padrão novo, {{ad.name}});
+// se não casar, tenta o utm_term (bases antigas usavam o nome do anúncio ali).
+function casaLead(r, anuncio) {
+  return casa(r.utm_content, anuncio) || casa(r.utm_term, anuncio);
+}
 function casa(utmContent, anuncio) {
   const u = norm(utmContent);
   return !!u && (u === norm(anuncio.ad_name) || u === norm(anuncio.ad_id));
