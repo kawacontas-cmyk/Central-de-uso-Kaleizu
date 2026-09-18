@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Lançamento · Instituto Kaleizu</title>
+<link rel="icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="acesso.js" data-tool="lancamento"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#060B1F; --surface:#0e1530; --card:#0f1428; --border:rgba(255,255,255,0.08);
+  --text:#e8eaf6; --muted:#8b93b8; --hint:#3a4060; --gold:#CDA04C; --gold-light:#e8c97a;
+  --green:#5fcd8a; --red:#e05a5a; --blue:#5b8aff; --purple:#a98bff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+.mono{font-family:'DM Mono',monospace}
+.wrap{max-width:1280px;margin:0 auto;padding:24px}
+
+/* topo */
+.topo{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+.voltar{color:var(--muted);text-decoration:none;font-size:13px}
+.voltar:hover{color:var(--gold-light)}
+.topo h1{font-size:20px;font-weight:600;margin-right:auto}
+select{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.status{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.pulso{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(95,205,138,.6);animation:pulso 2s infinite}
+.pulso.parado{background:var(--red);animation:none}
+@keyframes pulso{70%{box-shadow:0 0 0 8px rgba(95,205,138,0)}100%{box-shadow:0 0 0 0 rgba(95,205,138,0)}}
+@media (prefers-reduced-motion:reduce){.pulso{animation:none}}
+.btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
+.btn:hover{border-color:var(--gold);color:var(--gold-light)}
+
+/* cards */
+.rotulo{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--gold)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+.kpi{padding:20px}
+.kpi .valor{font-family:'DM Mono',monospace;font-size:30px;font-weight:500;margin-top:8px;letter-spacing:-.02em}
+.kpi .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.kpi.destaque .valor{color:var(--gold-light)}
+
+/* meta de leads */
+.meta{padding:16px 20px;margin-bottom:16px;display:none}
+.meta.on{display:block}
+.meta .linha{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:12px;flex-wrap:wrap}
+.meta .num{font-family:'DM Mono',monospace;font-size:13px;color:var(--muted)}
+.barra{height:8px;background:var(--surface);border-radius:4px;overflow:hidden;position:relative}
+.barra .cheio{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:4px;transition:width .6s}
+.barra .ritmo{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text);opacity:.5}
+
+/* grade */
+.grade{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+.bloco{padding:20px}
+.bloco h2{font-size:15px;font-weight:600;margin-bottom:4px}
+.bloco .desc{font-size:12px;color:var(--muted);margin-bottom:16px}
+.grafico{position:relative;height:300px}
+
+/* tabelas */
+.tabela-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;text-align:right;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+th:first-child,td:first-child{text-align:left}
+th:hover{color:var(--gold-light)}
+th.ord{color:var(--gold)}
+td{padding:10px;border-bottom:1px solid var(--border);text-align:right;font-family:'DM Mono',monospace;white-space:nowrap}
+td:first-child{font-family:'DM Sans',sans-serif;white-space:normal;max-width:340px}
+td .fraco{display:block;font-size:11px;color:var(--hint);font-family:'DM Mono',monospace}
+tr:last-child td{border-bottom:none}
+.bom{color:var(--green)} .ruim{color:var(--red)}
+.vazio{color:var(--muted);text-align:center;padding:28px 10px;font-family:'DM Sans',sans-serif}
+.barrinha{display:inline-block;height:4px;background:var(--gold);border-radius:2px;vertical-align:middle;margin-left:8px;opacity:.7}
+
+/* aviso */
+.aviso{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--gold);color:var(--text);padding:10px 18px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:10}
+.aviso.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.aviso.erro{border-color:var(--red)}
+
+@media (max-width:980px){.kpis{grid-template-columns:repeat(2,1fr)}.grade{grid-template-columns:1fr}}
+@media (max-width:520px){.wrap{padding:16px}.kpis{grid-template-columns:1fr}.kpi .valor{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topo">
+    <a class="voltar" href="/">← Painel</a>
+    <h1>Painel do Lançamento</h1>
+    <select id="selLanc" aria-label="Lançamento"></select>
+    <div class="status"><span class="pulso" id="pulso"></span><span id="txtStatus">carregando</span></div>
+    <button class="btn" onclick="carregar(true)">Atualizar</button>
+  </header>
+
+  <section class="kpis">
+    <div class="card kpi"><div class="rotulo">Investimento</div><div class="valor" id="kGasto">—</div><div class="sub" id="kGastoSub">&nbsp;</div></div>
+    <div class="card kpi"><div class="rotulo">Leads</div><div class="valor" id="kLeads">—</div><div class="sub" id="kLeadsSub">&nbsp;</div></div>
+    <div class="card kpi destaque"><div class="rotulo">CPL real</div><div class="valor" id="kCpl">—</div><div class="sub" id="kCplSub">&nbsp;</div></div>
+    <div class="card kpi"><div class="rotulo">Hoje</div><div class="valor" id="kHoje">—</div><div class="sub" id="kHojeSub">&nbsp;</div></div>
+  </section>
+
+  <section class="card meta" id="blocoMeta">
+    <div class="linha">
+      <div class="rotulo">Meta de leads</div>
+      <div class="num" id="metaNum"></div>
+    </div>
+    <div class="barra"><div class="cheio" id="metaCheio" style="width:0"></div><div class="ritmo" id="metaRitmo" title="Onde deveria estar hoje, no ritmo linear"></div></div>
+  </section>
+
+  <section class="grade">
+    <div class="card bloco">
+      <h2>Leads e CPL por dia</h2>
+      <p class="desc">Barras são leads que chegaram no banco; a linha é o CPL real do dia.</p>
+      <div class="grafico"><canvas id="grafDia"></canvas></div>
+    </div>
+    <div class="card bloco">
+      <h2>Leads por canal</h2>
+      <p class="desc">Pela utm_source de cada lead, pago e orgânico.</p>
+      <div class="tabela-wrap"><table id="tabCanais"></table></div>
+    </div>
+  </section>
+
+  <section class="card bloco">
+    <h2>Criativos</h2>
+    <p class="desc">Leads do banco casados pelo utm_content com o nome (ou ID) do anúncio. Clique no cabeçalho para ordenar.</p>
+    <div class="tabela-wrap"><table id="tabCriativos"></table></div>
+  </section>
+
+</div>
+<div class="aviso" id="aviso"></div>
+
+<script>
+const sb = supabase.createClient(
+  "https://iabugpuqlcfftwabuxsj.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYnVncHVxbGNmZnR3YWJ1eHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTA5MTIsImV4cCI6MjA5MTY2NjkxMn0.Rs2OJlbd8_2TMroE9iehTtZLFdBImVfBpKEH-RT_3UY"
+);
+
+const TZ = 'America/Sao_Paulo';
+const INTERVALO = 60000;
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const brl0 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const int = new Intl.NumberFormat('pt-BR');
+const pct = v => (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+
+let lancamentos = [];
+let grafico = null;
+let timer = null;
+let criativos = [];
+let ordCriativos = { col: 'leads', dir: -1 };
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hojeSP = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
+const norm = s => String(s ?? '').trim().toLowerCase();
+const div = (a, b) => b > 0 ? a / b : null;
+
+function aviso(msg, erro = false) {
+  const el = $('aviso');
+  el.textContent = msg;
+  el.className = 'aviso on' + (erro ? ' erro' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = 'aviso', 3500);
+}
+
+function diasEntre(inicio, fim) {
+  const out = [];
+  const d = new Date(inicio + 'T12:00:00Z');
+  const f = new Date(fim + 'T12:00:00Z');
+  while (d <= f) { out.push(d.toISOString().slice(0, 10)); d.setUTCDate(d.getUTCDate() + 1); }
+  return out;
+}
+
+function tempoAtras(iso) {
+  if (!iso) return null;
+  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 1) return 'agora';
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  return `há ${h} h`;
+}
+
+async function iniciar() {
+  const { data, error } = await sb.from('painel_lancamentos').select('*').order('inicio', { ascending: false });
+  if (error) { aviso('Não foi possível ler os lançamentos: ' + error.message, true); return; }
+  lancamentos = data || [];
+  if (!lancamentos.length) {
+    $('txtStatus').textContent = 'nenhum lançamento cadastrado em painel_lancamentos';
+    return;
+  }
+  const doUrl = new URLSearchParams(location.search).get('id');
+  $('selLanc').innerHTML = lancamentos.map(l => `<option value="${esc(l.id)}">${esc(l.rotulo || l.id)}</option>`).join('');
+  if (doUrl && lancamentos.some(l => l.id === doUrl)) $('selLanc').value = doUrl;
+  $('selLanc').onchange = () => {
+    history.replaceState(null, '', '?id=' + encodeURIComponent($('selLanc').value));
+    carregar(true);
+  };
+  carregar(true);
+}
+
+async function carregar(manual = false) {
+  clearTimeout(timer);
+  const lanc = lancamentos.find(l => l.id === $('selLanc').value);
+  if (!lanc) return;
+
+  const [mDia, mAd, lDia, lUtm, sync] = await Promise.all([
+    sb.from('painel_meta_diario').select('*').eq('lancamento_id', lanc.id),
+    sb.from('painel_meta_anuncios').select('*').eq('lancamento_id', lanc.id),
+    sb.from('painel_leads_diario').select('*').eq('lancamento_id', lanc.id),
+    sb.from('painel_leads_utm').select('*').eq('lancamento_id', lanc.id),
+    sb.from('meta_insights').select('atualizado_em').order('atualizado_em', { ascending: false }).limit(1),
+  ]);
+
+  const erro = [mDia, mAd, lDia, lUtm, sync].find(r => r.error);
+  if (erro) {
+    aviso('Erro ao carregar: ' + erro.error.message, true);
+    $('pulso').classList.add('parado');
+    $('txtStatus').textContent = 'erro ao carregar';
+  } else {
+    render(lanc, mDia.data, mAd.data, lDia.data, lUtm.data, sync.data?.[0]?.atualizado_em);
+    if (manual === true) aviso('Painel atualizado');
+  }
+  timer = setTimeout(carregar, INTERVALO);
+}
+
+function render(lanc, metaDia, metaAd, leadsDia, leadsUtm, ultimoSync) {
+  const hoje = hojeSP();
+  const fim = lanc.fim && lanc.fim < hoje ? lanc.fim : hoje;
+
+  // status
+  const atras = tempoAtras(ultimoSync);
+  const velho = !ultimoSync || (Date.now() - new Date(ultimoSync).getTime()) > 40 * 60000;
+  $('pulso').classList.toggle('parado', velho);
+  $('txtStatus').textContent = atras ? `Meta atualizado ${atras} · leads ao vivo` : 'Meta ainda sem dados · leads ao vivo';
+
+  // totais
+  const gasto = metaDia.reduce((s, r) => s + Number(r.gasto), 0);
+  const leadsMeta = metaDia.reduce((s, r) => s + Number(r.leads_meta), 0);
+  const cliques = metaDia.reduce((s, r) => s + Number(r.cliques_link), 0);
+  const impr = metaDia.reduce((s, r) => s + Number(r.impressoes), 0);
+  const leads = leadsDia.reduce((s, r) => s + Number(r.leads), 0);
+  const leadsPagos = leadsUtm.filter(r => r.utm_content && metaAd.some(a => casa(r.utm_content, a))).reduce((s, r) => s + Number(r.leads), 0);
+  const cpl = div(gasto, leads);
+
+  const gHoje = Number(metaDia.find(r => r.data === hoje)?.gasto || 0);
+  const lHoje = Number(leadsDia.find(r => r.data === hoje)?.leads || 0);
+
+  $('kGasto').textContent = brl0.format(gasto);
+  $('kGastoSub').textContent = lanc.verba ? `${pct(gasto / lanc.verba)} da verba de ${brl0.format(lanc.verba)}` : `CTR ${impr ? pct(cliques / impr) : '—'} · CPM ${impr ? brl.format(gasto / impr * 1000) : '—'}`;
+  $('kLeads').textContent = int.format(leads);
+  $('kLeadsSub').textContent = `${int.format(leadsPagos)} vindos de anúncio · Meta atribui ${int.format(leadsMeta)}`;
+  $('kCpl').textContent = cpl != null ? brl.format(cpl) : '—';
+  $('kCplSub').textContent = leadsPagos ? `Só pagos: ${brl.format(gasto / leadsPagos)} · Meta diz ${leadsMeta ? brl.format(gasto / leadsMeta) : '—'}` : 'Aguardando leads com utm_content';
+  $('kHoje').textContent = int.format(lHoje);
+  $('kHojeSub').textContent = `${brl0.format(gHoje)} investidos · CPL ${lHoje ? brl.format(gHoje / lHoje) : '—'}`;
+
+  // meta de leads
+  if (lanc.meta_leads) {
+    const dias = diasEntre(lanc.inicio, lanc.fim || fim);
+    const passados = diasEntre(lanc.inicio, fim).length;
+    const ritmo = lanc.fim ? Math.min(1, passados / dias.length) : null;
+    $('blocoMeta').classList.add('on');
+    $('metaCheio').style.width = Math.min(100, leads / lanc.meta_leads * 100) + '%';
+    $('metaNum').textContent = `${int.format(leads)} de ${int.format(lanc.meta_leads)} · ${pct(leads / lanc.meta_leads)}` +
+      (ritmo != null ? ` · ritmo esperado ${pct(ritmo)}` : '');
+    $('metaRitmo').style.display = ritmo != null ? 'block' : 'none';
+    if (ritmo != null) $('metaRitmo').style.left = (ritmo * 100) + '%';
+  } else {
+    $('blocoMeta').classList.remove('on');
+  }
+
+  desenharGrafico(lanc, fim, metaDia, leadsDia);
+  desenharCanais(leadsUtm, leads);
+
+  criativos = metaAd.map(a => {
+    const l = leadsUtm.filter(r => casa(r.utm_content, a)).reduce((s, r) => s + Number(r.leads), 0);
+    return {
+      nome: a.ad_name || a.ad_id,
+      conjunto: a.adset_name || '',
+      gasto: Number(a.gasto),
+      leads: l,
+      cpl: div(Number(a.gasto), l),
+      leads_meta: Number(a.leads_meta),
+      ctr: div(Number(a.cliques_link), Number(a.impressoes)),
+    };
+  }).filter(c => c.gasto > 0 || c.leads > 0);
+  desenharCriativos(cpl);
+}
+
+// utm_content casa com o anúncio pelo nome ou pelo ID
+function casa(utmContent, anuncio) {
+  const u = norm(utmContent);
+  return !!u && (u === norm(anuncio.ad_name) || u === norm(anuncio.ad_id));
+}
+
+function desenharGrafico(lanc, fim, metaDia, leadsDia) {
+  const dias = diasEntre(lanc.inicio, fim);
+  const g = Object.fromEntries(metaDia.map(r => [r.data, Number(r.gasto)]));
+  const l = Object.fromEntries(leadsDia.map(r => [r.data, Number(r.leads)]));
+  const rotulos = dias.map(d => d.slice(8, 10) + '/' + d.slice(5, 7));
+  const serieLeads = dias.map(d => l[d] || 0);
+  const serieCpl = dias.map(d => (l[d] ? +(g[d] || 0) / l[d] : null));
+  const serieGasto = dias.map(d => g[d] || 0);
+
+  if (grafico) {
+    grafico.data.labels = rotulos;
+    grafico.data.datasets[0].data = serieLeads;
+    grafico.data.datasets[1].data = serieCpl;
+    grafico.$gasto = serieGasto;
+    grafico.update('none');
+    return;
+  }
+  Chart.defaults.color = '#8b93b8';
+  Chart.defaults.font.family = "'DM Mono', monospace";
+  Chart.defaults.font.size = 11;
+  grafico = new Chart($('grafDia'), {
+    data: {
+      labels: rotulos,
+      datasets: [
+        { type: 'bar', label: 'Leads', data: serieLeads, backgroundColor: 'rgba(205,160,76,.75)', hoverBackgroundColor: '#e8c97a', borderRadius: 4, yAxisID: 'y', order: 2 },
+        { type: 'line', label: 'CPL', data: serieCpl, borderColor: '#5b8aff', backgroundColor: '#5b8aff', pointRadius: 3, tension: .3, spanGaps: true, yAxisID: 'y1', order: 1 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { boxWidth: 10, boxHeight: 10 } },
+        tooltip: {
+          backgroundColor: '#0e1530', borderColor: 'rgba(205,160,76,.5)', borderWidth: 1, padding: 10,
+          callbacks: {
+            label: c => c.dataset.label === 'CPL'
+              ? ` CPL ${c.raw != null ? brl.format(c.raw) : '—'}`
+              : ` ${int.format(c.raw)} leads`,
+            afterBody: items => `  Investido ${brl0.format(grafico.$gasto[items[0].dataIndex] || 0)}`,
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { precision: 0 } },
+        y1: { beginAtZero: true, position: 'right', grid: { display: false }, ticks: { callback: v => 'R$ ' + v } },
+      },
+    },
+  });
+  grafico.$gasto = serieGasto;
+}
+
+function desenharCanais(leadsUtm, total) {
+  const porCanal = {};
+  for (const r of leadsUtm) {
+    const k = r.utm_source + (r.utm_medium ? ' / ' + r.utm_medium : '');
+    porCanal[k] = (porCanal[k] || 0) + Number(r.leads);
+  }
+  const linhas = Object.entries(porCanal).sort((a, b) => b[1] - a[1]);
+  if (!linhas.length) {
+    $('tabCanais').innerHTML = '<tr><td class="vazio" colspan="3">Os leads aparecem aqui assim que o webhook receber o primeiro.</td></tr>';
+    return;
+  }
+  const max = linhas[0][1];
+  $('tabCanais').innerHTML = '<thead><tr><th>Canal</th><th>Leads</th><th>%</th></tr></thead><tbody>' +
+    linhas.map(([k, n]) => `<tr><td>${esc(k)}</td><td>${int.format(n)}<span class="barrinha" style="width:${Math.round(n / max * 48)}px"></span></td><td>${pct(n / total)}</td></tr>`).join('') +
+    '</tbody>';
+}
+
+const COLS_CRIATIVOS = [
+  { id: 'nome', nome: 'Anúncio' },
+  { id: 'gasto', nome: 'Investido' },
+  { id: 'leads', nome: 'Leads' },
+  { id: 'cpl', nome: 'CPL' },
+  { id: 'leads_meta', nome: 'Leads Meta' },
+  { id: 'ctr', nome: 'CTR' },
+];
+
+function ordenarCriativos(col) {
+  ordCriativos = { col, dir: ordCriativos.col === col ? -ordCriativos.dir : (col === 'cpl' || col === 'nome' ? 1 : -1) };
+  desenharCriativos();
+}
+
+let cplGeral = null;
+function desenharCriativos(cpl) {
+  if (cpl !== undefined) cplGeral = cpl;
+  if (!criativos.length) {
+    $('tabCriativos').innerHTML = '<tr><td class="vazio">Nenhum anúncio com "' + esc($('selLanc').value) + '" veiculando ainda. O Meta sincroniza a cada 15 minutos.</td></tr>';
+    return;
+  }
+  const { col, dir } = ordCriativos;
+  const lista = [...criativos].sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * dir;
+  });
+  const cor = c => c == null || cplGeral == null ? '' : c <= cplGeral * 0.85 ? 'bom' : c >= cplGeral * 1.25 ? 'ruim' : '';
+  $('tabCriativos').innerHTML =
+    '<thead><tr>' + COLS_CRIATIVOS.map(c => `<th class="${c.id === col ? 'ord' : ''}" onclick="ordenarCriativos('${c.id}')">${c.nome}${c.id === col ? (dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('') + '</tr></thead><tbody>' +
+    lista.map(c => `<tr>
+      <td>${esc(c.nome)}<span class="fraco">${esc(c.conjunto)}</span></td>
+      <td>${brl.format(c.gasto)}</td>
+      <td>${int.format(c.leads)}</td>
+      <td class="${cor(c.cpl)}">${c.cpl != null ? brl.format(c.cpl) : '—'}</td>
+      <td>${int.format(c.leads_meta)}</td>
+      <td>${c.ctr != null ? pct(c.ctr) : '—'}</td>
+    </tr>`).join('') + '</tbody>';
+}
+
+document.addEventListener('visibilitychange', () => { if (!document.hidden) carregar(); });
+iniciar();
+</script>
+</body>
+</html>
