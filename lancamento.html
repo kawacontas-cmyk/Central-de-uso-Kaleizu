@@ -234,6 +234,15 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .funil-svg .fv{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;fill:#fff}
 .funil-svg .fr{font-family:'DM Sans',sans-serif;font-size:10px;fill:rgba(255,255,255,.8)}
 
+/* animação do Explorar */
+@keyframes entra{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+.entra{animation:entra .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--atraso,0ms)}
+::view-transition-group(explorar){animation-duration:.5s;animation-timing-function:cubic-bezier(.2,.8,.2,1)}
+::view-transition-old(explorar),::view-transition-new(explorar){height:100%;width:100%;object-fit:cover;object-position:top center}
+::view-transition-old(explorar){animation-duration:.2s}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.3s}
+@media (prefers-reduced-motion:reduce){.entra{animation:none}::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}
+
 /* explorar em tela cheia */
 .sub-topo{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:22px}
 .migalha{display:flex;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}
@@ -928,7 +937,7 @@ function abaGeral(c) {
         <div class="mini-vazio">Ainda não há um critério de qualidade definido para os leads.</div>
       </div>
 
-      <div class="card mini explorar" onclick="explorar('organico')">
+      <div class="card mini explorar" data-tipo="organico" onclick="explorar('organico')">
         <div class="mini-cab"><span class="rotulo">Orgânico</span><button class="chip" onclick="event.stopPropagation(); explorar('organico')">${ico('lupa')}Explorar</button></div>
         <div class="mini-sub">${int.format(t.organicos)} leads · ${pct(div(t.organicos, t.leads) || 0)} do total</div>
         ${listaOrg.length ? `<div class="barras-h">${listaOrg.map(([k, n], i) => `
@@ -938,7 +947,7 @@ function abaGeral(c) {
           : '<div class="mini-vazio">Nenhum lead orgânico no período.</div>'}
       </div>
 
-      <div class="card mini explorar" onclick="explorar('trafego')">
+      <div class="card mini explorar" data-tipo="trafego" onclick="explorar('trafego')">
         <div class="mini-cab"><span class="rotulo">Tráfego</span><button class="chip" onclick="event.stopPropagation(); explorar('trafego')">${ico('lupa')}Explorar</button></div>
         <div class="mini-sub">${int.format(c.trafego)} leads${c.usaBanco ? '' : ' (atribuição Meta)'} · CPL ${moeda(div(t.gasto, c.trafego))}</div>
         ${t.impr ? funilSvg(camadas) : '<div class="mini-vazio">Sem dados do Meta no período.</div>'}
@@ -1011,20 +1020,54 @@ const SUBS = { organico: 'Orgânico', trafego: 'Tráfego' };
 const PALETA_ORG = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#e8eaf6', '#9ca3c7', '#7c7fa3', '#63668a', '#4f5274'];
 const org = { canal: 'todos', agrupar: 'canal', periodo: 'data' };
 
+// Transição: o card clicado "cresce" até virar a tela cheia (e encolhe de volta ao sair).
+// Usa View Transitions quando o navegador tem; senão, só a entrada em cascata dos cards.
+const semMovimento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function transicionar(de, atualizar, para) {
+  if (!document.startViewTransition || semMovimento() || !de) { atualizar(); return; }
+  de.style.viewTransitionName = 'explorar';
+  const t = document.startViewTransition(() => {
+    de.style.viewTransitionName = '';
+    atualizar();
+    const alvo = para();
+    if (alvo) alvo.style.viewTransitionName = 'explorar';
+  });
+  t.finished.finally(() => { document.querySelectorAll('[style*="view-transition-name"]').forEach(el => { el.style.viewTransitionName = ''; }); });
+}
+
 function explorar(tipo) {
   history.pushState(null, '', `?id=${encodeURIComponent(atualId)}&ver=${tipo}`);
-  est.sub = tipo;
   if (tipo === 'organico') Object.assign(org, { canal: 'todos', agrupar: 'canal', periodo: 'data' });
   if (tipo === 'trafego') Object.assign(traf, { temp: 'todas', foco: 'oportunidades', nivel: 'campanha', slide: 0 });
-  renderAba();
-  window.scrollTo(0, 0);
+  const card = document.querySelector(`.explorar[data-tipo="${tipo}"]`);
+  transicionar(card, () => {
+    est.sub = tipo;
+    est.animarEntrada = true;
+    renderAba();
+    window.scrollTo(0, 0);
+  }, () => $('conteudo'));
 }
 
 function sairSub() {
+  const tipo = est.sub;
   history.pushState(null, '', `?id=${encodeURIComponent(atualId)}`);
-  est.sub = null;
-  renderAba();
-  window.scrollTo(0, 0);
+  transicionar($('conteudo'), () => {
+    est.sub = null;
+    renderAba();
+    window.scrollTo(0, 0);
+  }, () => document.querySelector(`.explorar[data-tipo="${tipo}"]`));
+}
+
+// Cards da tela cheia entram em cascata, um pouco depois do outro
+function animarEntrada() {
+  if (!est.animarEntrada) return;
+  est.animarEntrada = false;
+  if (semMovimento()) return;
+  document.querySelectorAll('#conteudo .sub-topo, #conteudo .card, #conteudo .sub-rodape').forEach((el, i) => {
+    el.style.setProperty('--atraso', `${Math.min(i, 9) * 55}ms`);
+    el.classList.add('entra');
+    el.addEventListener('animationend', () => el.classList.remove('entra'), { once: true });
+  });
 }
 
 function migalha(nome) {
@@ -1046,8 +1089,9 @@ function rodapeSub() {
 
 function renderSub() {
   const c = calcular(est.de, est.ate);
-  if (est.sub === 'organico') return subOrganico(c);
-  return subTrafego(c);
+  if (est.sub === 'organico') subOrganico(c);
+  else subTrafego(c);
+  animarEntrada();
 }
 
 const chaveOrg = {
