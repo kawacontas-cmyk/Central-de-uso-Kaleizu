@@ -1125,10 +1125,14 @@ function abaGeral(c) {
 
   // Funil do tráfego, para o card
   const camadas = [
-    { v: moeda(div(t.gasto * 1000, t.impr)), r: 'CPM' },
-    { v: taxa(div(t.cliques, t.impr)), r: 'CTR' },
-    ...(t.lpv ? [{ v: taxa(div(t.lpv, t.cliques)), r: 'Connect rate' }] : []),
-    { v: t.lpv ? taxa(div(c.trafego, t.lpv)) : taxa(div(c.trafego, t.cliques)), r: t.lpv ? 'Conversão da página' : 'Conversão (cliques)' },
+    { v: moeda(div(t.gasto * 1000, t.impr)), r: 'CPM',
+      dica: { titulo: 'Impressões', linhas: [['Impressões', int.format(t.impr)], ['Investido', moeda(t.gasto)]] } },
+    { v: taxa(div(t.cliques, t.impr)), r: 'CTR',
+      dica: { titulo: 'Cliques no link', linhas: [['Cliques no link', int.format(t.cliques)], ['CPC', moeda(div(t.gasto, t.cliques))]] } },
+    ...(t.lpv ? [{ v: taxa(div(t.lpv, t.cliques)), r: 'Connect rate',
+      dica: { titulo: 'Visualizações da página', linhas: [['Visualizações', int.format(t.lpv)], ['Custo por visualização', moeda(div(t.gasto, t.lpv))]] } }] : []),
+    { v: t.lpv ? taxa(div(c.trafego, t.lpv)) : taxa(div(c.trafego, t.cliques)), r: t.lpv ? 'Conversão da página' : 'Conversão (cliques)',
+      dica: { titulo: 'Leads de tráfego', linhas: [['Leads', int.format(c.trafego)], ['CPL', moeda(div(t.gasto, c.trafego))]] } },
   ];
 
   $('conteudo').innerHTML = `
