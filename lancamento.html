@@ -234,6 +234,18 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .funil-svg .fv{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;fill:#fff}
 .funil-svg .fr{font-family:'DM Sans',sans-serif;font-size:10px;fill:rgba(255,255,255,.8)}
 
+/* quadro do funil */
+.funil-svg .camada{cursor:default;outline:none}
+.funil-svg .camada polygon{transition:filter .15s}
+.funil-svg .camada:hover polygon,.funil-svg .camada:focus-visible polygon{filter:brightness(1.18)}
+.funil-svg .camada:focus-visible polygon{stroke:var(--gold);stroke-width:2}
+.dica-funil{position:fixed;z-index:60;pointer-events:none;background:rgba(14,21,48,.96);border:1px solid rgba(169,139,255,.45);border-radius:8px;
+  padding:10px 12px;font-size:12px;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:170px}
+.df-titulo{font-weight:600;font-size:13px;margin-bottom:6px}
+.df-linha{display:flex;align-items:center;gap:7px;margin-top:3px;color:var(--muted)}
+.df-linha b{color:var(--text);font-family:'DM Mono',monospace;font-weight:500}
+.df-cor{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
 /* animação do Explorar */
 @keyframes entra{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
 .entra{animation:entra .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--atraso,0ms)}
@@ -805,6 +817,7 @@ function calcular(de, ate) {
 }
 
 function renderAba() {
+  esconderDicaFunil();
   for (const k in charts) { charts[k].destroy(); delete charts[k]; }
   document.querySelectorAll('.aba').forEach(b => {
     const on = b.dataset.aba === est.aba;
@@ -962,16 +975,44 @@ function funilSvg(camadas, tamanho) {
   const W = 400, H = grande ? 78 : 44, gap = grande ? 6 : 4, n = camadas.length;
   const larg = i => W - (W * 0.55) * (i / n);      // topo de cada camada
   const cores = ['#6d4fd1', '#7f62dc', '#9277e4', '#a98bff'];
+  // Camadas com "dica" mostram um quadro com os números por trás da taxa ao passar o mouse
+  camadas.forEach((c, i) => { c.cor = cores[i % cores.length]; });
+  FUNIL_DICAS = camadas;
   return `<svg class="funil-svg" viewBox="0 0 ${W} ${n * (H + gap)}" role="img" aria-label="Funil do tráfego">
     ${camadas.map((c, i) => {
       const t = larg(i), b = larg(i + 1), y = i * (H + gap);
       const x1 = (W - t) / 2, x2 = (W + t) / 2, x3 = (W + b) / 2, x4 = (W - b) / 2;
-      return `<polygon points="${x1},${y} ${x2},${y} ${x3},${y + H} ${x4},${y + H}" fill="${cores[i % cores.length]}"/>
+      const eventos = c.dica
+        ? ` class="camada" tabindex="0" onmousemove="mostrarDicaFunil(event, ${i})" onmouseleave="esconderDicaFunil()" onfocus="mostrarDicaFunil(event, ${i})" onblur="esconderDicaFunil()"`
+        : '';
+      return `<g${eventos}>
+        ${c.dica ? `<title>${esc(c.dica.titulo)}: ${c.dica.linhas.map(l => `${esc(l[0])} ${esc(l[1])}`).join(', ')}</title>` : ''}
+        <polygon points="${x1},${y} ${x2},${y} ${x3},${y + H} ${x4},${y + H}" fill="${c.cor}"/>
         <text x="${W / 2}" y="${y + H / 2 - 1}" text-anchor="middle" class="fv">${esc(c.v)}</text>
-        <text x="${W / 2}" y="${y + H / 2 + 13}" text-anchor="middle" class="fr">${esc(c.r)}</text>`;
+        <text x="${W / 2}" y="${y + H / 2 + 13}" text-anchor="middle" class="fr">${esc(c.r)}</text>
+      </g>`;
     }).join('')}
   </svg>`;
 }
+
+let FUNIL_DICAS = [];
+function mostrarDicaFunil(ev, i) {
+  const c = FUNIL_DICAS[i];
+  if (!c?.dica) return;
+  let el = $('dicaFunil');
+  if (!el) { el = document.createElement('div'); el.id = 'dicaFunil'; el.className = 'dica-funil'; el.setAttribute('role', 'tooltip'); document.body.appendChild(el); }
+  el.innerHTML = `<div class="df-titulo">${esc(c.dica.titulo)}</div>` +
+    c.dica.linhas.map(([rot, val]) => `<div class="df-linha"><span class="df-cor" style="background:${c.cor}"></span>${esc(rot)}: <b>${esc(val)}</b></div>`).join('');
+  el.hidden = false;
+  // Segue o mouse; no teclado, fica ao lado da camada
+  const alvo = ev.currentTarget.getBoundingClientRect();
+  let x = ev.clientX || (alvo.left + alvo.width / 2), y = ev.clientY || (alvo.top + alvo.height / 2);
+  const w = el.offsetWidth, h = el.offsetHeight;
+  x = x + 16 + w > innerWidth ? x - w - 16 : x + 16;
+  y = Math.max(8, Math.min(y - h / 2, innerHeight - h - 8));
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+}
+function esconderDicaFunil() { const el = $('dicaFunil'); if (el) el.hidden = true; }
 
 function desenharDesempenho(c, o = {}) {
   const id = o.id || 'gDesemp';
@@ -1247,10 +1288,14 @@ function subTrafego(c) {
   const t = tr.t;
   const cplMedio = div(t.gasto, tr.leads);
   const camadas = [
-    { v: moeda(div(t.gasto * 1000, t.impr)), r: 'CPM' },
-    { v: taxa(div(t.cliques, t.impr)), r: 'CTR' },
-    ...(t.lpv ? [{ v: taxa(div(t.lpv, t.cliques)), r: 'Connect rate' }] : []),
-    { v: t.lpv ? taxa(div(tr.leads, t.lpv)) : taxa(div(tr.leads, t.cliques)), r: 'Tx. conversão' },
+    { v: moeda(div(t.gasto * 1000, t.impr)), r: 'CPM',
+      dica: { titulo: 'Impressões', linhas: [['Impressões', int.format(t.impr)], ['Investido', moeda(t.gasto)]] } },
+    { v: taxa(div(t.cliques, t.impr)), r: 'CTR',
+      dica: { titulo: 'Cliques no link', linhas: [['Cliques no link', int.format(t.cliques)], ['CPC', moeda(div(t.gasto, t.cliques))]] } },
+    ...(t.lpv ? [{ v: taxa(div(t.lpv, t.cliques)), r: 'Connect rate',
+      dica: { titulo: 'Visualizações da página', linhas: [['Visualizações', int.format(t.lpv)], ['Custo por visualização', moeda(div(t.gasto, t.lpv))]] } }] : []),
+    { v: t.lpv ? taxa(div(tr.leads, t.lpv)) : taxa(div(tr.leads, t.cliques)), r: 'Tx. conversão',
+      dica: { titulo: 'Leads', linhas: [['Leads', int.format(tr.leads)], ['CPL', moeda(cplMedio)]] } },
   ];
   const macro = (rot, valor, icone, cor, sub) => `
     <div class="card macro">
@@ -1407,7 +1452,7 @@ function abaRelatorio() {
   // Números acumulados do início do lançamento até o fim do dia escolhido
   const c = calcular(minimo <= rel.data ? minimo : rel.data, rel.data);
   const total = c.t.leads, org = c.t.organicos, pago = c.trafego;
-  const respostas = est.pesq.rows.filter(r => diaSP(r.criado_em) <= rel.data).length;
+  const respostas = est.pesq.rows.filter(r => r._dia <= rel.data).length;
 
   const [a, m, d] = rel.data.split('-');
   const texto = [
@@ -1618,6 +1663,62 @@ const pesquisaId = l => l.pesquisa_id || `${l.id} - Captação`;
 const diaSP = iso => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(iso));
 const CAMPOS_CONTATO = /^(email|e-mail|telefone|nome|whatsapp|celular)$/i;
 
+// ---- Data de cada resposta ----
+// Respostas importadas por CSV trazem a data numa coluna; as do webhook, na hora de entrada.
+const MESES = { jan: 1, fev: 2, feb: 2, mar: 3, abr: 4, apr: 4, mai: 5, may: 5, jun: 6, jul: 7, ago: 8, aug: 8, set: 9, sep: 9, out: 10, oct: 10, nov: 11, dez: 12, dec: 12 };
+const NOME_DATA = /^(data|date|data e hora|data\/hora|carimbo de data\/hora|timestamp|data de envio|enviad[oa] em|submitted( at)?|created( at)?|criad[oa] em|hor[aá]rio)$/i;
+
+function isoValido(a, m, d) {
+  if (a < 100) a += 2000;
+  if (a < 2000 || a > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function lerData(valor) {
+  const v = String(valor ?? '').trim();
+  if (!v) return null;
+  let m;
+  // Número de série do Excel (ex.: 46283 ou 46283,58)
+  if (/^\d{5}([.,]\d+)?$/.test(v)) {
+    const n = parseFloat(v.replace(',', '.'));
+    if (n > 36000 && n < 80000) return new Date(Date.UTC(1899, 11, 30) + Math.floor(n) * 86400000).toISOString().slice(0, 10);
+  }
+  // ISO com fuso (2026-09-18T02:10:00Z): converte para o dia em São Paulo
+  if (/^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/.test(v)) { const d = new Date(v); if (!isNaN(d)) return diaSP(d.toISOString()); }
+  if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(v))) return isoValido(+m[1], +m[2], +m[3]);
+  // 18/09/2026, 18-09-26, 18.09.2026 (dia primeiro; se o "mês" passar de 12, inverte)
+  if ((m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/.exec(v))) {
+    let d = +m[1], mes = +m[2];
+    if (mes > 12 && d <= 12) [d, mes] = [mes, d];
+    return isoValido(+m[3], mes, d);
+  }
+  // 18 de setembro de 2026 · 18 set 2026
+  if ((m = /^(\d{1,2})\s*(?:de\s+)?([a-zç]{3})[a-zç]*\.?\s*(?:de\s+)?(\d{4})/i.exec(v)) && MESES[m[2].toLowerCase()])
+    return isoValido(+m[3], MESES[m[2].toLowerCase()], +m[1]);
+  // September 18, 2026 · setembro 18, 2026
+  if ((m = /^([a-zç]{3})[a-zç]*\.?\s+(\d{1,2}),?\s+(\d{4})/i.exec(v)) && MESES[m[1].toLowerCase()])
+    return isoValido(+m[3], MESES[m[1].toLowerCase()], +m[2]);
+  return null;
+}
+
+// Acha a coluna de data: primeiro pelo nome; senão, a coluna em que quase tudo é data
+function acharColunaData(rows, cols) {
+  const amostra = rows.slice(0, 60);
+  const taxaDatas = k => {
+    const vals = amostra.map(r => r.dados?.[k]).filter(v => String(v ?? '').trim());
+    return vals.length ? vals.filter(lerData).length / vals.length : 0;
+  };
+  const porNome = cols.filter(k => NOME_DATA.test(k.trim()));
+  for (const k of porNome) if (taxaDatas(k) >= .6) return k;
+  let melhor = null, nota = 0;
+  for (const k of cols) {
+    if (CAMPOS_CONTATO.test(k)) continue;
+    const t = taxaDatas(k);
+    if (t >= .8 && t > nota) { melhor = k; nota = t; }
+  }
+  return melhor;
+}
+
 async function carregarPesquisa() {
   const id = pesquisaId(est.lanc);
   const rows = [];
@@ -1629,7 +1730,12 @@ async function carregarPesquisa() {
     if (data.length < 1000) break;
   }
   const { data: card } = await sb.from('lancamentos').select('id, cols, total').eq('id', id).maybeSingle();
-  est.pesq = { id, card, rows };
+  // todas as chaves das respostas, não só as do card: a coluna de data pode não estar no cols
+  const colunas = [...new Set([...(card?.cols || []), ...rows.slice(0, 200).flatMap(r => Object.keys(r.dados || {}))])].filter(k => !k.startsWith('_'));
+  const colData = acharColunaData(rows, colunas);
+  rows.forEach(r => { r._dia = (colData && lerData(r.dados?.[colData])) || diaSP(r.criado_em); });
+  rows.sort((a, b) => a._dia.localeCompare(b._dia));
+  est.pesq = { id, card, rows, colData };
 }
 
 function abaPesquisa(c) {
@@ -1649,16 +1755,17 @@ function abaPesquisa(c) {
   }
   const hoje = hojeSP();
   const n = rows.length, leads = c.t.leads;
-  const hojeN = rows.filter(r => diaSP(r.criado_em) === hoje).length;
-  const ultima = rows[rows.length - 1].criado_em;
+  const hojeN = rows.filter(r => r._dia === hoje).length;
+  const ultima = rows[rows.length - 1]._dia;
+  const { colData } = est.pesq;
   const cols = (card?.cols?.length ? card.cols : [...new Set(rows.flatMap(r => Object.keys(r.dados || {})))])
     .filter(k => !k.startsWith('_'));
-  const perguntas = cols.filter(k => !CAMPOS_CONTATO.test(k));
+  const perguntas = cols.filter(k => !CAMPOS_CONTATO.test(k) && k !== colData);
   const vivo = situacao(est.lanc).classe === 'andamento';
 
-  const dias = diasEntre(diaSP(rows[0].criado_em), vivo ? hoje : diaSP(ultima));
+  const dias = diasEntre(rows[0]._dia, vivo && hoje > ultima ? hoje : ultima);
   const porDia = Object.fromEntries(dias.map(d => [d, 0]));
-  rows.forEach(r => { const d = diaSP(r.criado_em); if (d in porDia) porDia[d]++; });
+  rows.forEach(r => { if (r._dia in porDia) porDia[r._dia]++; });
 
   const blocos = perguntas.map((q, i) => {
     const vals = rows.map(r => String(r.dados?.[q] ?? '').trim()).filter(Boolean);
@@ -1685,11 +1792,11 @@ function abaPesquisa(c) {
       ${kcard('Respostas', int.format(n), esc(id), 'prancheta', COR.purple)}
       ${kcard('Taxa de resposta', leads ? taxa(n / leads) : '—', `${int.format(n)} de ${int.format(leads)} leads`, 'porcento', COR.gold)}
       ${vivo ? kcard('Hoje', int.format(hojeN), 'Respostas no dia', 'relogio', COR.blue)
-             : kcard('Última resposta', fmtData(diaSP(ultima)), '', 'relogio', COR.blue)}
+             : kcard('Última resposta', fmtData(ultima), '', 'relogio', COR.blue)}
       ${kcard('Perguntas', int.format(perguntas.length), 'Sem contar nome, e-mail e telefone', 'bandeira', COR.teal)}
     </div>
     ${secao('Respostas por dia')}
-    ${bloco('Respostas por dia', 'Quando cada resposta chegou', 'gResp', true)}
+    ${bloco('Respostas por dia', colData ? `Pela coluna "${esc(colData)}" da pesquisa; respostas sem data contam no dia em que entraram` : 'Quando cada resposta chegou', 'gResp', true)}
     ${secao('Respostas por pergunta')}
     <div class="g2">${blocos.map(b => b.html).join('')}</div>`;
 
