@@ -808,6 +808,7 @@ const ABAS = [
   { id: 'origem',    nome: 'Origem (UTM)', ico: 'ramos' },
   { id: 'organico',  nome: 'Orgânico',     ico: 'folha' },
   { id: 'pesquisa',  nome: 'Pesquisa',     ico: 'prancheta' },
+  { id: 'grupo',     nome: 'Grupo do WPP', ico: 'chat' },
   { id: 'metas',     nome: 'Metas',        ico: 'bandeira' },
   { id: 'relatorio', nome: 'Relatório diário', ico: 'copiar' },
 ];
@@ -842,6 +843,7 @@ const ICONES = {
   copiar: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   lupa: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   relogio: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
 };
 const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n] || ''}</svg>`;
 
@@ -891,6 +893,7 @@ async function carregar(manual = false) {
     est.links = new Map((criativosDrive.data || []).map(r => [r.chave, r.url]));
     if (trocou) { est.aba = 'geral'; est.filtroMexido = false; }
     est.pesq = null;
+    est.wpp = null;
     rel.grupos = null;
     if (est.aba === 'pesquisa') await carregarPesquisa();
     definirPeriodoPadrao();
@@ -1029,7 +1032,7 @@ function renderAba() {
   if (est.sub) return renderSub();
   const inteiro = est.aba === 'metas' || est.aba === 'pesquisa';
   const c = inteiro ? calcular(est.padraoDe, est.padraoAte) : calcular(est.de, est.ate);
-  ({ geral: abaGeral, midia: abaMidia, criativos: abaCriativos, origem: abaOrigem, organico: abaOrganico, pesquisa: abaPesquisa, metas: abaMetas, relatorio: abaRelatorio })[est.aba](c);
+  ({ geral: abaGeral, midia: abaMidia, criativos: abaCriativos, origem: abaOrigem, organico: abaOrganico, pesquisa: abaPesquisa, grupo: abaGrupo, metas: abaMetas, relatorio: abaRelatorio })[est.aba](c);
 }
 
 // ---------- peças de interface ----------
@@ -2031,6 +2034,62 @@ function desenharOpcoes(id, opcoes, total) {
   });
 }
 
+// ---------- Grupo do WPP (entradas/saídas dos grupos de WhatsApp, via webhook do SendFlow) ----------
+async function carregarWpp() {
+  est.wpp = await buscarTudo('painel_wpp_eventos', est.lanc.id, ['criado_em']);
+}
+function contarPor(rows, chave) {
+  const m = {};
+  for (const r of rows) {
+    const k = chave(r) || '(sem grupo)';
+    (m[k] ||= { nome: k, n: 0 }).n++;
+  }
+  return Object.values(m);
+}
+function abaGrupo(c) {
+  if (!est.wpp) {
+    $(alvoRender).innerHTML = '<p class="carregando">Carregando eventos dos grupos…</p>';
+    carregarWpp()
+      .then(() => { if (est.aba === 'grupo' && !est.sub) renderAba(); })
+      .catch(e => { $('conteudo').innerHTML = `<div class="faixa"><b>Não foi possível carregar os grupos</b><p>${esc(e.message)}</p></div>`; });
+    return;
+  }
+  if (!est.wpp.length) {
+    $(alvoRender).innerHTML = `<div class="faixa"><b>Nenhum evento ainda</b>
+      <p>As entradas e saídas dos grupos de WhatsApp chegam pelo webhook do SendFlow. A URL pronta está no Checklist.</p>
+      ${ehAdmin ? '<button class="btn" onclick="abrirChecklist()">Abrir checklist</button>' : ''}</div>`;
+    return;
+  }
+  const eventos = est.wpp.filter(e => { const d = diaSP(e.criado_em); return d >= c.de && d <= c.ate; });
+  const entradas = eventos.filter(e => e.evento === 'entrada');
+  const saidas = eventos.filter(e => e.evento === 'saida');
+  const total = entradas.length + saidas.length;
+  const porDia = Object.fromEntries(c.dias.map(d => [d, { entradas: 0, saidas: 0 }]));
+  eventos.forEach(e => { const d = diaSP(e.criado_em); if (porDia[d]) porDia[d][e.evento === 'entrada' ? 'entradas' : 'saidas']++; });
+  const saldo = entradas.length - saidas.length;
+
+  $(alvoRender).innerHTML = `
+    <div class="g4">
+      ${kcard('Entradas', int.format(entradas.length), `${ddmm(c.de)} — ${ddmm(c.ate)}`, 'pessoas', COR.green)}
+      ${kcard('Saídas', int.format(saidas.length), `${ddmm(c.de)} — ${ddmm(c.ate)}`, 'pessoas', COR.red)}
+      ${kcard('Saldo', (saldo > 0 ? '+' : '') + int.format(saldo), 'Entradas − saídas', 'tendencia', COR.gold)}
+      ${kcard('Taxa de entrada', total ? taxa(entradas.length / total) : '—', 'Entradas ÷ (entradas + saídas)', 'porcento', COR.purple)}
+    </div>
+    ${secao('Entradas e saídas por dia')}
+    ${bloco('Movimento por dia', 'Entradas, saídas e a taxa de entrada de cada dia', 'gWpp', true)}
+    <div class="g2">
+      ${tabelaGrupo('Entradas por grupo', 'Grupo de WhatsApp de destino', contarPor(entradas, r => r.grupo_nome), entradas.length || 1)}
+      ${tabelaGrupo('Saídas por grupo', 'Grupo de WhatsApp de origem', contarPor(saidas, r => r.grupo_nome), saidas.length || 1)}
+    </div>`;
+
+  desenhar('gWpp', 'bar', rotulosDias(c), [
+    { label: 'Entradas', data: c.dias.map(d => porDia[d].entradas), cor: COR.green },
+    { label: 'Saídas', data: c.dias.map(d => porDia[d].saidas), cor: COR.red },
+    { label: 'Taxa de entrada', tipo: 'line', eixo: 'y1', fmt: 'pct', cor: COR.gold,
+      data: c.dias.map(d => { const t = porDia[d].entradas + porDia[d].saidas; return t ? porDia[d].entradas / t : null; }) },
+  ]);
+}
+
 // ---------- Metas ----------
 function abaMetas(c) {
   const l = est.lanc, t = c.t, hoje = hojeSP(), st = situacao(l).classe;
@@ -2328,6 +2387,7 @@ async function abrirChecklist(id = atualId, token = null) {
   }
   const url = origem => `${WEBHOOK_BASE}?token=${token}&lanc=${encodeURIComponent(id)}&origem=${origem}`;
   const urlPesq = `${WEBHOOK_BASE.replace('lead-webhook', 'pesquisa-webhook')}?token=${token}&lanc=${encodeURIComponent(id)}`;
+  const urlWpp = `${WEBHOOK_BASE.replace('lead-webhook', 'wpp-webhook')}?token=${token}&lanc=${encodeURIComponent(id)}`;
   const nome = esc(l.rotulo || l.id);
 
   abrirModal(`Checklist do ${l.rotulo || l.id}`, `
@@ -2380,8 +2440,15 @@ async function abrirChecklist(id = atualId, token = null) {
         <p class="vivo" id="ckLeadTxt">Verificando…</p>
         <p><button type="button" class="btn" id="btnApagarTeste" hidden onclick="apagarTestes('${esc(id)}')">Apagar leads de teste</button></p>
       </div></li>
+
+      <li id="ckWpp"><div class="st"></div><div>
+        <b>Webhook dos grupos do WhatsApp</b>
+        <p>No SendFlow, na campanha, adicione a mesma URL abaixo nos dois eventos: "Membro adicionado" e "Membro removido". Um evento vira entrada, o outro saída, na aba Grupo do WPP.</p>
+        ${copiavel(urlWpp)}
+        <p class="vivo" id="ckWppTxt">Verificando…</p>
+      </div></li>
     </ol>
-    <p class="nota">Os passos 2, 5, 6 e 7 se conferem sozinhos a cada 20 segundos enquanto esta janela estiver aberta.</p>
+    <p class="nota">Os passos 2, 5, 6, 7 e 8 se conferem sozinhos a cada 20 segundos enquanto esta janela estiver aberta.</p>
     <div class="acoes"><button type="button" class="btn primario" onclick="fecharModal()">Concluir</button></div>`);
 
   verificarChecklist(l);
@@ -2397,12 +2464,13 @@ function marcar(id, ok, texto) {
 }
 
 async function verificarChecklist(l) {
-  const [ads, utm, pesq, arqs, nomesAds] = await Promise.all([
+  const [ads, utm, pesq, arqs, nomesAds, wpp] = await Promise.all([
     sb.from('painel_meta_anuncios').select('campaign_name').eq('lancamento_id', l.id),
     sb.from('painel_leads_utm').select('utm_source, leads').eq('lancamento_id', l.id),
     sb.from('respostas').select('id', { count: 'exact', head: true }).eq('lancamento_id', pesquisaId(l)),
     sb.from('painel_criativos').select('chave').eq('lancamento_id', l.id).range(0, 4999),
     sb.from('painel_meta_anuncios').select('ad_name').eq('lancamento_id', l.id),
+    sb.from('painel_wpp_eventos').select('id', { count: 'exact', head: true }).eq('lancamento_id', l.id),
   ]);
   if (!$('ckMeta')) return;
 
@@ -2427,6 +2495,8 @@ async function verificarChecklist(l) {
     : !chavesArq.size ? 'Pasta cadastrada, mas nenhum arquivo lido ainda. Confira o compartilhamento e clique em Sincronizar agora.'
     : `${int.format(chavesArq.size)} arquivo(s) lidos · ${int.format(ligados)} de ${int.format(anunc.length)} anúncio(s) com link.`);
   marcar('ckPesq', nPesq > 0, nPesq ? `${int.format(nPesq)} resposta(s) recebida(s).` : 'Nenhuma resposta recebida ainda.');
+  const nWpp = wpp.count || 0;
+  marcar('ckWpp', nWpp > 0, nWpp ? `${int.format(nWpp)} evento(s) recebido(s).` : 'Nenhum evento recebido ainda. Use "Enviar teste" no SendFlow.');
   if (testes) $('btnApagarTeste').textContent = `Apagar ${testes} lead(s) de teste`;
 }
 
