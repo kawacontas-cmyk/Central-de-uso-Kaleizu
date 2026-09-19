@@ -360,6 +360,17 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .sub-rodape{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:18px;font-size:12px;color:var(--muted)}
 @media (max-width:980px){.org-grade{grid-template-columns:1fr}.org-grafico{min-height:280px}}
 
+/* Grupo do WPP: card único, igual ao painel de referência (cabeçalho + KPIs + gráfico + ranking) */
+.wpp-cab{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border)}
+.wpp-cab h2{font-size:15px;margin:0}
+.wpp-grade{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr) minmax(0,1.15fr);gap:18px;padding:20px 22px}
+.wpp-kpis{display:flex;flex-direction:column;gap:14px;min-width:0}
+.wpp-kpis .macro{padding:16px 18px}
+.wpp-grafico,.wpp-ranking{display:flex;flex-direction:column;min-width:0}
+.wpp-grafico .grafico{flex:1;min-height:260px}
+.wpp-ranking .barras-h{max-height:none;flex:1}
+@media (max-width:1150px){.wpp-grade{grid-template-columns:1fr}}
+
 /* explorar tráfego */
 .pills{display:inline-flex;gap:4px;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:99px;flex-wrap:wrap}
 .pill{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;padding:6px 12px;border-radius:99px;cursor:pointer;white-space:nowrap}
@@ -1041,6 +1052,11 @@ const kcard = (rot, valor, sub, icone, cor) => `
     <div class="k-cab"><span class="rotulo">${rot}</span><span class="k-ico" style="--c:${cor}">${ico(icone)}</span></div>
     <div class="valor">${valor}</div>
     <div class="sub">${sub || '&nbsp;'}</div>
+  </div>`;
+const kcardMacro = (rot, valor, icone, cor) => `
+  <div class="card macro">
+    <div class="rotulo">${rot}</div>
+    <div class="macro-linha"><span class="k-ico" style="--c:${cor}">${ico(icone)}</span><span class="macro-valor">${valor}</span></div>
   </div>`;
 const secao = txt => `<div class="secao">${txt}</div>`;
 const bloco = (titulo, desc, id, largo = false) => `
@@ -2064,6 +2080,19 @@ function contarPor(rows, chave) {
   }
   return Object.values(m);
 }
+// Taxa de entrada por grupo: entradas ÷ (entradas + saídas) daquele grupo, maior primeiro
+function taxaPorGrupo(eventos) {
+  const m = {};
+  for (const e of eventos) {
+    const k = e.grupo_nome || '(sem grupo)';
+    const x = m[k] ||= { nome: k, entradas: 0, saidas: 0 };
+    x[e.evento === 'entrada' ? 'entradas' : 'saidas']++;
+  }
+  return Object.values(m)
+    .map(x => ({ nome: x.nome, total: x.entradas + x.saidas, taxa: (x.entradas + x.saidas) ? x.entradas / (x.entradas + x.saidas) : 0 }))
+    .sort((a, b) => b.taxa - a.taxa)
+    .slice(0, 10);
+}
 function abaGrupo(c) {
   if (!est.wpp) {
     $(alvoRender).innerHTML = '<p class="carregando">Carregando eventos dos grupos…</p>';
@@ -2084,20 +2113,35 @@ function abaGrupo(c) {
   const total = entradas.length + saidas.length;
   const porDia = Object.fromEntries(c.dias.map(d => [d, { entradas: 0, saidas: 0 }]));
   eventos.forEach(e => { const d = diaSP(e.criado_em); if (porDia[d]) porDia[d][e.evento === 'entrada' ? 'entradas' : 'saidas']++; });
-  const saldo = entradas.length - saidas.length;
+
+  const ranking = taxaPorGrupo(eventos);
+  const rankMax = Math.max(...ranking.map(r => r.taxa), 0.0001);
 
   $(alvoRender).innerHTML = `
-    <div class="g4">
-      ${kcard('Entradas', int.format(entradas.length), `${ddmm(c.de)} — ${ddmm(c.ate)}`, 'pessoas', COR.green)}
-      ${kcard('Saídas', int.format(saidas.length), `${ddmm(c.de)} — ${ddmm(c.ate)}`, 'pessoas', COR.red)}
-      ${kcard('Saldo', (saldo > 0 ? '+' : '') + int.format(saldo), 'Entradas − saídas', 'tendencia', COR.gold)}
-      ${kcard('Taxa de entrada', total ? taxa(entradas.length / total) : '—', 'Entradas ÷ (entradas + saídas)', 'porcento', COR.purple)}
-    </div>
-    ${secao('Entradas e saídas por dia')}
-    ${bloco('Movimento por dia', 'Entradas, saídas e a taxa de entrada de cada dia', 'gWpp', true)}
-    <div class="g2">
-      ${tabelaGrupo('Entradas por grupo', 'Grupo de WhatsApp de destino', contarPor(entradas, r => r.grupo_nome), entradas.length || 1)}
-      ${tabelaGrupo('Saídas por grupo', 'Grupo de WhatsApp de origem', contarPor(saidas, r => r.grupo_nome), saidas.length || 1)}
+    <div class="card wpp-card">
+      <div class="wpp-cab">
+        <span class="k-ico" style="--c:${COR.gold}">${ico('chat')}</span>
+        <h2>Grupo do WPP</h2>
+      </div>
+      <div class="wpp-grade">
+        <div class="wpp-kpis">
+          ${kcardMacro('Taxa de entrada', total ? taxa(entradas.length / total) : '—', 'porcento', COR.gold)}
+          ${kcardMacro('Entradas', int.format(entradas.length), 'pessoas', COR.green)}
+          ${kcardMacro('Saídas', int.format(saidas.length), 'pessoas', COR.red)}
+        </div>
+        <div class="wpp-grafico">
+          <div class="rotulo">Taxa de entrada por dia</div>
+          <div class="grafico"><canvas id="gWpp"></canvas></div>
+        </div>
+        <div class="wpp-ranking">
+          <div class="rotulo">Taxa de entrada por grupo</div>
+          ${ranking.length ? `<div class="barras-h">${ranking.map((r, i) => `
+            <div class="bh"><span class="bh-rot" title="${esc(r.nome)}">${esc(r.nome)}</span>
+              <span class="bh-trilho"><span style="width:${Math.max(2, r.taxa / rankMax * 100)}%;background:${PALETA_ORG[Math.min(i, PALETA_ORG.length - 1)]}"></span></span>
+              <span class="bh-num">${taxa(r.taxa)}</span></div>`).join('')}</div>`
+            : '<div class="mini-vazio">Nenhum grupo no período.</div>'}
+        </div>
+      </div>
     </div>`;
 
   desenhar('gWpp', 'bar', rotulosDias(c), [
