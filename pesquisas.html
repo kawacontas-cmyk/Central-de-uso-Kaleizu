@@ -186,15 +186,30 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
 });
 
+// Ordem numérica pelo lançamento: L5KR, L6KR ... L22KR, L23KR (e não L10 antes de L2).
+// Mesmo número: Captação antes de Alunos. Sem número no nome: no fim, em ordem alfabética.
+function ordemLancamento(a, b) {
+  const num = s => { const m = /L\s*(\d+)/i.exec(s.id); return m ? parseInt(m[1], 10) : Infinity; };
+  const tipo = s => (s.tipo === 'Captação' ? 0 : 1);
+  return (num(a) - num(b)) || (tipo(a) - tipo(b)) || a.id.localeCompare(b.id, 'pt-BR', { numeric: true });
+}
+
 async function fetchSheets() {
-  const { data, error } = await sb.from('lancamentos').select('*').order('criado_em');
+  const { data, error } = await sb.from('lancamentos').select('*');
   if (error) throw error;
-  return data;
+  return data.sort(ordemLancamento);
 }
 async function fetchRows(id) {
   if (rowsCache[id]) return rowsCache[id];
-  const { data, error } = await sb.from('respostas').select('id,dados,criado_em').eq('lancamento_id',id).order('criado_em');
-  if (error) throw error;
+  // O Supabase devolve no máximo 1.000 linhas por consulta: busca em páginas até acabar
+  const data = [];
+  for (let de = 0; ; de += 1000) {
+    const { data: pag, error } = await sb.from('respostas').select('id,dados,criado_em')
+      .eq('lancamento_id', id).order('criado_em').order('id').range(de, de + 999);
+    if (error) throw error;
+    data.push(...pag);
+    if (pag.length < 1000) break;
+  }
   const rows = data.map(r => ({ _id:r.id, _criado:r.criado_em, ...r.dados }));
   rowsCache[id] = rows;
   return rows;
@@ -255,6 +270,7 @@ function corDoLancamento(id) {
 }
 
 function renderLancamentos() {
+  sheets.sort(ordemLancamento); // mantém a ordem também para cards criados agora
   const total = sheets.reduce((s,x)=>s+x.total, 0);
   document.getElementById('topbarCount').textContent = total.toLocaleString('pt-BR') + ' respostas';
 
