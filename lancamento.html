@@ -234,6 +234,12 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .funil-svg .fv{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;fill:#fff}
 .funil-svg .fr{font-family:'DM Sans',sans-serif;font-size:10px;fill:rgba(255,255,255,.8)}
 
+/* link dos criativos */
+.link-criativo{color:inherit;text-decoration:none;border-bottom:1px dashed rgba(205,160,76,.45);display:inline-flex;align-items:center;gap:4px}
+.link-criativo svg{width:12px;height:12px;color:var(--gold);flex-shrink:0;opacity:.8}
+.link-criativo:hover{color:var(--gold-light);border-bottom-color:var(--gold)}
+.link-criativo:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
+
 /* quadro do funil */
 .funil-svg .camada{cursor:default;outline:none}
 .funil-svg .camada polygon{transition:filter .15s}
@@ -660,6 +666,16 @@ const ICONES = {
 const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n] || ''}</svg>`;
 
 const moeda = v => v != null && isFinite(v) ? brl.format(v) : '—';
+
+// Nome do criativo → link para o arquivo no Drive (mesma chave da função drive-sync)
+const EXT_ARQUIVO = /\.(mp4|mov|m4v|avi|mkv|webm|jpg|jpeg|png|gif|webp|heic|psd|ai|pdf|mp3|wav)$/i;
+const chaveCriativo = nome => String(nome || '').replace(EXT_ARQUIVO, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[\s_]+/g, ' ').trim();
+function linkCriativo(nome) {
+  const url = est.links?.get(chaveCriativo(nome));
+  if (!url || !/^https:\/\//.test(url)) return esc(nome);
+  return `<a class="link-criativo" href="${esc(url)}" target="_blank" rel="noopener" title="Abrir no Drive" onclick="event.stopPropagation()">${esc(nome)}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>`;
+}
 const taxa = v => v != null && isFinite(v) ? pct(v) : '—';
 const ddmm = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '';
 
@@ -683,13 +699,16 @@ async function carregar(manual = false) {
   if (!lanc) return;
   const trocou = est.lanc?.id !== lanc.id;
   try {
-    const [adDia, utmDia, sync] = await Promise.all([
+    const [adDia, utmDia, sync, criativosDrive] = await Promise.all([
       buscarTudo('painel_meta_ad_dia', lanc.id, ['data', 'ad_id']),
       buscarTudo('painel_leads_utm_dia', lanc.id, ['data', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']),
       sb.from('meta_insights').select('atualizado_em').order('atualizado_em', { ascending: false }).limit(1),
+      sb.from('painel_criativos').select('chave, url').eq('lancamento_id', lanc.id).range(0, 4999),
     ]);
     if (atualId !== lanc.id) return; // trocou de tela enquanto carregava
     Object.assign(est, { lanc, adDia, utmDia, sync: sync.data?.[0]?.atualizado_em, carregadoEm: new Date() });
+    // Arquivo do Drive de cada criativo, pelo nome (a tabela pode não existir ainda: aí só não há links)
+    est.links = new Map((criativosDrive.data || []).map(r => [r.chave, r.url]));
     if (trocou) { est.aba = 'geral'; est.filtroMexido = false; }
     est.pesq = null;
     rel.grupos = null;
@@ -1350,7 +1369,7 @@ function subTrafego(c) {
               <div class="slide${i === traf.slide ? ' on' : ''}" aria-hidden="${i !== traf.slide}">
                 <div class="slide-arte">${ico('imagem')}<span>#${i + 1} em leads</span></div>
                 <div class="slide-info">
-                  <div class="slide-nome">${esc(a.nome)}</div>
+                  <div class="slide-nome">${linkCriativo(a.nome)}</div>
                   <div class="slide-conj">${esc(a.sub)}</div>
                   <div class="slide-chips">
                     <span class="chip-dado">Gasto: ${moeda(a.gasto)}</span>
@@ -1391,7 +1410,7 @@ function subTrafego(c) {
       <tbody>${lista.map(x => {
         const dif = cplMedio && x.cpl != null ? x.cpl / cplMedio - 1 : null;
         return `<tr>
-          <td>${esc(x.nome)}${x.sub ? `<span class="fraco">${esc(x.sub)}</span>` : ''}</td>
+          <td>${traf.nivel === 'anuncio' ? linkCriativo(x.nome) : esc(x.nome)}${x.sub ? `<span class="fraco">${esc(x.sub)}</span>` : ''}</td>
           <td>${moeda(x.gasto)}</td><td>${int.format(x.l)}</td><td>${moeda(x.cpl)}</td>
           <td class="${dif == null || Math.abs(dif) < .005 ? '' : dif < 0 ? 'bom' : 'ruim'}">${dif == null ? '—' : Math.abs(dif) < .005 ? 'na média' : `${dif < 0 ? '−' : '+'}${pct(Math.abs(dif))}`}</td>
           <td>${taxa(x.ctr)}</td><td>${taxa(x.connect)}</td>
@@ -1597,7 +1616,7 @@ function abaCriativos(c) {
 }
 
 // ---------- Origem (UTM) ----------
-function tabelaGrupo(titulo, desc, linhas, total) {
+function tabelaGrupo(titulo, desc, linhas, total, comLink = false) {
   const ord = linhas.sort((a, b) => b.n - a.n);
   const topo = ord.slice(0, 12);
   const resto = ord.slice(12).reduce((s, r) => s + r.n, 0);
@@ -1608,7 +1627,7 @@ function tabelaGrupo(titulo, desc, linhas, total) {
       <h2>${titulo}</h2><p class="desc">${desc}</p>
       <div class="tabela-wrap"><table>
         ${topo.length ? `<thead><tr><th>${titulo.replace('Por ', '')}</th><th>Leads</th><th>%</th></tr></thead><tbody>` +
-          topo.map(r => `<tr><td>${esc(r.nome)}${r.tag ? `<span class="tag ${r.tag}">${r.tag === 'pago' ? 'tráfego' : 'orgânico'}</span>` : ''}</td>
+          topo.map(r => `<tr><td>${comLink ? linkCriativo(r.nome) : esc(r.nome)}${r.tag ? `<span class="tag ${r.tag}">${r.tag === 'pago' ? 'tráfego' : 'orgânico'}</span>` : ''}</td>
             <td>${int.format(r.n)}<span class="barrinha" style="width:${Math.round(r.n / max * 48)}px"></span></td>
             <td>${pct(r.n / total)}</td></tr>`).join('') + '</tbody>'
           : '<tr><td class="vazio">Nenhum lead no período.</td></tr>'}
@@ -1631,7 +1650,7 @@ function abaOrigem(c) {
       ${tabelaGrupo('Por canal', 'utm_source / utm_medium de cada lead', agrupar(c.utm, r => r.utm_source + (r.utm_medium ? ' / ' + r.utm_medium : ''), true), total)}
       ${tabelaGrupo('Por campanha', 'utm_campaign', agrupar(c.utm, r => r.utm_campaign), total)}
     </div>
-    ${tabelaGrupo('Por conteúdo', 'utm_content: nos anúncios, o nome do criativo', agrupar(c.utm, r => r.utm_content), total)}`;
+    ${tabelaGrupo('Por conteúdo', 'utm_content: nos anúncios, o nome do criativo', agrupar(c.utm, r => r.utm_content), total, true)}`;
 }
 
 // ---------- Orgânico ----------
@@ -1933,7 +1952,7 @@ function desenharCriativos(cpl) {
   $('tabCriativos').innerHTML =
     '<thead><tr>' + COLS_CRIATIVOS.map(c => `<th class="${c.id === col ? 'ord' : ''}" onclick="ordenarCriativos('${c.id}')">${c.nome}${c.id === col ? (dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('') + '</tr></thead><tbody>' +
     lista.map(c => `<tr>
-      <td>${esc(c.nome)}<span class="fraco">${esc(c.conjunto)}</span></td>
+      <td>${linkCriativo(c.nome)}<span class="fraco">${esc(c.conjunto)}</span></td>
       <td>${brl.format(c.gasto)}</td>
       <td>${int.format(c.leads)}</td>
       <td class="${cor(c.cpl)}">${moeda(c.cpl)}</td>
@@ -1981,6 +2000,10 @@ function abrirForm(editar = false) {
       <label class="largo">Trecho no nome das campanhas do Meta
         <input name="filtro" value="${esc(l?.filtro_campanha || rot)}" placeholder="L24" autocomplete="off">
         <small>Toda campanha com esse trecho no nome entra no painel. Use um trecho que não apareça em outros lançamentos: "L2" também pegaria o L23 e o L24.</small>
+      </label>
+      <label class="largo">Pasta dos criativos no Drive <span class="opc">opcional</span>
+        <input name="drive" value="${esc(l?.drive_pasta || '')}" placeholder="https://drive.google.com/drive/folders/..." autocomplete="off">
+        <small>Cada arquivo com o mesmo nome de um anúncio vira link no painel. A pasta precisa estar compartilhada com a conta de serviço (veja o Checklist).</small>
       </label>
       <label>Início dos anúncios
         <input type="date" name="inicio" value="${esc(l?.inicio || hojeSP())}">
@@ -2032,15 +2055,33 @@ function abrirForm(editar = false) {
       p_fim: v.fim || null,
       p_meta: v.meta ? parseInt(v.meta, 10) : null,
       p_verba: v.verba ? Number(v.verba) : null,
+      p_drive: v.drive.trim() || null,
     });
     if (error) {
       btn.disabled = false; btn.textContent = editar ? 'Salvar alterações' : 'Cadastrar lançamento';
       return erro(error.message);
     }
+    if (v.drive.trim()) sincronizarDrive(v.codigo, true); // busca os arquivos em segundo plano
     await iniciar(v.codigo);
     if (editar) { fecharModal(); aviso('Alterações salvas'); }
     else abrirChecklist(v.codigo, token);
   };
+}
+
+async function sincronizarDrive(id, silencioso = false) {
+  const btn = $('btnDrive');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sincronizando…'; }
+  const { data, error } = await sb.functions.invoke('drive-sync', { body: { lanc: id } });
+  if (btn) { btn.disabled = false; btn.textContent = 'Sincronizar agora'; }
+  const r = data?.resultado?.[id];
+  if (error || r?.erro) {
+    aviso('Drive: ' + (r?.erro || error?.message || 'erro ao sincronizar'), true);
+  } else if (!silencioso) {
+    aviso(`${int.format(r?.arquivos || 0)} arquivo(s) encontrados no Drive`);
+  }
+  if (est.lanc?.id === id) carregar();
+  const l = lancamentos.find(x => x.id === id);
+  if (l && $('ckDrive')) verificarChecklist(l);
 }
 
 const copiavel = txt => `<div class="copia"><code>${esc(txt)}</code><button type="button" class="btn" onclick="copiar(this)">Copiar</button></div>`;
@@ -2094,6 +2135,13 @@ async function abrirChecklist(id = atualId, token = null) {
         </details>
       </div></li>
 
+      <li id="ckDrive"><div class="st"></div><div>
+        <b>Pasta dos criativos no Drive</b>
+        <p>Cole o link da pasta em Editar e compartilhe a pasta, como Leitor, com a conta de serviço do painel. Arquivos com o mesmo nome do anúncio viram link em todo o painel.</p>
+        <p class="vivo" id="ckDriveTxt">Verificando…</p>
+        ${l.drive_pasta ? `<p><button type="button" class="btn" id="btnDrive" onclick="sincronizarDrive('${esc(id)}')">Sincronizar agora</button></p>` : ''}
+      </div></li>
+
       <li id="ckPesq"><div class="st"></div><div>
         <b>Webhook da pesquisa</b>
         <p>No formulário da pesquisa, adicione a ação Webhook com a URL abaixo. As respostas entram no card <code>${esc(pesquisaId(l))}</code> da Central de Pesquisas, e cada pergunta vira uma coluna.</p>
@@ -2108,7 +2156,7 @@ async function abrirChecklist(id = atualId, token = null) {
         <p><button type="button" class="btn" id="btnApagarTeste" hidden onclick="apagarTestes('${esc(id)}')">Apagar leads de teste</button></p>
       </div></li>
     </ol>
-    <p class="nota">Os passos 2, 5 e 6 se conferem sozinhos a cada 20 segundos enquanto esta janela estiver aberta.</p>
+    <p class="nota">Os passos 2, 5, 6 e 7 se conferem sozinhos a cada 20 segundos enquanto esta janela estiver aberta.</p>
     <div class="acoes"><button type="button" class="btn primario" onclick="fecharModal()">Concluir</button></div>`);
 
   verificarChecklist(l);
@@ -2124,10 +2172,12 @@ function marcar(id, ok, texto) {
 }
 
 async function verificarChecklist(l) {
-  const [ads, utm, pesq] = await Promise.all([
+  const [ads, utm, pesq, arqs, nomesAds] = await Promise.all([
     sb.from('painel_meta_anuncios').select('campaign_name').eq('lancamento_id', l.id),
     sb.from('painel_leads_utm').select('utm_source, leads').eq('lancamento_id', l.id),
     sb.from('respostas').select('id', { count: 'exact', head: true }).eq('lancamento_id', pesquisaId(l)),
+    sb.from('painel_criativos').select('chave').eq('lancamento_id', l.id).range(0, 4999),
+    sb.from('painel_meta_anuncios').select('ad_name').eq('lancamento_id', l.id),
   ]);
   if (!$('ckMeta')) return;
 
@@ -2145,6 +2195,12 @@ async function verificarChecklist(l) {
     : 'Nenhum lead recebido ainda.');
   $('btnApagarTeste').hidden = testes === 0;
   const nPesq = pesq.count || 0;
+  const chavesArq = new Set((arqs.data || []).map(r => r.chave));
+  const anunc = [...new Set((nomesAds.data || []).map(a => a.ad_name).filter(Boolean))];
+  const ligados = anunc.filter(n => chavesArq.has(chaveCriativo(n))).length;
+  marcar('ckDrive', chavesArq.size > 0, !l.drive_pasta ? 'Nenhuma pasta cadastrada. Cole o link em Editar.'
+    : !chavesArq.size ? 'Pasta cadastrada, mas nenhum arquivo lido ainda. Confira o compartilhamento e clique em Sincronizar agora.'
+    : `${int.format(chavesArq.size)} arquivo(s) lidos · ${int.format(ligados)} de ${int.format(anunc.length)} anúncio(s) com link.`);
   marcar('ckPesq', nPesq > 0, nPesq ? `${int.format(nPesq)} resposta(s) recebida(s).` : 'Nenhuma resposta recebida ainda.');
   if (testes) $('btnApagarTeste').textContent = `Apagar ${testes} lead(s) de teste`;
 }
