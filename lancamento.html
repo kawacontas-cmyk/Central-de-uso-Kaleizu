@@ -983,10 +983,9 @@ function funilSvg(camadas, tamanho) {
       const t = larg(i), b = larg(i + 1), y = i * (H + gap);
       const x1 = (W - t) / 2, x2 = (W + t) / 2, x3 = (W + b) / 2, x4 = (W - b) / 2;
       const eventos = c.dica
-        ? ` class="camada" tabindex="0" onmousemove="mostrarDicaFunil(event, ${i})" onmouseleave="esconderDicaFunil()" onfocus="mostrarDicaFunil(event, ${i})" onblur="esconderDicaFunil()"`
+        ? ` class="camada" tabindex="0" aria-label="${esc(c.dica.titulo)}: ${c.dica.linhas.map(l => `${esc(l[0])} ${esc(l[1])}`).join(', ')}" onmousemove="mostrarDicaFunil(event, ${i})" onmouseleave="esconderDicaFunil()" onfocus="mostrarDicaFunil(event, ${i})" onblur="esconderDicaFunil()"`
         : '';
       return `<g${eventos}>
-        ${c.dica ? `<title>${esc(c.dica.titulo)}: ${c.dica.linhas.map(l => `${esc(l[0])} ${esc(l[1])}`).join(', ')}</title>` : ''}
         <polygon points="${x1},${y} ${x2},${y} ${x3},${y + H} ${x4},${y + H}" fill="${c.cor}"/>
         <text x="${W / 2}" y="${y + H / 2 - 1}" text-anchor="middle" class="fv">${esc(c.v)}</text>
         <text x="${W / 2}" y="${y + H / 2 + 13}" text-anchor="middle" class="fr">${esc(c.r)}</text>
