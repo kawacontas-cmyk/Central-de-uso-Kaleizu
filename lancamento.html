@@ -1626,10 +1626,21 @@ async function carregarGrupos() {
   rel.grupos = data || [];
 }
 
-// Pessoas nos grupos na data: o valor salvo nela ou o último antes dela
+// Pessoas nos grupos na data: o valor salvo nela ou o último antes dela (correção manual)
 function gruposNaData(data) {
   const ant = (rel.grupos || []).filter(g => g.data <= data);
   return ant.length ? ant[ant.length - 1] : null;
+}
+
+// Pessoas nos grupos calculado dos eventos do SendFlow: saldo de entradas − saídas até o fim do dia.
+// null se o Grupo do WPP não está conectado (sem nenhum evento) ou a data é anterior ao 1º evento.
+function pessoasAutomatico(data) {
+  if (!est.wpp || !est.wpp.length) return null;
+  const primeiro = est.wpp.reduce((min, e) => { const d = diaSP(e.criado_em); return !min || d < min ? d : min; }, null);
+  if (!primeiro || data < primeiro) return null;
+  let n = 0;
+  for (const e of est.wpp) if (diaSP(e.criado_em) <= data) n += e.evento === 'entrada' ? 1 : -1;
+  return Math.max(0, n);
 }
 
 const reais = v => 'R$' + (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1638,9 +1649,9 @@ const pct2 = v => v == null || !isFinite(v) ? '—' : (v * 100).toLocaleString('
 function abaRelatorio() {
   const l = est.lanc, hoje = hojeSP();
   if (rel.lanc !== l.id) Object.assign(rel, { lanc: l.id, data: null, pessoas: '', grupos: null });
-  if (!est.pesq || !rel.grupos) {
+  if (!est.pesq || !rel.grupos || !est.wpp) {
     $(alvoRender).innerHTML = '<p class="carregando">Montando o relatório…</p>';
-    Promise.all([est.pesq ? null : carregarPesquisa(), rel.grupos ? null : carregarGrupos()])
+    Promise.all([est.pesq ? null : carregarPesquisa(), rel.grupos ? null : carregarGrupos(), est.wpp ? null : carregarWpp()])
       .then(() => { if (est.aba === 'relatorio' && !est.sub) renderAba(); })
       .catch(e => { $('conteudo').innerHTML = `<div class="faixa"><b>Não foi possível montar o relatório</b><p>${esc(e.message)}</p></div>`; });
     return;
@@ -1651,7 +1662,9 @@ function abaRelatorio() {
   if (!rel.data) rel.data = l.fim && l.fim < hoje ? l.fim : hoje;
   if (rel.data > hoje) rel.data = hoje;
   const salvo = gruposNaData(rel.data);
-  const pessoasTxt = rel.pessoas !== '' ? rel.pessoas : (salvo ? String(salvo.pessoas) : '');
+  const auto = pessoasAutomatico(rel.data);
+  const usandoAuto = rel.pessoas === '' && !salvo && auto != null;
+  const pessoasTxt = rel.pessoas !== '' ? rel.pessoas : (salvo ? String(salvo.pessoas) : (auto != null ? String(auto) : ''));
   const pessoas = pessoasTxt === '' ? null : Number(pessoasTxt);
 
   // Números acumulados do início do lançamento até o fim do dia escolhido
@@ -1687,7 +1700,12 @@ function abaRelatorio() {
           <label>Pessoas nos grupos
             <input type="number" id="relPessoas" min="0" step="1" inputmode="numeric" value="${esc(pessoasTxt)}" placeholder="Ex.: 320"
               onchange="salvarPessoas(this.value)">
-            <small>${salvo ? (salvo.data === rel.data ? 'Salvo para este dia.' : `Último valor informado em ${fmtData(salvo.data)}. Atualize com o número de hoje.`) : 'Informe o total de pessoas nos grupos de WhatsApp.'}</small>
+            <small>${
+              rel.pessoas !== '' ? 'Vai substituir o valor calculado ou salvo para este dia ao sair do campo.'
+              : salvo ? (salvo.data === rel.data ? 'Corrigido manualmente para este dia.' : `Correção manual de ${fmtData(salvo.data)}. Atualize se precisar.`)
+              : usandoAuto ? 'Calculado automaticamente pelos eventos de entrada/saída dos grupos (aba Grupo do WPP). Edite para corrigir.'
+              : 'Informe o total de pessoas nos grupos de WhatsApp.'
+            }</small>
           </label>
         </div>
         <div class="rel-origem">
