@@ -470,7 +470,7 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
   </div>
   <div class="topbar-right">
     <span class="topbar-count" id="topbarCount"></span>
-    <button class="btn-topbar voltar-app" onclick="window.location.href='index.html'">&#8592; Voltar</button>
+    <button class="btn-topbar voltar-app" onclick="voltar()">&#8592; Voltar</button>
     <button class="btn-topbar" onclick="sair()">Sair</button>
   </div>
 </header>
@@ -480,7 +480,6 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
   <header class="topo">
     <div class="titulo"><h1 id="titulo">Painel do Lançamento</h1><div class="subtitulo" id="subtitulo">carregando</div></div>
     <div class="status" id="boxStatus" hidden><span class="pulso" id="pulso"></span><span id="txtStatus"></span></div>
-    <button class="btn" id="btnTodos" hidden onclick="voltarLista()">&#8592; Todos os lançamentos</button>
     <button class="btn" id="btnAtualizar" hidden onclick="carregar(true)">Atualizar</button>
     <button class="btn" id="btnChecklist" hidden onclick="abrirChecklist()">Checklist</button>
     <button class="btn" id="btnEditar" hidden onclick="abrirForm(true)">Editar</button>
@@ -604,6 +603,13 @@ function abrirLancamento(id) {
   mostrarPainel(id);
   window.scrollTo(0, 0);
 }
+// Voltar em etapas: Explorar → dashboard → lista de lançamentos → seleção de ferramentas
+function voltar() {
+  if (atualId && est.sub) sairSub();
+  else if (atualId) voltarLista();
+  else window.location.href = 'index.html';
+}
+
 async function sair() {
   await sb.auth.signOut();
   window.location.href = 'index.html';
@@ -635,7 +641,6 @@ function mostrarPainel(id) {
   $('telaPainel').hidden = false;
   $('titulo').textContent = l.rotulo || l.id;
   $('subtitulo').textContent = `${periodo(l)} · ${situacao(l).txt}`;
-  $('btnTodos').hidden = false;
   $('boxBusca').hidden = true;
   $('boxStatus').hidden = false;
   $('btnAtualizar').hidden = false;
@@ -654,7 +659,6 @@ async function mostrarLista() {
   $('titulo').textContent = 'Lançamentos';
   $('subtitulo').textContent = 'Escolha um lançamento para abrir o dashboard';
   $('boxBusca').hidden = false;
-  $('btnTodos').hidden = true;
   $('boxStatus').hidden = true;
   $('btnAtualizar').hidden = $('btnChecklist').hidden = $('btnEditar').hidden = true;
   $('btnNovo').hidden = !ehAdmin;
