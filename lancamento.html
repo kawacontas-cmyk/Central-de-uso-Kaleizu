@@ -14,7 +14,7 @@
 :root{
   --bg:#060B1F; --surface:#0e1530; --card:#0f1428; --border:rgba(255,255,255,0.08);
   --text:#e8eaf6; --muted:#8b93b8; --hint:#3a4060; --gold:#CDA04C; --gold-light:#e8c97a;
-  --green:#5fcd8a; --red:#e05a5a; --blue:#5b8aff; --purple:#a98bff;
+  --green:#5fcd8a; --red:#e05a5a; --blue:#5b8aff; --purple:#a98bff; --amber:#f0a94a;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 
@@ -233,6 +233,27 @@ dialog::backdrop{background:rgba(6,11,31,.78);backdrop-filter:blur(3px)}
 .funil-svg{width:100%;height:auto;max-height:210px;margin-top:auto}
 .funil-svg .fv{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;fill:#fff}
 .funil-svg .fr{font-family:'DM Sans',sans-serif;font-size:10px;fill:rgba(255,255,255,.8)}
+
+/* excluir lançamento */
+.lanc-wrap{position:relative;display:flex}
+.lanc-wrap .lanc-card{flex:1;width:100%}
+.lanc-apagar{position:absolute;top:-10px;right:-10px;width:30px;height:30px;border-radius:50%;background:var(--surface);border:1px solid var(--border);
+  color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transform:scale(.9);transition:opacity .15s,transform .15s,color .15s,border-color .15s;z-index:2}
+.lanc-apagar svg{width:14px;height:14px}
+.lanc-wrap:hover .lanc-apagar,.lanc-wrap:focus-within .lanc-apagar{opacity:1;transform:none}
+.lanc-apagar:hover,.lanc-apagar:focus-visible{color:var(--red);border-color:var(--red);outline:none}
+@media (hover:none){.lanc-apagar{opacity:1;transform:none}}
+.exclusao p{font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.55}
+.exclusao p b{color:var(--text)}
+.exclusao .aviso-exc{color:var(--amber)}
+.exclusao label{display:flex;flex-direction:column;gap:6px;font-size:13px;margin:6px 0 4px}
+.exclusao code{font-family:'DM Mono',monospace;color:var(--gold-light)}
+.exclusao input{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font:inherit}
+.exclusao input:focus{outline:none;border-color:var(--red)}
+.exclusao .erro{color:var(--red);font-size:13px}
+.btn.perigo{border-color:rgba(224,90,90,.5);color:var(--red)}
+.btn.perigo:not(:disabled):hover{background:var(--red);color:#fff;border-color:var(--red)}
+.btn.perigo:disabled{opacity:.4;cursor:not-allowed}
 
 /* link dos criativos */
 .link-criativo{color:inherit;text-decoration:none;border-bottom:1px dashed rgba(205,160,76,.45);display:inline-flex;align-items:center;gap:4px}
@@ -585,9 +606,11 @@ async function mostrarLista() {
     return;
   }
 
-  const [meta, lds] = await Promise.all([
+  const [meta, lds, utm, ads] = await Promise.all([
     sb.from('painel_meta_diario').select('lancamento_id, gasto'),
     sb.from('painel_leads_diario').select('lancamento_id, leads'),
+    sb.from('painel_leads_utm').select('lancamento_id, utm_source, utm_medium, utm_content, utm_term, leads'),
+    sb.from('painel_meta_anuncios').select('lancamento_id, ad_id, ad_name'),
   ]);
   if (atualId) return; // o usuário já abriu um lançamento enquanto carregava
   const soma = (linhas, campo) => (linhas || []).reduce((m, r) => {
@@ -595,6 +618,16 @@ async function mostrarLista() {
   }, {});
   const gastos = soma(meta.data, 'gasto');
   const leads = soma(lds.data, 'leads');
+  // leads de tráfego por lançamento, com a mesma regra do painel
+  const nomesPorLanc = {};
+  (ads.data || []).forEach(a => {
+    const set = nomesPorLanc[a.lancamento_id] ||= new Set();
+    if (norm(a.ad_name)) set.add(norm(a.ad_name)); set.add(norm(a.ad_id));
+  });
+  const pagos = {};
+  (utm.data || []).forEach(r => {
+    if (ehPago(r, nomesPorLanc[r.lancamento_id] || new Set())) pagos[r.lancamento_id] = (pagos[r.lancamento_id] || 0) + Number(r.leads);
+  });
 
   const ordenados = [...lancamentos].sort((a, b) =>
     situacao(a).ordem - situacao(b).ordem || b.inicio.localeCompare(a.inicio));
@@ -605,16 +638,17 @@ async function mostrarLista() {
     const barra = l.meta_leads
       ? `<div class="lc-meta" title="${int.format(n)} de ${int.format(l.meta_leads)} leads"><span style="width:${Math.min(100, n / l.meta_leads * 100)}%"></span></div>`
       : '';
-    return `<button class="card lanc-card" onclick="abrirLancamento('${esc(l.id)}')">
+    const p = pagos[l.id] || 0;
+    return `<div class="lanc-wrap"><button class="card lanc-card" onclick="abrirLancamento('${esc(l.id)}')">
       <div class="lc-topo"><span class="lc-nome">${esc(l.rotulo || l.id)}</span><span class="selo ${st.classe}">${st.txt}</span></div>
       <div class="lc-periodo">${esc(periodo(l))}</div>
       <div class="lc-nums">
         <div><span class="rotulo">Investido</span><b>${brl0.format(g)}</b></div>
         <div><span class="rotulo">Leads</span><b>${int.format(n)}</b></div>
-        <div><span class="rotulo">CPL</span><b>${n && g ? brl.format(g / n) : '—'}</b></div>
+        <div><span class="rotulo">CPL</span><b>${p && g ? brl.format(g / p) : '—'}</b></div>
       </div>
       ${barra}
-    </button>`;
+    </button>${ehAdmin ? `<button class="lanc-apagar" title="Excluir lançamento" aria-label="Excluir ${esc(l.rotulo || l.id)}" onclick="pedirExclusao('${esc(l.id)}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>` : ''}</div>`;
   }).join('') + (ehAdmin ? '<button class="lanc-novo" onclick="abrirForm()"><span class="mais">+</span>Novo lançamento</button>' : '');
 }
 
@@ -2066,6 +2100,42 @@ function abrirForm(editar = false) {
     if (editar) { fecharModal(); aviso('Alterações salvas'); }
     else abrirChecklist(v.codigo, token);
   };
+}
+
+// ---------- Excluir lançamento do painel ----------
+function pedirExclusao(id) {
+  const l = lancamentos.find(x => x.id === id);
+  if (!l) return;
+  abrirModal(`Excluir ${l.rotulo || l.id}`, `
+    <div class="exclusao">
+      <p>O lançamento sai do Painel do Lançamento, junto com o que só existe aqui: metas, pasta do Drive, token dos webhooks e pessoas nos grupos do relatório diário.</p>
+      <p><b>Continuam guardados:</b> os leads na Central de Leads, as respostas na Central de Pesquisas e os dados do Meta. Se cadastrar o mesmo código de novo, tudo volta a aparecer.</p>
+      <p class="aviso-exc">Os webhooks deste lançamento param de aceitar leads e respostas.</p>
+      <label><span>Para confirmar, digite <code>${esc(l.id)}</code></span>
+        <input id="confExc" autocomplete="off" oninput="$('btnExc').disabled = this.value.trim().toUpperCase() !== '${esc(l.id)}'">
+      </label>
+      <p class="erro" id="excErro" hidden></p>
+      <div class="acoes">
+        <button type="button" class="btn" onclick="fecharModal()">Cancelar</button>
+        <button type="button" class="btn perigo" id="btnExc" disabled onclick="excluirLancamento('${esc(l.id)}')">Excluir lançamento</button>
+      </div>
+    </div>`);
+  setTimeout(() => $('confExc')?.focus(), 50);
+}
+
+async function excluirLancamento(id) {
+  const btn = $('btnExc');
+  btn.disabled = true; btn.textContent = 'Excluindo…';
+  const { error } = await sb.rpc('excluir_lancamento', { p_id: id });
+  if (error) {
+    $('excErro').textContent = error.message; $('excErro').hidden = false;
+    btn.disabled = false; btn.textContent = 'Excluir lançamento';
+    return;
+  }
+  fecharModal();
+  history.replaceState(null, '', location.pathname);
+  await iniciar();
+  aviso(`${id} excluído do painel`);
 }
 
 async function sincronizarDrive(id, silencioso = false) {
